@@ -17,8 +17,8 @@ del hard_dependencies, dependency, missing_dependencies
 
 # import local objects
 
-__version__ = "0.0.5"
-__name__ = "turbopanda"
-
 from .metapanda import MetaPanda
 from .utils import *
+
+__version__ = "0.0.5"
+__name__ = "turbopanda"

@@ -12,7 +12,7 @@ import numpy as np
 from pandas.api.types import CategoricalDtype
 from scipy.stats import kstest
 
-from .utils import instance_check, chain_intersection, chain_union, is_twotuple
+from .utils import *
 
 
 class MetaPanda(object):
@@ -79,6 +79,7 @@ class MetaPanda(object):
     def __normality__(self, c):
         return kstest(self.df_[c].dropna().values, "norm")[1] < 0.05 if self.__column_float__(c) else False
 
+
     def _categorize(self):
         col_renames = {}
         # iterate over all column names.
@@ -106,14 +107,20 @@ class MetaPanda(object):
         # apply all global rename changes to the column.
         self.df_.rename(columns=col_renames, inplace=True)
 
+
     def _remove_MultiIndex(self):
         if isinstance(self.df_.columns, pd.MultiIndex):
             indices = [n if n is not None else ("Index%d" % i) for i, n in enumerate(self.df_.columns.names)]
             self.df_.columns = pd.Index(["__".join(col) for col in self.df_.columns], name="__".join(indices))
 
+
     def _remove_spaces_in_obj_columns(self):
         for c in self.df_.columns[self.df_.dtypes.eq(object)]:
             self.df_[c] = self.df_[c].str.strip()
+        # if we have an object index, strip this string also
+        if self.df_.index.dtype == object:
+            self.df_.index = self.df_.index.str.strip()
+
 
     def _construct_metadata(self):
         # step 1. construct a dataframe based on the column names as an index.
@@ -133,6 +140,7 @@ class MetaPanda(object):
             "is_norm":is_normal
         }, index=colnames)
 
+
     def _get_selector_item(self, selector, raise_error=True):
         if selector in [
                 float, int, bool, "category", "float", "int", "bool", "boolean",
@@ -145,6 +153,21 @@ class MetaPanda(object):
                               np.float64:np.float64, np.int64:np.int64, bool:np.bool}
             nk = string_to_type[selector]
             return self.df_.columns[self.df_.dtypes.eq(nk)]
+        # check if selector is a callable object (i.e function)
+        elif callable(selector):
+            # call the selector, assuming it takes a pandas.DataFrame argument. Must
+            # return a boolean Series.
+            ser = selector(self.df_)
+            # perform check
+            is_boolean_series(ser)
+            # check lengths
+            not_same = self.df_.columns.symmetric_difference(ser.index)
+            # if this exists, append these true cols on
+            if not_same.shape[0] > 0:
+                ns = pd.concat([pd.Series(True, index=not_same), ser], axis=0)
+                return self.df_.columns[ns]
+            else:
+                return self.df_.columns[ser]
         elif isinstance(selector, str):
             # check if the key is in the meta_ column names
             if selector in self.meta_:
@@ -195,9 +218,10 @@ class MetaPanda(object):
     def __delitem__(self, selector):
         # drops columns inplace
         selection = self._get_selector(selector)
-        self.df_.drop(selection, axis=1, inplace=True)
-        # drop meta
-        self.meta_.drop(selection, axis=0, inplace=True)
+        if selection.shape[0] > 0:
+            self.df_.drop(selection, axis=1, inplace=True)
+            # drop meta
+            self.meta_.drop(selection, axis=0, inplace=True)
 
 
     def __repr__(self):
@@ -228,6 +252,8 @@ class MetaPanda(object):
             self._remove_spaces_in_obj_columns()
             # remove spaces/tabs within the column name.
             self.df_.columns = self.df_.columns.str.replace(" ", "_").str.replace("\t","_").str.replace("-","")
+            # sort index
+            self.df_.sort_index(inplace=True)
             # construct metadata on columns
             self._construct_metadata()
         else:
@@ -298,8 +324,9 @@ class MetaPanda(object):
         """
         # perform inplace
         selection = self._get_selector(selector, raise_error=False, select_join="OR")
-        self.df_.drop(selection, axis=1, inplace=True)
-        self.meta_.drop(selection, axis=0, inplace=True)
+        if selection.shape[0] > 0:
+            self.df_.drop(selection, axis=1, inplace=True)
+            self.meta_.drop(selection, axis=0, inplace=True)
         return self
 
 

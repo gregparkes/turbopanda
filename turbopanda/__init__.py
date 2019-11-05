@@ -18,7 +18,7 @@ del hard_dependencies, dependency, missing_dependencies
 # import local objects
 
 from .metapanda import MetaPanda
-from .utils import *
+from .fileio import *
 
 __version__ = "0.0.5"
 __name__ = "turbopanda"

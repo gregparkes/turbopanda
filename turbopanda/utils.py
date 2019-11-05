@@ -6,7 +6,12 @@ Created on Mon Nov  4 13:13:38 2019
 @author: gparkes
 """
 
-__all__ = ["is_twotuple","instance_check","chain_intersection","chain_union"]
+import numpy as np
+import pandas as pd
+
+__all__ = ["is_twotuple","instance_check",
+           "chain_intersection","chain_union",
+           "is_boolean_series"]
 
 
 def is_twotuple(L):
@@ -20,6 +25,13 @@ def is_twotuple(L):
     else:
         raise TypeError("L must be of type [list, tuple]")
     return True
+
+
+def is_boolean_series(bool_s):
+    if not isinstance(bool_s, pd.Series):
+        raise TypeError("bool_s must be of type [pd.Series], not {}".format(type(bool_s)))
+    if not bool_s.dtype in [bool, np.bool]:
+        raise TypeError("bool_s must contain booleans, not type '{}'".format(bool_s.dtype))
 
 
 def instance_check(a, i):

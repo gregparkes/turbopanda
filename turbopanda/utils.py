@@ -8,10 +8,12 @@ Created on Mon Nov  4 13:13:38 2019
 
 import numpy as np
 import pandas as pd
+import itertools as it
 
 __all__ = ["is_twotuple","instance_check",
            "chain_intersection","chain_union",
-           "is_boolean_series"]
+           "is_boolean_series","attach_name",
+            "check_list_type"]
 
 
 def is_twotuple(L):
@@ -27,11 +29,22 @@ def is_twotuple(L):
     return True
 
 
+def attach_name(*pds):
+    return list(it.chain.from_iterable([pd.name_ + "__" + pd.df_.columns for pd in pds]))
+
+
 def is_boolean_series(bool_s):
     if not isinstance(bool_s, pd.Series):
         raise TypeError("bool_s must be of type [pd.Series], not {}".format(type(bool_s)))
     if not bool_s.dtype in [bool, np.bool]:
         raise TypeError("bool_s must contain booleans, not type '{}'".format(bool_s.dtype))
+
+
+def check_list_type(L, t):
+    for i, l in enumerate(L):
+        if not isinstance(l, t):
+            raise TypeError("type '{}' not found in list at index [{}]".format(t, i))
+    return True
 
 
 def instance_check(a, i):

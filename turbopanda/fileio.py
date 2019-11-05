@@ -13,7 +13,7 @@ from .metapanda import MetaPanda
 __all__ = ["read"]
 
 
-def read(filename, *args, **kwargs):
+def read(filename, name=None, *args, **kwargs):
     """
     Reads in a datafile and creates a MetaPanda object from it.
 
@@ -22,6 +22,8 @@ def read(filename, *args, **kwargs):
     filename : str
         A relative/absolute link to the file, with extension provided.
         Accepted extensions: [csv, xls, xlsx, html, json, hdf, sql]
+    name : str
+        A custom name to use for the MetaPanda, else the filename is used
     args : list
         Additional args to pass to pd.read_[ext]
     kwargs : dict
@@ -38,7 +40,7 @@ def read(filename, *args, **kwargs):
         "sql": pd.read_sql
     }
 
-    ext = filename.split(".")[-1]
-    df = file_ext_map[ext](filename, *args, **kwargs)
+    ext = filename.split("/")[-1].split(".")
+    df = file_ext_map[ext[-1]](filename, *args, **kwargs)
     # map to MetaPanda
-    return MetaPanda(df)
+    return MetaPanda(df, name=ext[0])

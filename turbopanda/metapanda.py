@@ -14,6 +14,8 @@ from scipy.stats import kstest
 
 from .utils import *
 
+from .analyze import agglomerate
+
 
 class MetaPanda(object):
     """
@@ -23,6 +25,7 @@ class MetaPanda(object):
 
     def __init__(self,
                  dataset,
+                 name="dataframe",
                  cat_thresh=20,
                  default_remove_single_col=True):
         """
@@ -33,6 +36,8 @@ class MetaPanda(object):
         -------
         dataset : pd.DataFrame
             The raw dataset to create as a metadataframe.
+        name : str
+            Gives the metaframe a name, which comes into play with merging, for instance
         cat_thresh : int
             The threshold until which 'category' variables are not created
         default_remove_one_column : bool
@@ -43,6 +48,7 @@ class MetaPanda(object):
         self._def_remove_single_col = default_remove_single_col
         # set using property
         self.df_ = dataset
+        self.name_ = name
         self._select = {}
 
 
@@ -206,6 +212,20 @@ class MetaPanda(object):
             # just one item, return asis
             return self._get_selector_item(selector,raise_error)
 
+    def _single_merge(self, other, left_on, right_on, join_type, **kwargs):
+        # determine index use
+        left_ind = True if left_on is None else False
+        right_ind = True if right_on is None else False
+        if left_ind and not right_ind:
+            ndf = pd.merge(self.df_, other.df_, left_index=True, right_on=right_on, how=join_type, **kwargs)
+        elif not left_ind and right_ind:
+            ndf = pd.merge(self.df_, other.df_, left_on=left_on, right_index=True, how=join_type, **kwargs)
+        elif left_ind and right_ind:
+            ndf = pd.merge(self.df_, other.df_, left_index=True, right_index=True, how=join_type,**kwargs)
+        else:
+            ndf = pd.merge(self.df_, other.df_, left_on=left_on, right_on=right_on, how=join_type,**kwargs)
+
+        return ndf
 
     ############################ OVERRIDEN OPERATIONS #######################################
 
@@ -225,7 +245,7 @@ class MetaPanda(object):
 
 
     def __repr__(self):
-        return "MetaPanda(DataSet(n={}, p={}, mem={}))".format(
+        return "MetaPanda({}(n={}, p={}, mem={}))".format(self.name_,
             self.df_.shape[0], self.df_.shape[1], self.memory_)
 
 
@@ -393,3 +413,65 @@ class MetaPanda(object):
             return self
         else:
             return curr_cols
+
+
+    def analyze(self, functions = ["agglomerate"]):
+        """
+        Performs a series of analyses on the column names and how they might
+        associate with each other.
+
+        Parameters
+        -------
+        functions : list
+            Choose from:
+                'agglomerate' - uses Levenshtein edit distance to determine how
+                similar features are and uses FeatureAgglomeration to label each
+                subgroup.
+
+        Returns
+        ------
+        self
+        """
+        if "agglomerate" in functions:
+            self.meta_["agglomerate"] = agglomerate(self.df_.columns)
+        return self
+
+
+    def merge(self, others, ons, how="inner", **kwargs):
+        """
+        Chains together database merging operations applied on to this MetaPanda object
+        this object is the left-most.
+
+        Performs changes to self.df_ and self.meta_.
+
+        Parameters
+        -------
+        others : MetaPanda or list/tuple of MetaPanda
+            A single or multiple MetaPanda object to integrate
+        ons : str/list/tuple
+            Column name(s) to join with, INCLUDING this MetaPanda's column name,
+            if None, uses the index. List size must be p+1 where p is the number of
+            other MetaPanda frames.
+        how : str/list/tuple
+            For each merge, determines which join to use. By default does inner
+            join on all. Choose from [inner, outer, left, right]
+        kwargs : dict
+            Additional keywords to pass to pd.merge
+
+        Returns
+        -------
+        self
+        """
+        # perform checks
+        instance_check(ons, (list, tuple))
+        # check to make sure ons is length of others + 1
+        if isinstance(others, MetaPanda):
+            ndf = self._single_merge(others, left_on=ons[0], right_on=ons[1],
+                                     join_type=how, **kwargs)
+            # append string names
+            ndf.columns = attach_name(self, others)
+            return ndf
+        elif isinstance(others, (list, tuple)):
+            check_list_type(others, MetaPanda)
+            raise NotImplementedError
+

@@ -7,7 +7,6 @@ Created on Tue Nov  5 14:48:53 2019
 """
 
 import pandas as pd
-
 from .metapanda import MetaPanda
 
 __all__ = ["read"]

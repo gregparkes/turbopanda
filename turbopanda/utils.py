@@ -9,11 +9,15 @@ Created on Mon Nov  4 13:13:38 2019
 import numpy as np
 import pandas as pd
 import itertools as it
+from pandas.api.types import CategoricalDtype
+
+
 
 __all__ = ["is_twotuple","instance_check",
            "chain_intersection","chain_union",
            "is_boolean_series","attach_name",
-            "check_list_type"]
+            "check_list_type","not_column_float",
+            "is_column_float","is_column_object"]
 
 
 def is_twotuple(L):
@@ -27,6 +31,28 @@ def is_twotuple(L):
     else:
         raise TypeError("L must be of type [list, tuple]")
     return True
+
+
+def not_column_float(ser):
+    return ser.dtype not in [np.float64, np.float32, np.float, np.float16, float]
+
+
+def is_column_float(ser):
+    return ser.dtype in [np.float64, np.float32, np.float, np.float16, float]
+
+
+def is_column_object(ser):
+    return ser.dtype in [object, pd.CategoricalDtype]
+
+
+def convert_boolean(df, col, name_map):
+    df[col] = df[col].astype(np.bool)
+    name_map[col] = "is_"+col
+
+
+def convert_category(df, col, uniques):
+    c_cat = CategoricalDtype(np.sort(uniques), ordered=True)
+    df[col] = df[col].astype(c_cat)
 
 
 def attach_name(*pds):

@@ -10,7 +10,7 @@ Handling the construction and use of metadata associated with MetaPanda
 
 import pandas as pd
 from scipy.stats import kstest
-from .utils import not_column_float, is_column_float
+from .utils import not_column_float, is_column_float, is_column_object
 
 
 def is_unique_ID(ser):
@@ -23,7 +23,7 @@ def is_potential_ID(ser, thresh=0.5):
 
 
 def is_potential_stacker(ser, regex=";|\t|,|\|", thresh=0.1):
-    return ser.str.contains(regex).sum() > thresh if not_column_float(ser) else False
+    return ser.str.contains(regex).sum() > thresh if is_column_object(ser) else False
 
 
 def is_normality(ser, significant=0.05):

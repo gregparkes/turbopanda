@@ -17,7 +17,9 @@ __all__ = ["is_twotuple","instance_check",
            "chain_intersection","chain_union",
            "is_boolean_series","attach_name",
             "check_list_type","not_column_float",
-            "is_column_float","is_column_object"]
+            "is_column_float","is_column_object",
+            "convert_category", "convert_boolean",
+            "calc_mem"]
 
 
 def is_twotuple(L):
@@ -98,3 +100,21 @@ def chain_union(*cgroup):
     for m in mchain:
         res = res.union(m)
     return res
+
+
+def remove_multi_index(df):
+    if isinstance(df.columns, pd.MultiIndex):
+        indices = [n if n is not None else ("Index%d" % i) for i, n in enumerate(df.columns.names)]
+        df.columns = pd.Index(["__".join(col) for col in df.columns], name="__".join(indices))
+
+
+def remove_string_spaces(df):
+    for c in df.columns[df.dtypes.eq(object)]:
+        df[c] = df[c].str.strip()
+    # if we have an obj index, strip this
+    if df.index.dtype == object:
+        df.index = df.index.str.strip()
+
+
+def calc_mem(df):
+    return df.memory_usage().sum()/1000000

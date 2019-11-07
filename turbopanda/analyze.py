@@ -12,6 +12,9 @@ import numpy as np
 import pandas as pd
 from sklearn.cluster import FeatureAgglomeration
 
+from .utils import chain_union, remove_multi_index, remove_string_spaces
+from .selection import categorize
+
 
 def _levenshtein_ratio_and_distance(s, t, ratio_calc = False):
     """ levenshtein_ratio_and_distance:
@@ -76,3 +79,35 @@ def agglomerate(columns):
     LM = _levenshtein_matrix(columns)
     fa = FeatureAgglomeration(2).fit(LM)
     return fa.labels_
+
+
+def intersection_grid(indexes):
+    """
+    Given a list of pd.Index, calculates whether any of the values are shared
+    between any of the indexes.
+    """
+    union_l = []
+    for i in range(len(indexes)):
+        for j in range(i+1, len(indexes)):
+            ints = indexes[i].intersection(indexes[j])
+            union_l.append(ints)
+    return chain_union(*union_l)
+
+
+def dataframe_clean(df, cat_thresh=20, def_remove_single_col=True):
+    """ Given a raw, unprocessed, dataframe; clean it and prepare it. """
+    # convert columns to numeric if possible
+    ndf = df.apply(pd.to_numeric, errors="ignore")
+    # if multi-column, concatenate to a single column.
+    remove_multi_index(ndf)
+    # perform categorization
+    categorize(ndf, cat_thresh, def_remove_single_col)
+    # strip column names of spaces either side
+    ndf.columns = ndf.columns.str.strip()
+    # strip spaces within text-based features
+    remove_string_spaces(ndf)
+    # remove spaces/tabs within the column name.
+    ndf.columns = ndf.columns.str.replace(" ", "_").str.replace("\t","_").str.replace("-","")
+    # sort index
+    ndf.sort_index(inplace=True)
+    return ndf

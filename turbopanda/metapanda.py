@@ -10,8 +10,8 @@ import warnings
 import pandas as pd
 
 from .utils import *
-from .selection import get_selector, categorize
-from .analyze import agglomerate
+from .selection import get_selector
+from .analyze import agglomerate, intersection_grid, dataframe_clean
 from .metadata import construct_meta
 
 
@@ -51,20 +51,6 @@ class MetaPanda(object):
 
 
     ############################### HIDDEN FUNCTIONS ##################################
-
-
-    def _remove_MultiIndex(self):
-        if isinstance(self.df_.columns, pd.MultiIndex):
-            indices = [n if n is not None else ("Index%d" % i) for i, n in enumerate(self.df_.columns.names)]
-            self.df_.columns = pd.Index(["__".join(col) for col in self.df_.columns], name="__".join(indices))
-
-
-    def _remove_spaces_in_obj_columns(self):
-        for c in self.df_.columns[self.df_.dtypes.eq(object)]:
-            self.df_[c] = self.df_[c].str.strip()
-        # if we have an object index, strip this string also
-        if self.df_.index.dtype == object:
-            self.df_.index = self.df_.index.str.strip()
 
 
     def _single_merge(self, other, left_on, right_on, join_type, **kwargs):
@@ -114,22 +100,8 @@ class MetaPanda(object):
     @df_.setter
     def df_(self, df):
         if isinstance(df, pd.DataFrame):
-            # convert columns to numeric if possible
-            self._df = df.apply(pd.to_numeric, errors="ignore")
-            # calculate level depth
-            self._levels = self._df.columns.nlevels if isinstance(self._df.columns, pd.MultiIndex) else 1
-            # if multi-column, concatenate to a single column.
-            self._remove_MultiIndex()
-            # perform categorization
-            categorize(self._df, self._cat_thresh, self._def_remove_single_col)
-            # strip column names of spaces either side
-            self._df.columns = self._df.columns.str.strip()
-            # strip spaces within text-based features
-            self._remove_spaces_in_obj_columns()
-            # remove spaces/tabs within the column name.
-            self._df.columns = self._df.columns.str.replace(" ", "_").str.replace("\t","_").str.replace("-","")
-            # sort index
-            self._df.sort_index(inplace=True)
+            # cleans and preprocesses dataframe
+            self._df = dataframe_clean(df, self._cat_thresh, self._def_remove_single_col)
             # construct metadata on columns
             self._meta = construct_meta(self.df_)
         else:
@@ -143,7 +115,7 @@ class MetaPanda(object):
 
     @property
     def memory_(self):
-        return "{:0.3f}MB".format(self.df_.memory_usage().sum() / 1000000)
+        return "{:0.3f}MB".format(calc_mem(self.df_) + calc_mem(self.meta_))
 
 
     ################################ FUNCTIONS ###################################################
@@ -251,7 +223,10 @@ class MetaPanda(object):
         self
         """
         for name, selector in caches.items():
-            self.cache(name, selector)
+            if isinstance(selector, (tuple, list)) and len(selector) > 1:
+                self.cache(name, *selector)
+            else:
+                self.cache(name, selector)
         return self
 
 
@@ -355,3 +330,74 @@ class MetaPanda(object):
             check_list_type(others, MetaPanda)
             raise NotImplementedError
 
+
+    def meta_map(self, name, selectors):
+        """
+        Maps a group of selectors into a column in the meta-information
+        describing some groupings/associations between features.
+
+        For example, your data may come from multiple sources and you wish to
+        identify this within your data.
+
+        Parameters
+        --------
+        name : str
+            The name of this overall grouping
+        selectors : list, tuple or dict
+            At least 2 or more selectors identifying subgroups. If you use
+            cached names, the ID of the cache name is used as an identifier, and
+            likewise with a dict, else list/tuple uses default group1...groupk.
+
+        Returns
+        -------
+        self
+        """
+        instance_check(name, str)
+        # for each selector, get the group view.
+        if isinstance(selectors, dict):
+            cnames = [self.view(sel) for n, sel in selectors.items()]
+            names = selectors.keys()
+        elif isinstance(selectors, (list, tuple)):
+            cnames = [self.view(sel) for sel in selectors]
+            names = [sel if sel in self._select else "group%d"%(i+1)
+                        for i, sel in enumerate(selectors)]
+        else:
+            raise TypeError("'selectors' must be of type [list, tuple, dict]")
+
+        igrid = intersection_grid(cnames)
+        if igrid.shape[0] == 0:
+            NG = pd.concat([
+                    pd.Series(n, index=val) for n, val in zip(names,cnames)
+                ], sort=False, axis=0)
+            NG.name = name
+        else:
+            raise ValueError("shared terms: {} discovered for meta_map.".format(igrid))
+        # merge into meta
+        self.meta_[name] = NG
+        # categorize
+        convert_category(self.meta_, name, NG.unique())
+        return self
+
+
+    def write(self, filename=None, *args, **kwargs):
+        """
+        Saves a MetaPanda to disk.
+
+        Parameters
+        -------
+        filename : str
+            The name of the file to save, or None it will use the name found in MetaPanda
+        *args : list
+            Arguments to pass to pd.to_csv
+        **kwargs : dict
+            Keywords to pass to pd.to_csv
+        """
+        if filename is not None:
+            # uses the name stored in mp
+            directory, name = filename.rsplit("/",1)
+            jname = name.split(".")[0]
+            self.df_.to_csv(filename, sep=",",*args,**kwargs)
+            self.meta_.to_csv(directory+"/"+jname+"__meta.csv",sep=",")
+        else:
+            self.df_.to_csv(self.name_+".csv", sep=",",*args,**kwargs)
+            self.meta_.to_csv(self.name_+"__meta.csv",sep=",")

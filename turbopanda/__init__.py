@@ -1,7 +1,7 @@
 # import
 
 """ This block handles the import needs of the package """
-hard_dependencies = ("numpy", "scipy", "pandas")
+hard_dependencies = ("numpy", "scipy", "pandas", "sklearn")
 missing_dependencies = []
 
 for dependency in hard_dependencies:
@@ -19,6 +19,7 @@ del hard_dependencies, dependency, missing_dependencies
 
 from .metapanda import MetaPanda
 from .fileio import *
+from .plot import *
 
-__version__ = "0.0.7"
+__version__ = "0.1.0"
 __name__ = "turbopanda"

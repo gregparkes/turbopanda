@@ -11,7 +11,7 @@ import pandas as pd
 
 from .utils import *
 from .selection import get_selector
-from .analyze import agglomerate, intersection_grid, dataframe_clean
+from .analyze import agglomerate, intersection_grid, dataframe_clean, dist
 from .metadata import construct_meta
 
 
@@ -49,24 +49,6 @@ class MetaPanda(object):
         self.name_ = name
         self._select = {}
 
-
-    ############################### HIDDEN FUNCTIONS ##################################
-
-
-    def _single_merge(self, other, left_on, right_on, join_type, **kwargs):
-        # determine index use
-        left_ind = True if left_on is None else False
-        right_ind = True if right_on is None else False
-        if left_ind and not right_ind:
-            ndf = pd.merge(self.df_, other.df_, left_index=True, right_on=right_on, how=join_type, **kwargs)
-        elif not left_ind and right_ind:
-            ndf = pd.merge(self.df_, other.df_, left_on=left_on, right_index=True, how=join_type, **kwargs)
-        elif left_ind and right_ind:
-            ndf = pd.merge(self.df_, other.df_, left_index=True, right_index=True, how=join_type,**kwargs)
-        else:
-            ndf = pd.merge(self.df_, other.df_, left_on=left_on, right_on=right_on, how=join_type,**kwargs)
-
-        return ndf
 
     ############################ OVERRIDEN OPERATIONS #######################################
 
@@ -116,6 +98,17 @@ class MetaPanda(object):
     @property
     def memory_(self):
         return "{:0.3f}MB".format(calc_mem(self.df_) + calc_mem(self.meta_))
+
+
+    @property
+    def name_(self):
+        return self._name
+    @name_.setter
+    def name_(self, n):
+        if isinstance(n, str):
+            self._name = n
+        else:
+            raise TypeError("'name_' must be of type str")
 
 
     ################################ FUNCTIONS ###################################################
@@ -196,7 +189,6 @@ class MetaPanda(object):
         -------
         self
         """
-        instance_check(name, str)
         if name not in self._select:
             self._select[name] = selector
         else:
@@ -278,57 +270,75 @@ class MetaPanda(object):
         Parameters
         -------
         functions : list
-            Choose from:
+            Choose any combination of:
                 'agglomerate' - uses Levenshtein edit distance to determine how
-                similar features are and uses FeatureAgglomeration to label each
-                subgroup.
+                    similar features are and uses FeatureAgglomeration to label each
+                    subgroup.
+                'approx_dist' - estimates which statistical distribution each feature
+                    belongs to.
 
         Returns
         ------
         self
         """
+        options = ["agglomerate", "approx_dist"]
+
         if "agglomerate" in functions:
             self.meta_["agglomerate"] = agglomerate(self.df_.columns)
+        if "approx_dist" in functions:
+            self.meta_["approx_dist"] = dist(self.df_)
         return self
 
 
-    def merge(self, others, ons, how="inner", **kwargs):
+    def transform(self, selector, function, *args):
         """
-        Chains together database merging operations applied on to this MetaPanda object
-        this object is the left-most.
-
-        Performs changes to self.df_ and self.meta_.
+        Performs an inplace transformation to a group of columns within the df_
+        attribute.
 
         Parameters
         -------
-        others : MetaPanda or list/tuple of MetaPanda
-            A single or multiple MetaPanda object to integrate
-        ons : str/list/tuple
-            Column name(s) to join with, INCLUDING this MetaPanda's column name,
-            if None, uses the index. List size must be p+1 where p is the number of
-            other MetaPanda frames.
-        how : str/list/tuple
-            For each merge, determines which join to use. By default does inner
-            join on all. Choose from [inner, outer, left, right]
-        kwargs : dict
-            Additional keywords to pass to pd.merge
+        selector : str
+            Contains either types, meta column names, column names or regex-compliant strings
+            Allows user to specify subset to rename
+        function : function
+            A function taking the pd.Series x_i as input and returning pd.Series y_i as output
+        args : list
+            Additional arguments to pass to function(x, *args)
 
         Returns
         -------
         self
         """
-        # perform checks
-        instance_check(ons, (list, tuple))
-        # check to make sure ons is length of others + 1
-        if isinstance(others, MetaPanda):
-            ndf = self._single_merge(others, left_on=ons[0], right_on=ons[1],
-                                     join_type=how, **kwargs)
-            # append string names
-            ndf.columns = attach_name(self, others)
-            return ndf
-        elif isinstance(others, (list, tuple)):
-            check_list_type(others, MetaPanda)
-            raise NotImplementedError
+        # perform inplace
+        selection = get_selector(self.df_, self.meta_, self._select, selector,
+                                 raise_error=False, select_join="OR")
+        # modify
+        if callable(function) and selection.shape[0] > 0:
+            self.df_.loc[:, selection] = self.df_.loc[:, selection].apply(lambda x: function(x, *args))
+        return self
+
+
+    def multi_transform(self, ops):
+        """
+        Performs multiple inplace transformations to a group of columns within the df_
+        attribute.
+
+        Parameters
+        -------
+        ops : list of 2-tuple
+            Containing:
+                1. selector - Contains either types, meta column names, column names or regex-compliant strings
+            Allows user to specify subset to rename
+                2. function - A function taking the pd.Series x_i as input and returning pd.Series y_i as output
+
+        Returns
+        -------
+        self
+        """
+        is_twotuple(ops)
+        for op in ops:
+            self.transform(op[0], op[1])
+        return self
 
 
     def meta_map(self, name, selectors):
@@ -352,7 +362,6 @@ class MetaPanda(object):
         -------
         self
         """
-        instance_check(name, str)
         # for each selector, get the group view.
         if isinstance(selectors, dict):
             cnames = [self.view(sel) for n, sel in selectors.items()]
@@ -393,11 +402,14 @@ class MetaPanda(object):
             Keywords to pass to pd.to_csv
         """
         if filename is not None:
-            # uses the name stored in mp
-            directory, name = filename.rsplit("/",1)
-            jname = name.split(".")[0]
             self.df_.to_csv(filename, sep=",",*args,**kwargs)
-            self.meta_.to_csv(directory+"/"+jname+"__meta.csv",sep=",")
+            # uses the name stored in mp
+            dsplit = filename.rsplit("/",1)
+            if len(dsplit) == 1:
+                self.meta_.to_csv(dsplit[0].split(".")[0]+"__meta.csv",sep=",")
+            else:
+                directory, name = dsplit
+                self.meta_.to_csv(directory+"/"+name.split(".")[0]+"__meta.csv",sep=",")
         else:
             self.df_.to_csv(self.name_+".csv", sep=",",*args,**kwargs)
             self.meta_.to_csv(self.name_+"__meta.csv",sep=",")

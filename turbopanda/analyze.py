@@ -11,9 +11,11 @@ Some analysis functions to apply to meta columns.
 import numpy as np
 import pandas as pd
 from sklearn.cluster import FeatureAgglomeration
+from scipy import stats
 
 from .utils import chain_union, remove_multi_index, remove_string_spaces
 from .selection import categorize
+from .distribution import Distribution
 
 
 def _levenshtein_ratio_and_distance(s, t, ratio_calc = False):
@@ -81,6 +83,20 @@ def agglomerate(columns):
     return fa.labels_
 
 
+def dist(df):
+    """ Given pandas.DataFrame, find the best distribution for all """
+    # select numerical columns
+    d = Distribution()
+    # fit each numerical column
+    numcols = df.columns[df.dtypes.eq(float)]
+    models = [d.Fit(df[col].dropna()) for col in numcols]
+    model_names = [name if val >= 0.05 else np.nan for name, val in models]
+    not_numcols = df.columns.symmetric_difference(numcols)
+    return pd.concat([
+        pd.Series(np.nan,not_numcols), pd.Series(model_names,numcols)
+    ])
+
+
 def intersection_grid(indexes):
     """
     Given a list of pd.Index, calculates whether any of the values are shared
@@ -97,7 +113,7 @@ def intersection_grid(indexes):
 def dataframe_clean(df, cat_thresh=20, def_remove_single_col=True):
     """ Given a raw, unprocessed, dataframe; clean it and prepare it. """
     # convert columns to numeric if possible
-    ndf = df.apply(pd.to_numeric, errors="ignore")
+    ndf = df.apply(pd.to_numeric, errors="ignore", downcast="integer")
     # if multi-column, concatenate to a single column.
     remove_multi_index(ndf)
     # perform categorization

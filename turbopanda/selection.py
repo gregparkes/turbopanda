@@ -19,23 +19,46 @@ from .utils import is_boolean_series, chain_intersection, chain_union, \
 __all__ = ["get_selector", "categorize"]
 
 
+def _accepted_dtypes():
+    return [
+         float, int, bool, "category", "float", "int", "bool", "boolean",
+         np.float64, np.int64, object, np.int32, np.int16, np.int8,
+         np.float32, np.float16
+    ]
+
+
+def _convert_mapper():
+    return {
+         "category": pd.CategoricalDtype,
+         "float": np.float64,
+         "int": np.int64,
+         "bool": np.bool,
+         "boolean": np.bool
+    }
+
+
 def _get_selector_item(df, meta, cached, selector, raise_error=True):
-    if selector in [
-            float, int, bool, "category", "float", "int", "bool", "boolean",
-            np.float64, np.int64, object
-        ]:
+    """
+    Accepts:
+        type [object, int, float, np.float]
+        callable (function)
+        pd.Index
+        str [regex, df.column name, cached name, meta.column name (bool only)]
+    """
+    if isinstance(selector, pd.Index):
+        # check to see if values in selector match df.column names
+        return meta.index.intersection(selector)
+
+    elif selector in _accepted_dtypes():
         # if it's a string option, convert to type
-        string_to_type = {"category": pd.CategoricalDtype, "float": np.float64,
-                          "int": np.int64, "bool": np.bool, "boolean": np.bool,
-                          float: np.float64, int: np.int64, object:object,
-                          np.float64:np.float64, np.int64:np.int64, bool:np.bool}
-        nk = string_to_type[selector]
-        return df.columns[df.dtypes.eq(nk)]
+        if selector in _convert_mapper():
+            selector = _convert_mapper()[selector]
+        return df.columns[df.dtypes.eq(selector)]
     # check if selector is a callable object (i.e function)
     elif callable(selector):
         # call the selector, assuming it takes a pandas.DataFrame argument. Must
         # return a boolean Series.
-        ser = selector(df)
+        ser = df.apply(selector)
         # perform check
         is_boolean_series(ser)
         # check lengths
@@ -47,8 +70,8 @@ def _get_selector_item(df, meta, cached, selector, raise_error=True):
         else:
             return df.columns[ser]
     elif isinstance(selector, str):
-        # check if the key is in the meta_ column names
-        if selector in meta:
+        # check if the key is in the meta_ column names, only if a boolean column
+        if (selector in meta) and (meta[selector].dtype == bool):
             return df.columns[meta[selector]]
         elif selector in cached:
             # recursively go down the stack, and fetch the string selectors from that.
@@ -72,6 +95,9 @@ def _get_selector_item(df, meta, cached, selector, raise_error=True):
 
 
 def get_selector(df, meta, cached, selector, raise_error=True, select_join="OR"):
+    """
+    Selector must be a list/tuple of selectors.
+    """
     if isinstance(selector, (tuple, list)):
         # iterate over all selector elements and get pd.Index es.
         for s in selector:
@@ -91,7 +117,7 @@ def categorize(df, cat_thresh=20, remove_single_col=True):
     col_renames = {}
     # iterate over all column names.
     for c in df.columns:
-        if df[c].dtype in [np.int64, object]:
+        if df[c].dtype in [np.int64, object] and df[c].count()==df.shape[0]:
             un = df[c].unique()
             if un.shape[0] == 1:
                 if remove_single_col:

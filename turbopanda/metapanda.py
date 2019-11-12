@@ -241,7 +241,7 @@ class MetaPanda(object):
 
         Returns
         -------
-        self
+        self or pd.Index
         """
         # check ops is right format
         is_twotuple(ops)
@@ -252,6 +252,74 @@ class MetaPanda(object):
 
         for op in ops:
             curr_cols = curr_cols.str.replace(*op)
+
+        if apply:
+            # set to df_ and meta_
+            self.df_.rename(columns=dict(zip(sel_cols, curr_cols)), inplace=True)
+            self.meta_.rename(index=dict(zip(sel_cols, curr_cols)), inplace=True)
+            return self
+        else:
+            return curr_cols
+
+
+    def add_prefix(self, pref, selector=None, apply=True):
+        """
+        Adds a prefix to all of the columns or selected columns.
+
+        Parameters
+        -------
+        pref : str
+            The prefix to add
+        selector : None, str, or tuple args
+            Contains either types, meta column names, column names or regex-compliant strings
+            Allows user to specify subset to rename
+        apply : bool
+            If true, performs operation immediately on dataset, else returns the
+            new appearance only.
+
+        Returns
+        ------
+        self or pd.Index
+        """
+        if selector is not None:
+            sel_cols = get_selector(self.df_, self.meta_, self._select, selector, select_join="OR")
+        else:
+            sel_cols = self.df_.columns
+        curr_cols = pref + sel_cols
+
+        if apply:
+            # set to df_ and meta_
+            self.df_.rename(columns=dict(zip(sel_cols, curr_cols)), inplace=True)
+            self.meta_.rename(index=dict(zip(sel_cols, curr_cols)), inplace=True)
+            return self
+        else:
+            return curr_cols
+
+
+    def add_suffix(self, suf, selector=None, apply=True):
+        """
+        Adds a suffix to all of the columns or selected columns.
+
+        Parameters
+        -------
+        suf : str
+            The prefix to add
+        selector : None, str, or tuple args
+            Contains either types, meta column names, column names or regex-compliant strings
+            Allows user to specify subset to rename
+        apply : bool
+            If true, performs operation immediately on dataset, else returns the
+            new appearance only.
+
+        Returns
+        ------
+        self or pd.Index
+        """
+        if selector is not None:
+            sel_cols = get_selector(self.df_, self.meta_, self._select, selector, select_join="OR")
+        else:
+            sel_cols = self.df_.columns
+        curr_cols = sel_cols + suf
 
         if apply:
             # set to df_ and meta_

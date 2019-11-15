@@ -70,7 +70,8 @@ The raw pandas object can be accessed through the `df_` attribute:
 >>> g.df_.head()
 ```
 
-| - | **Protein_IDs** | **Majority_protein_IDs** | **Protein_names** | **...** |
+| | **Protein_IDs** | **Majority_protein_IDs** | **Protein_names** | **...** |
+| --- | --------------------- | -------------------------- | ------------------- | ---------------- |
 | 0 | Q96IC2;Q96IC2-2;H3BM72;H3BV93;H3BSC5 | Q96IC2;Q96IC2-2;H3BM72;H3BV93;H3BSC5 | Putative RNA exonuclease NEF-sp | ... |
 | 1 | H0YGH4;P01023;H0YGH6;F8W7L3 | H0YGH4;P01023 | Alpha-2-macroglobulin | ... |
 | 2 | A8K2U0;F5H2W3;H0YGG5;F5H2Z2;F5GXP1 | A8K2U0;F5H2W3;H0YGG5;F5H2Z2 | Alpha-2-macroglobulin-like protein 1 | ... |
@@ -84,6 +85,7 @@ Whereas **metadata** can be accessed through the `meta_` which is automatically 
 ```
 
 | - | **mytypes** | **is_unique** | **potential_id** | **potential_stacker** |
+| --- | -------- | -------- |---------- | --------- |
 | Protein_IDs | object | True | True | True |
 | Majority_protein_IDs | object | True | True | True |
 | Protein_names | object | False | True | True |

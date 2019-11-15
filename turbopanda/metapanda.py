@@ -646,6 +646,31 @@ class MetaPanda(object):
         return self
 
 
+    def corr(self, *args, **kwargs):
+        """
+        Computes the pearson or spearman-rank correlation between every pair
+        of columns and produces a correlation matrix of shape (p, p).
+
+        This function can handle missing values between pairs, correlations
+        between continuous-continuous columns, continuous-discrete pairings and
+        discrete-discrete pairings.
+        Columns that are of type 'object' are automatically dropped.
+
+        No changes are made to the MetaPanda object.
+
+        Parameters
+        --------
+        args/kwargs :  list/dict
+            parameters to pass to appropriate scipy function
+
+        Returns
+        -------
+        corr : pd.DataFrame
+            correlation matrix
+        """
+        return NotImplemented
+
+
     def write(self, filename=None, *args, **kwargs):
         """
         Saves a MetaPanda to disk.

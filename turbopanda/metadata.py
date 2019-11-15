@@ -39,5 +39,5 @@ def construct_meta(df):
         "mtypes": df.dtypes.values,
         "is_unique": is_uniq, "potential_id": is_id, "potential_stacker":is_stacked
     }, index=colnames)
-
+    _meta.index.name = "colnames"
     return _meta

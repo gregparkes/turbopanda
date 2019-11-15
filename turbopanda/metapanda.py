@@ -24,6 +24,7 @@ class MetaPanda(object):
     def __init__(self,
                  dataset,
                  name="DataSet",
+                 key=None,
                  cat_thresh=20,
                  default_remove_single_col=True):
         """
@@ -36,6 +37,8 @@ class MetaPanda(object):
             The raw dataset to create as a metadataframe.
         name : str
             Gives the metaframe a name, which comes into play with merging, for instance
+        key : None, str
+            Defines the primary key (unique identifier), if None does nothing.
         cat_thresh : int
             The threshold until which 'category' variables are not created
         default_remove_one_column : bool
@@ -84,8 +87,11 @@ class MetaPanda(object):
         if isinstance(df, pd.DataFrame):
             # cleans and preprocesses dataframe
             self._df = dataframe_clean(df, self._cat_thresh, self._def_remove_single_col)
-            # construct metadata on columns
-            self._meta = construct_meta(self.df_)
+            self._meta = construct_meta(self._df)
+            if "colnames" not in self._df.columns:
+                self._df.columns.name = "colnames"
+            if "counter" not in self._df.columns:
+                self._df.index.name = "counter"
         else:
             raise TypeError("'df' must be of type [pd.DataFrame]")
 
@@ -93,6 +99,13 @@ class MetaPanda(object):
     @property
     def meta_(self):
         return self._meta
+    @meta_.setter
+    def meta_(self, meta):
+        if isinstance(meta, pd.DataFrame):
+            self._meta = dataframe_clean(meta, self._cat_thresh, self._def_remove_single_col)
+            self._meta.index.name = "colnames"
+        else:
+            raise TypeError("'meta' must be of type [pd.DataFrame]")
 
 
     @property
@@ -146,7 +159,7 @@ class MetaPanda(object):
             The list of column names NOT selected, or empty
         """
         selected_list = get_selector(self.df_, self.meta_, self._select, selector, select_join="OR")
-        return self.df_.columns.symmetric_difference(selected_list)
+        return self.df_.columns.drop(selected_list)
 
 
     def drop(self, *selector):
@@ -195,6 +208,28 @@ class MetaPanda(object):
             warnings.warn("cache name '{}' already exists in .cache, overriding".format(name), UserWarning)
             self._select[name] = selector
         return self
+
+
+    def keys(self, prim_key=None, second_key=None):
+        """
+        Defines primary and secondary ID keys to the dataset. A primary key is a
+        unique identifier to each row within a dataset as defined by third normal
+        form theory.
+
+        Parameters
+        --------
+        prim_key : str, None
+            If None, creates a primary key from scratch, else assigns column name
+            as this key.
+        second_key : None, str, list/tuple
+            Assigns one or more columns to be 'secondary' keys for other MetaPanda
+            datasets.
+
+        Returns
+        -------
+        self
+        """
+        return NotImplemented
 
 
     def multi_cache(self, **caches):
@@ -453,6 +488,161 @@ class MetaPanda(object):
         self.meta_[name] = NG
         # categorize
         convert_category(self.meta_, name, NG.unique())
+        return self
+
+
+    def sort_columns(self, by="alphabet", ascending=True):
+        """
+        Sort by any categorical meta_ column or "alphabet".
+
+        Parameters
+        -------
+        by : str or list/tuple of str
+            Sorts the columns by order of what terms are given. "alphabet" refers
+            to the column name alphabetical sorting.
+        ascending : bool or list/tuple of bool
+            Sort ascending vs descending. Specify list for multiple sort orders.
+
+        Returns
+        -------
+        self
+        """
+        if isinstance(by, str):
+            by = "colnames" if by == "alphabet" else by
+            if (by in self.meta_) or (by == "colnames"):
+                # sort the meta
+                self.meta_.sort_values(by=by, axis=0, ascending=ascending, inplace=True)
+                # sort the df
+                self.df_ = self.df_.reindex(self.meta_.index, axis=1)
+        elif isinstance(by, (list, tuple)) and isinstance(ascending, (list,tuple)):
+            if "alphabet" in by:
+                by[by.index("alphabet")] = "colnames"
+            if len(by) != len(ascending):
+                raise ValueError("the length of 'by' {} must equal the length of 'ascending' {}".format(len(by),len(ascending)))
+            if all([(col in self.meta_) or (col == "colnames") for col in by]):
+                # sort meta
+                self.meta_.sort_values(by=by, axis=0, ascending=ascending, inplace=True)
+                # sort df
+                self._df = self.df_.reindex(self.meta_.index, axis=1)
+        else:
+            raise TypeError("'by' must be of type [str, list, tuple], not {}".format(type(by)))
+
+
+    def expand(self, column, sep=","):
+        """
+        Expands out a 'stacked' id column to a longer-form dataframe, and re-merging
+        the data back in.
+
+        Parameters
+        -------
+        column : str
+            The name of the column to expand, must be of datatype [object]
+        sep : str
+            The separating string to use.
+
+        Returns
+        -------
+        self
+        """
+        if column not in self.df_.columns:
+            raise ValueError("column '{}' not found in df".format(column))
+        if not self.meta_.loc[column, "potential_stacker"]:
+            raise ValueError("column '{}' not found to be stackable".format(column))
+
+        self._df = pd.merge(
+            # expand out id column
+            self.df_[column].str.strip().str.split(sep).explode(),
+            self.df_.dropna(subset=[column]).drop(column, axis=1),
+            left_index=True, right_index=True
+        )
+        self._df.columns.name = "colnames"
+        return self
+
+
+    def shrink(self, column, sep=","):
+        """
+        Shrinks  down a 'duplicated' id column to a shorter-form dataframe, and re-merging
+        the data back in.
+
+        Parameters
+        -------
+        column : str
+            The name of the duplicated column to shrink, must be of datatype [object]
+        sep : str
+            The separating string to add.
+
+        Returns
+        -------
+        self
+        """
+        if column not in self.df_.columns:
+            raise ValueError("column '{}' not found in df".format(column))
+        if self.meta_.loc[column, "is_unique"]:
+            raise ValueError("column '{}' found to be unique".format(column))
+
+        # no changes made to columns, use hidden df
+        self._df = pd.merge(
+            # shrink down id column
+            self.df_.groupby("counter")[column].apply(lambda x: x.str.cat(sep=sep)),
+            self.df_.drop(column, axis=1).drop_duplicates(keep="first").set_index("counter"),
+            left_index=True, right_index=True
+        )
+        self._df.columns.name = "colnames"
+        return self
+
+
+    def split_categories(self, column, sep=",", renames=None):
+        """
+        Splits a column into N categorical variables to be associated with df_.
+
+        Parameters
+        -------
+        column : str
+            The name of the column to split, must be of datatype [object], and contain values sep inside
+        sep : str
+            The separating string to add.
+        renames : None or list of str
+            If list of str, must be the same dimension as expanded columns
+        """
+        if column not in self.df_.columns:
+            raise ValueError("column '{}' not found in df".format(column))
+
+        exp = self.df_[column].str.strip().str.split(sep, expand=True)
+        # calculate column names
+        if renames is None:
+            cnames = ["cat%d" % (i+1) for i in range(exp.shape[1])]
+        else:
+            cnames = renames if len(renames) == exp.shape[1] else ["cat%d" % (i+1) for i in range(exp.shape[1])]
+
+        self._df = self.df_.join(
+            exp.rename(columns=dict(zip(range(exp.shape[1]), cnames)))
+        )
+        self._df.columns.name = "colnames"
+        return self
+
+
+    def melt(self, id_vars=["counter"], *args, **kwargs):
+        """
+        Performs a 'melt' operation on the DataFrame, with some minor adjustments to
+        maintain the integrity of the MetaPandaframe.
+
+        Parameters
+        --------
+        id_vars : list, optional
+            Column(s) to use as identifier variables.
+        args, kwargs : list/dict
+            arguments to pass to pandas.DataFrame.melt
+
+        Returns
+        -------
+        self
+        """
+        if isinstance(id_vars, list) or id_vars is None:
+            if "counter" not in id_vars:
+                id_vars.insert(0, "counter")
+            # modify df by resetting and melting
+            self.df_ = (self.df_.reset_index()
+                .melt(id_vars=id_vars, *args, **kwargs))
         return self
 
 

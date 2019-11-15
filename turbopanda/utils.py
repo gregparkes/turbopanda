@@ -112,7 +112,7 @@ def remove_string_spaces(df):
     for c in df.columns[df.dtypes.eq(object)]:
         df[c] = df[c].str.strip()
     # if we have an obj index, strip this
-    if df.index.dtype == object:
+    if df.index.dtype == object and (not isinstance(df.index, pd.MultiIndex)):
         df.index = df.index.str.strip()
 
 

@@ -57,7 +57,7 @@ def read(filename, name=None, metafile=None, *args, **kwargs):
 
     if metafile is not None:
         met = pd.read_csv(metafile, index_col=0, header=0, sep=",")
-        mp._meta = met
+        mp.meta_ = met
     else:
         # try to find a metafile in the same directory.
         dir_files = os.listdir(directory)
@@ -71,7 +71,8 @@ def read(filename, name=None, metafile=None, *args, **kwargs):
             if potential_name in dir_files:
                 met = pd.read_csv(directory+"/"+potential_name, index_col=0, header=0,sep=",")
                 # add to mp
-                mp._meta = met
+                mp.meta_ = met
+
     return mp
 
 

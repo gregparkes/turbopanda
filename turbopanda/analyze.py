@@ -124,6 +124,4 @@ def dataframe_clean(df, cat_thresh=20, def_remove_single_col=True):
     remove_string_spaces(ndf)
     # remove spaces/tabs within the column name.
     ndf.columns = ndf.columns.str.replace(" ", "_").str.replace("\t","_").str.replace("-","")
-    # sort index
-    ndf.sort_index(inplace=True)
     return ndf

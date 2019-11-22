@@ -9,8 +9,7 @@ Handling the construction and use of metadata associated with MetaPanda
 """
 
 import pandas as pd
-from scipy.stats import kstest
-from .utils import not_column_float, is_column_float, is_column_object
+from .utils import not_column_float, is_column_object
 
 
 def is_unique_ID(ser):

@@ -18,47 +18,6 @@ from sklearn.model_selection import learning_curve
 __all__ = ["missing"]
 
 
-def missing(df, size_cutoff = 25000, kwargs={}):
-    """
-    Given a pandas.DataFrame, generate a plot of the missing data within this frame.
-
-    Parameters
-    -------
-    df : pandas.DataFrame
-    	a dataframe dataset
-    size_cutoff : int
-    	for 'clustermap'; the number of rows before we refuse to cluster
-    kwargs : dict
-    	additional keyword arguments to pass to either heatmap or clustermap
-
-    Returns
-    -------
-    fig : matplotlib.pyplot.Figure
-    	The figure object to plot by your choice.
-    """
-    if isinstance(df, pd.DataFrame):
-        def print_prop(out):
-            # prop missing data
-            prop = 1 - (out.values.sum() / (out.shape[0]*out.shape[1]))
-            print("Printing DF: missing data = {}%".format(prop*100))
-            return
-
-        # calculate length based on size of DF
-        ylen = int(df.shape[1] / 4.) + 1
-
-        # wrangle data
-        out = df.notnull().astype(np.uint8).T
-
-        fig, ax = plt.subplots(figsize=(16, ylen))
-        # use seaborn's heatmap
-        ax.imshow(out, cmap="Greys", aspect="auto", **kwargs)
-        # make sure to plot ALL labels. manual override
-        ax.set_yticks(range(df.shape[1]))
-        ax.set_yticklabels(df.columns.values)
-        print_prop(out)
-        return fig
-
-
 def mean_test(cv_results):
     return cv_results[cv_results.columns[cv_results.columns.str.contains("^split[0-9]+_test_score$")]]
 

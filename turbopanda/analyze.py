@@ -11,7 +11,6 @@ Some analysis functions to apply to meta columns.
 import numpy as np
 import pandas as pd
 from sklearn.cluster import FeatureAgglomeration
-from scipy import stats
 
 from .utils import chain_union, remove_multi_index, remove_string_spaces
 from .selection import categorize

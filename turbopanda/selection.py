@@ -45,10 +45,11 @@ def _get_selector_item(df, meta, cached, selector, raise_error=True):
         pd.Index
         str [regex, df.column name, cached name, meta.column name (bool only)]
     """
+    if selector is None:
+        return pd.Index([], name=df.columns.name)
     if isinstance(selector, pd.Index):
         # check to see if values in selector match df.column names
         return meta.index.intersection(selector)
-
     elif selector in _accepted_dtypes():
         # if it's a string option, convert to type
         if selector in _convert_mapper():
@@ -58,7 +59,7 @@ def _get_selector_item(df, meta, cached, selector, raise_error=True):
     elif callable(selector):
         # call the selector, assuming it takes a pandas.DataFrame argument. Must
         # return a boolean Series.
-        ser = df.apply(selector)
+        ser = df.aggregate(selector, axis=0)
         # perform check
         is_boolean_series(ser)
         # check lengths
@@ -100,12 +101,11 @@ def get_selector(df, meta, cached, selector, raise_error=True, select_join="OR")
     """
     if isinstance(selector, (tuple, list)):
         # iterate over all selector elements and get pd.Index es.
-        for s in selector:
-            s_groups = [_get_selector_item(df, meta, cached, s, raise_error) for s in selector]
-            if select_join == "AND":
-                return chain_intersection(*s_groups)
-            elif select_join == "OR":
-                return chain_union(*s_groups)
+        s_groups = [_get_selector_item(df, meta, cached, s, raise_error) for s in selector]
+        if select_join == "AND":
+            return chain_intersection(*s_groups)
+        elif select_join == "OR":
+            return chain_union(*s_groups)
         # by default, use intersection for AND, union for OR
     else:
         # just one item, return asis

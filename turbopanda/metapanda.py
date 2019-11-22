@@ -7,6 +7,7 @@ Created on Fri Nov  1 15:55:38 2019
 """
 
 import warnings
+import functools
 import pandas as pd
 
 from .utils import *
@@ -25,6 +26,7 @@ class MetaPanda(object):
                  dataset,
                  name="DataSet",
                  key=None,
+                 mode="instant",
                  cat_thresh=20,
                  default_remove_single_col=True):
         """
@@ -39,6 +41,10 @@ class MetaPanda(object):
             Gives the metaframe a name, which comes into play with merging, for instance
         key : None, str
             Defines the primary key (unique identifier), if None does nothing.
+        mode : str
+            Choose from ['instant', 'delay']
+            If instant, executes all functions immediately inplace
+            If delay, builds a task graph and then executes inplace when 'compute()' is called
         cat_thresh : int
             The threshold until which 'category' variables are not created
         default_remove_one_column : bool
@@ -50,21 +56,61 @@ class MetaPanda(object):
         # set using property
         self.df_ = dataset
         self.name_ = name
+        self.mode_ = mode
         self._select = {}
+        self._pipe = []
 
 
     ############################ OVERRIDEN OPERATIONS #######################################
 
 
+    def _actionable(function):
+        @functools.wraps(function)
+        def new_function(self, *args, **kwargs):
+            if self.mode_ == "delay":
+                self._pipe.append((function.__name__, args, kwargs))
+            else:
+                function(self, *args, **kwargs)
+                return self
+
+
+    def _rename_columns(self, old, new):
+        self.df_.rename(columns=dict(zip(old, new)), inplace=True)
+        self.meta_.rename(index=dict(zip(old, new)), inplace=True)
+
+
+    def _drop_columns(self, select):
+        if select.size > 0:
+            self.df_.drop(select, axis=1, inplace=True)
+            self.meta_.drop(select, axis=0, inplace=True)
+
+
+    def _add_pipe(self, fn, *fargs, **fkwargs):
+        self._pipe.append((fn, fargs, fkwargs))
+
+
+    def _apply_function(self, fn, *fargs, **fkwargs):
+        if hasattr(self.df_, fn):
+            f = getattr(self.df_, fn)
+            ndf = f(*fargs, **fkwargs)
+            if isinstance(ndf, pd.DataFrame):
+                self.df_ = ndf
+                return self
+            else:
+                raise TypeError("function '{}' did not return pd.DataFrame".format(fn))
+        else:
+            raise ValueError("function '{}' not recognized in pandas.DataFrame.* API".format(fn))
+
+
     def __getitem__(self, selector):
-        # firstly check if 'key' is a datatype to keep!#
-        sel = get_selector(self.df_, self.meta_, self._select, selector, select_join="OR")
-        return self.df_[sel].squeeze()
+        sel = self.view(selector)
+        if sel.size > 0:
+            return self.df_[sel].squeeze()
 
 
     def __delitem__(self, selector):
         # drops columns inplace
-        sel = get_selector(self.df_, self.meta_, self._select, selector, select_join="OR")
+        sel = self.view(selector)
         if sel.shape[0] > 0:
             self.df_.drop(sel, axis=1, inplace=True)
             # drop meta
@@ -72,8 +118,8 @@ class MetaPanda(object):
 
 
     def __repr__(self):
-        return "MetaPanda({}(n={}, p={}, mem={}))".format(self.name_,
-            self.df_.shape[0], self.df_.shape[1], self.memory_)
+        return "MetaPanda({}(n={}, p={}, mem={}), mode='{}')".format(self.name_,
+            self.df_.shape[0], self.df_.shape[1], self.memory_, self.mode_)
 
 
     ############################### PROPERTIES ##############################################
@@ -124,12 +170,42 @@ class MetaPanda(object):
             raise TypeError("'name_' must be of type str")
 
 
+    @property
+    def mode_(self):
+        return self._mode
+    @mode_.setter
+    def mode_(self, mode):
+        if mode in ["instant", "delay"]:
+            self._mode = mode
+        else:
+            raise ValueError("'mode' must be ['instant', 'delay'], not '{}'".format(mode))
+
+
     ################################ FUNCTIONS ###################################################
+
+
+    def head(self, k=5):
+        """
+        Simply displays the top k rows of the pandas.DataFrame. This function is not affected by
+        the 'mode' parameter.
+
+        Parameters
+        --------
+        k : int
+            Must be 0 < k < n.
+
+        Returns
+        -------
+        ndf_ : pandas.DataFrame
+            First k rows of self.df_
+        """
+        return self.df_.head(k)
 
 
     def view(self, *selector):
         """
-        Select merely returns the columns of interest selected using this selector.
+        Select merely returns the columns of interest selected using this selector. This function
+        is not affected by the 'mode' parameter.
 
         Parameters
         -------
@@ -141,12 +217,16 @@ class MetaPanda(object):
         sel : list
             The list of column names selected, or empty
         """
-        return get_selector(self.df_, self.meta_, self._select, selector, select_join="OR")
+        sel = get_selector(self.df_, self.meta_, self._select, selector, select_join="OR")
+        if sel.shape[0] == 0:
+            warnings.warn("selection: '{}' was empty, no columns selected.".format(selector), UserWarning)
+        return sel
 
 
     def view_not(self, *selector):
         """
-        Select merely returns the columns of interest NOT selected using this selector.
+        Select merely returns the columns of interest NOT selected using this selector. This function
+        is not affected by the 'mode' parameter.
 
         Parameters
         -------
@@ -158,8 +238,33 @@ class MetaPanda(object):
         sel : list
             The list of column names NOT selected, or empty
         """
-        selected_list = get_selector(self.df_, self.meta_, self._select, selector, select_join="OR")
-        return self.df_.columns.drop(selected_list)
+        return self.df_.columns.drop(self.view(*selector))
+
+
+    @_actionable
+    def apply(self, f_name, *f_args, **f_kwargs):
+        """
+        Applies a pandas.DataFrame.* function to the MetaPanda dataset.
+
+        e.g mdf.apply("groupby", ["counter","refseq_id"], as_index=False)
+            applies self.df_.groupby() to data and return value is stored in df_
+            assumes pandas.DataFrame is returned.
+
+        Parameters
+        -------
+        f_name : str
+            The name of the function
+        f_args : list/tuple
+            Arguments to pass to the function
+        f_kwargs : dict
+            Keyword arguments to pass to the function
+
+        Returns
+        -------
+        self
+        """
+        self._apply_function(f_name, *f_args, **f_kwargs)
+        return self
 
 
     def drop(self, *selector):
@@ -177,11 +282,7 @@ class MetaPanda(object):
         self
         """
         # perform inplace
-        selection = get_selector(self.df_, self.meta_, self._select, selector,
-                                 raise_error=False, select_join="OR")
-        if selection.shape[0] > 0:
-            self.df_.drop(selection, axis=1, inplace=True)
-            self.meta_.drop(selection, axis=0, inplace=True)
+        self._drop_columns(self.view(*selector))
         return self
 
 
@@ -190,6 +291,8 @@ class MetaPanda(object):
         Saves a 'selector' to use at a later date. This can be useful if you
         wish to keep track of changes, or if you want to quickly reference a selector
         using a name rather than a group of selections.
+
+        This function is not affected by the 'mode' parameter.
 
         Parameters
         -------
@@ -202,24 +305,24 @@ class MetaPanda(object):
         -------
         self
         """
-        if name not in self._select:
-            self._select[name] = selector
-        else:
+        if name in self._select:
             warnings.warn("cache name '{}' already exists in .cache, overriding".format(name), UserWarning)
-            self._select[name] = selector
+        self._select[name] = selector
         return self
 
 
     def keys(self, prim_key=None, second_key=None):
         """
-        Defines primary and secondary ID keys to the dataset. A primary key is a
+        Defines and creates primary and secondary ID keys to the dataset. A primary key is a
         unique identifier to each row within a dataset as defined by third normal
         form theory.
+
+        This function is not affected by the 'mode' parameter.
 
         Parameters
         --------
         prim_key : str, None
-            If None, creates a primary key from scratch, else assigns column name
+            If None, creates a primary key from 'counter', else assigns column name
             as this key.
         second_key : None, str, list/tuple
             Assigns one or more columns to be 'secondary' keys for other MetaPanda
@@ -237,6 +340,8 @@ class MetaPanda(object):
         Saves a group of 'selectors' to use at a later date. This can be useful
         if you wish to keep track of changes, or if you want to quickly reference a selector
         using a name rather than a group of selections.
+
+        This function is not affected by the 'mode' parameter.
 
         Parameters
         --------
@@ -257,7 +362,7 @@ class MetaPanda(object):
         return self
 
 
-    def rename(self, ops, selector=None, apply=True):
+    def rename(self, ops, selector=None):
         """
         Renames the column names within the pandas.DataFrame in a flexible fashion.
 
@@ -270,9 +375,6 @@ class MetaPanda(object):
         selector : None, str, or tuple args
             Contains either types, meta column names, column names or regex-compliant strings
             Allows user to specify subset to rename
-        apply : bool
-            If true, performs operation immediately on dataset, else returns the
-            new appearance only.
 
         Returns
         -------
@@ -280,24 +382,16 @@ class MetaPanda(object):
         """
         # check ops is right format
         is_twotuple(ops)
-        if selector is not None:
-            curr_cols = sel_cols = get_selector(self.df_, self.meta_, self._select, selector, select_join="OR")
-        else:
-            curr_cols = sel_cols = self.df_.columns
+        curr_cols = sel_cols = self.view(*selector) if selector is not None else self.df_.columns
 
         for op in ops:
             curr_cols = curr_cols.str.replace(*op)
 
-        if apply:
-            # set to df_ and meta_
-            self.df_.rename(columns=dict(zip(sel_cols, curr_cols)), inplace=True)
-            self.meta_.rename(index=dict(zip(sel_cols, curr_cols)), inplace=True)
-            return self
-        else:
-            return curr_cols
+        self._rename_columns(sel_cols, curr_cols)
+        return self
 
 
-    def add_prefix(self, pref, selector=None, apply=True):
+    def add_prefix(self, pref, selector=None):
         """
         Adds a prefix to all of the columns or selected columns.
 
@@ -309,29 +403,22 @@ class MetaPanda(object):
             Contains either types, meta column names, column names or regex-compliant strings
             Allows user to specify subset to rename
         apply : bool
-            If true, performs operation immediately on dataset, else returns the
+            If true, performs operation inplace on dataset, else returns the
             new appearance only.
 
         Returns
         ------
-        self or pd.Index
+        self
         """
-        if selector is not None:
-            sel_cols = get_selector(self.df_, self.meta_, self._select, selector, select_join="OR")
-        else:
-            sel_cols = self.df_.columns
+        sel_cols = self.view(*selector) if selector is not None else self.df_.columns
         curr_cols = pref + sel_cols
 
-        if apply:
-            # set to df_ and meta_
-            self.df_.rename(columns=dict(zip(sel_cols, curr_cols)), inplace=True)
-            self.meta_.rename(index=dict(zip(sel_cols, curr_cols)), inplace=True)
-            return self
-        else:
-            return curr_cols
+        # set to df_ and meta_
+        self._rename_columns(sel_cols, curr_cols)
+        return self
 
 
-    def add_suffix(self, suf, selector=None, apply=True):
+    def add_suffix(self, suf, selector=None):
         """
         Adds a suffix to all of the columns or selected columns.
 
@@ -343,26 +430,19 @@ class MetaPanda(object):
             Contains either types, meta column names, column names or regex-compliant strings
             Allows user to specify subset to rename
         apply : bool
-            If true, performs operation immediately on dataset, else returns the
+            If true, performs operation inplace on dataset, else returns the
             new appearance only.
 
         Returns
         ------
-        self or pd.Index
+        self
         """
-        if selector is not None:
-            sel_cols = get_selector(self.df_, self.meta_, self._select, selector, select_join="OR")
-        else:
-            sel_cols = self.df_.columns
+        sel_cols = self.view(*selector) if selector is not None else self.df_.columns
         curr_cols = sel_cols + suf
 
-        if apply:
-            # set to df_ and meta_
-            self.df_.rename(columns=dict(zip(sel_cols, curr_cols)), inplace=True)
-            self.meta_.rename(index=dict(zip(sel_cols, curr_cols)), inplace=True)
-            return self
-        else:
-            return curr_cols
+        # set to df_ and meta_
+        self._rename_columns(sel_cols, curr_cols)
+        return self
 
 
     def analyze(self, functions = ["agglomerate"]):
@@ -393,18 +473,19 @@ class MetaPanda(object):
         return self
 
 
-    def transform(self, selector, function, *args):
+    def transform(self, function, selector=None, *args):
         """
         Performs an inplace transformation to a group of columns within the df_
         attribute.
 
         Parameters
         -------
-        selector : str
-            Contains either types, meta column names, column names or regex-compliant strings
-            Allows user to specify subset to rename
         function : function
             A function taking the pd.Series x_i as input and returning pd.Series y_i as output
+        selector : None or str
+            Contains either types, meta column names, column names or regex-compliant strings
+            Allows user to specify subset to rename
+            If None, applies the function to all columns.
         args : list
             Additional arguments to pass to function(x, *args)
 
@@ -413,11 +494,10 @@ class MetaPanda(object):
         self
         """
         # perform inplace
-        selection = get_selector(self.df_, self.meta_, self._select, selector,
-                                 raise_error=False, select_join="OR")
+        selection = self.view(selector) if selector is not None else self.df_.columns
         # modify
         if callable(function) and selection.shape[0] > 0:
-            self.df_.loc[:, selection] = self.df_.loc[:, selection].apply(lambda x: function(x, *args))
+            self.df_.loc[:, selection] = self.df_.loc[:, selection].transform(lambda x: function(x, *args))
         return self
 
 
@@ -430,10 +510,9 @@ class MetaPanda(object):
         -------
         ops : list of 2-tuple
             Containing:
-                1. selector - Contains either types, meta column names, column names or regex-compliant strings
-            Allows user to specify subset to rename
-                2. function - A function taking the pd.Series x_i as input and returning pd.Series y_i as output
-
+                1. function - A function taking the pd.Series x_i as input and returning pd.Series y_i as output
+                2. selector - Contains either types, meta column names, column names or regex-compliant strings
+                    Allows user to specify subset to rename
         Returns
         -------
         self
@@ -499,7 +578,8 @@ class MetaPanda(object):
         -------
         by : str or list/tuple of str
             Sorts the columns by order of what terms are given. "alphabet" refers
-            to the column name alphabetical sorting.
+            to the column name alphabetical sorting. Choose a meta_ column categorical
+            to sort by.
         ascending : bool or list/tuple of bool
             Sort ascending vs descending. Specify list for multiple sort orders.
 
@@ -514,9 +594,12 @@ class MetaPanda(object):
                 self.meta_.sort_values(by=by, axis=0, ascending=ascending, inplace=True)
                 # sort the df
                 self.df_ = self.df_.reindex(self.meta_.index, axis=1)
-        elif isinstance(by, (list, tuple)) and isinstance(ascending, (list,tuple)):
+        elif isinstance(by, (list, tuple)):
             if "alphabet" in by:
                 by[by.index("alphabet")] = "colnames"
+            if isinstance(ascending, bool):
+                # turn into a list with that value
+                ascending=[ascending]*len(by)
             if len(by) != len(ascending):
                 raise ValueError("the length of 'by' {} must equal the length of 'ascending' {}".format(len(by),len(ascending)))
             if all([(col in self.meta_) or (col == "colnames") for col in by]):
@@ -646,39 +729,31 @@ class MetaPanda(object):
         return self
 
 
-    def corr(self, *args, **kwargs):
+    def compute(self):
         """
-        Computes the pearson or spearman-rank correlation between every pair
-        of columns and produces a correlation matrix of shape (p, p).
+        Computes tasks in-order depending on the pipeline cached.
 
-        This function can handle missing values between pairs, correlations
-        between continuous-continuous columns, continuous-discrete pairings and
-        discrete-discrete pairings.
-        Columns that are of type 'object' are automatically dropped.
-
-        No changes are made to the MetaPanda object.
-
-        Parameters
-        --------
-        args/kwargs :  list/dict
-            parameters to pass to appropriate scipy function
+        Does nothing if mode == 'instant'
 
         Returns
         -------
-        corr : pd.DataFrame
-            correlation matrix
+        self
         """
         return NotImplemented
 
 
-    def write(self, filename=None, *args, **kwargs):
+    def write(self, filename=None, with_meta=True, *args, **kwargs):
         """
         Saves a MetaPanda to disk.
+
+        This function is not affected by the 'mode' parameter.
 
         Parameters
         -------
         filename : str
             The name of the file to save, or None it will use the name found in MetaPanda
+        with_meta : bool
+            If true, saves metafile also, else doesn't
         *args : list
             Arguments to pass to pd.to_csv
         **kwargs : dict
@@ -686,13 +761,18 @@ class MetaPanda(object):
         """
         if filename is not None:
             self.df_.to_csv(filename, sep=",",*args,**kwargs)
-            # uses the name stored in mp
-            dsplit = filename.rsplit("/",1)
-            if len(dsplit) == 1:
-                self.meta_.to_csv(dsplit[0].split(".")[0]+"__meta.csv",sep=",")
-            else:
-                directory, name = dsplit
-                self.meta_.to_csv(directory+"/"+name.split(".")[0]+"__meta.csv",sep=",")
+            if with_meta:
+                # uses the name stored in mp
+                dsplit = filename.rsplit("/",1)
+                if len(dsplit) == 1:
+                    self.meta_.to_csv(dsplit[0].split(".")[0]+"__meta.csv",sep=",")
+                else:
+                    directory, name = dsplit
+                    self.meta_.to_csv(directory+"/"+name.split(".")[0]+"__meta.csv",sep=",")
         else:
             self.df_.to_csv(self.name_+".csv", sep=",",*args,**kwargs)
-            self.meta_.to_csv(self.name_+"__meta.csv",sep=",")
+            if with_meta:
+                self.meta_.to_csv(self.name_+"__meta.csv",sep=",")
+
+
+    _actionable = staticmethod(_actionable)

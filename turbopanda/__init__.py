@@ -19,7 +19,7 @@ del hard_dependencies, dependency, missing_dependencies
 
 from .metapanda import MetaPanda
 from .fileio import *
-from .plot import *
+from .visualise import *
 
 __version__ = "0.1.0"
 __name__ = "turbopanda"

@@ -36,7 +36,9 @@ def construct_meta(df):
     # FINAL - return all as a meta_ option.
     _meta = pd.DataFrame({
         "mtypes": df.dtypes.values,
-        "is_unique": is_uniq, "potential_id": is_id, "potential_stacker":is_stacked
+        "is_unique": is_uniq,
+        "potential_id": is_id,
+        "potential_stacker":is_stacked
     }, index=colnames)
     _meta.index.name = "colnames"
     return _meta

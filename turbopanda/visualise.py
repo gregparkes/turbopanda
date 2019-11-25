@@ -20,8 +20,7 @@ def _generate_square_like_grid(n):
     """
     f1,f2 = nearest_square_factors(n)
     fig, axes = plt.subplots(ncols=f1, nrows=f2, figsize=(3*f1, 3*f2))
-    if len(axes)>3:
-        # correct for stacked list
+    if (axes.ndim > 1):
         axes = list(it.chain.from_iterable(axes))
     return fig, axes
 

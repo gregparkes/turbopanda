@@ -10,10 +10,30 @@ import warnings
 import functools
 import pandas as pd
 
+from pandas import DataFrame
+from pandas.core.groupby.generic import DataFrameGroupBy
+
 from .utils import *
 from .selection import get_selector
 from .analyze import agglomerate, intersection_grid, dataframe_clean, dist
 from .metadata import construct_meta
+
+
+# hidden .py attributes
+
+__nondelay_functions__ = [
+    "head", "cache", "multi_cache", "view", "view_not",
+    "analyze", "keys", "compute", "write"
+]
+
+__delay_functions__ = [
+    "drop", "apply", "transform", "multi_transform",
+    "rename", "add_prefix", "add_suffix", "meta_map",
+    "expand", "shrink", "sort_columns", "split_categories",
+    "melt", "filter_row"
+]
+
+__functions__ = __nondelay_functions__ + __delay_functions__
 
 
 class MetaPanda(object):
@@ -44,7 +64,8 @@ class MetaPanda(object):
         mode : str
             Choose from ['instant', 'delay']
             If instant, executes all functions immediately inplace
-            If delay, builds a task graph and then executes inplace when 'compute()' is called
+            If delay, builds a task graph in 'pipe_'
+                and then executes inplace when 'compute()' is called
         cat_thresh : int
             The threshold until which 'category' variables are not created
         default_remove_one_column : bool
@@ -61,7 +82,7 @@ class MetaPanda(object):
         self._pipe = []
 
 
-    ############################ OVERRIDEN OPERATIONS #######################################
+    ############################ HIDDEN OPERATIONS #######################################
 
 
     def _actionable(function):
@@ -70,8 +91,8 @@ class MetaPanda(object):
             if self.mode_ == "delay":
                 self._pipe.append((function.__name__, args, kwargs))
             else:
-                function(self, *args, **kwargs)
-                return self
+                return function(self, *args, **kwargs)
+        return new_function
 
 
     def _rename_columns(self, old, new):
@@ -92,14 +113,13 @@ class MetaPanda(object):
     def _apply_function(self, fn, *fargs, **fkwargs):
         if hasattr(self.df_, fn):
             f = getattr(self.df_, fn)
-            ndf = f(*fargs, **fkwargs)
-            if isinstance(ndf, pd.DataFrame):
-                self.df_ = ndf
-                return self
-            else:
-                raise TypeError("function '{}' did not return pd.DataFrame".format(fn))
+            self.df_ = f(*fargs, **fkwargs)
+            return self
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.* API".format(fn))
+
+
+    ############################## OVERIDDEN OPERATIONS ######################################
 
 
     def __getitem__(self, selector):
@@ -118,8 +138,9 @@ class MetaPanda(object):
 
 
     def __repr__(self):
+        p = self.df_.shape[1] if self.df_.ndim > 1 else 1
         return "MetaPanda({}(n={}, p={}, mem={}), mode='{}')".format(self.name_,
-            self.df_.shape[0], self.df_.shape[1], self.memory_, self.mode_)
+            self.df_.shape[0], p, self.memory_, self.mode_)
 
 
     ############################### PROPERTIES ##############################################
@@ -130,7 +151,7 @@ class MetaPanda(object):
         return self._df
     @df_.setter
     def df_(self, df):
-        if isinstance(df, pd.DataFrame):
+        if isinstance(df, DataFrame):
             # cleans and preprocesses dataframe
             self._df = dataframe_clean(df, self._cat_thresh, self._def_remove_single_col)
             self._meta = construct_meta(self._df)
@@ -138,8 +159,14 @@ class MetaPanda(object):
                 self._df.columns.name = "colnames"
             if "counter" not in self._df.columns:
                 self._df.index.name = "counter"
+        elif isinstance(df, pd.Series):
+            # again, we'll just pretend the user knows what they're doing...
+            self._df = df
+        elif isinstance(df, DataFrameGroupBy):
+            # part of a groupby operation, just copy over for now...
+            self._df = df
         else:
-            raise TypeError("'df' must be of type [pd.DataFrame]")
+            raise TypeError("'df' must be of type [pd.Series, pd.DataFrame, DataFrameGroupBy]")
 
 
     @property
@@ -147,7 +174,7 @@ class MetaPanda(object):
         return self._meta
     @meta_.setter
     def meta_(self, meta):
-        if isinstance(meta, pd.DataFrame):
+        if isinstance(meta, DataFrame):
             self._meta = dataframe_clean(meta, self._cat_thresh, self._def_remove_single_col)
             self._meta.index.name = "colnames"
         else:
@@ -179,6 +206,11 @@ class MetaPanda(object):
             self._mode = mode
         else:
             raise ValueError("'mode' must be ['instant', 'delay'], not '{}'".format(mode))
+
+
+    @property
+    def pipe_(self):
+        return self._pipe
 
 
     ################################ FUNCTIONS ###################################################
@@ -267,6 +299,7 @@ class MetaPanda(object):
         return self
 
 
+    @_actionable
     def drop(self, *selector):
         """
         Given a selector or group of selectors, drop all of the columns selected within
@@ -283,6 +316,42 @@ class MetaPanda(object):
         """
         # perform inplace
         self._drop_columns(self.view(*selector))
+        return self
+
+
+    @_actionable
+    def filter_row(self, function, selector=None, *args):
+        """
+        Given a function, filter out rows that do not meet the functions' criteria.
+
+        Parameters
+        --------
+        function : function
+            A function taking the whole dataset or subset, and returning a boolean
+            pd.Series with True rows kept and False rows dropped
+        selector : None or str
+            Contains either types, meta column names, column names or regex-compliant strings
+            Allows user to specify subset to rename
+            If None, applies the function to all columns.
+        args : list
+            Additional arguments to pass to function(x, *args)
+
+        Returns
+        -------
+        self
+        """
+        # perform inplace
+        selection = self.view(selector) if selector is not None else self.df_.columns
+        # modify
+        if callable(function) and selection.shape[0] == 1:
+            bs = function(self.df_[selection[0]], *args)
+        elif callable(function) and selection.shape[0] > 1:
+            bs = function(self.df_.loc[:, selection], *args)
+        else:
+            raise ValueError("parameter '{}' not callable".format(function))
+        # check that bs is boolean series
+        is_boolean_series(bs)
+        self.df_ = self.df_.loc[bs, :]
         return self
 
 
@@ -362,6 +431,7 @@ class MetaPanda(object):
         return self
 
 
+    @_actionable
     def rename(self, ops, selector=None):
         """
         Renames the column names within the pandas.DataFrame in a flexible fashion.
@@ -391,6 +461,7 @@ class MetaPanda(object):
         return self
 
 
+    @_actionable
     def add_prefix(self, pref, selector=None):
         """
         Adds a prefix to all of the columns or selected columns.
@@ -418,6 +489,7 @@ class MetaPanda(object):
         return self
 
 
+    @_actionable
     def add_suffix(self, suf, selector=None):
         """
         Adds a suffix to all of the columns or selected columns.
@@ -473,6 +545,7 @@ class MetaPanda(object):
         return self
 
 
+    @_actionable
     def transform(self, function, selector=None, *args):
         """
         Performs an inplace transformation to a group of columns within the df_
@@ -501,6 +574,7 @@ class MetaPanda(object):
         return self
 
 
+    @_actionable
     def multi_transform(self, ops):
         """
         Performs multiple inplace transformations to a group of columns within the df_
@@ -523,6 +597,7 @@ class MetaPanda(object):
         return self
 
 
+    @_actionable
     def meta_map(self, name, selectors):
         """
         Maps a group of selectors into a column in the meta-information
@@ -570,6 +645,7 @@ class MetaPanda(object):
         return self
 
 
+    @_actionable
     def sort_columns(self, by="alphabet", ascending=True):
         """
         Sort by any categorical meta_ column or "alphabet".
@@ -611,6 +687,7 @@ class MetaPanda(object):
             raise TypeError("'by' must be of type [str, list, tuple], not {}".format(type(by)))
 
 
+    @_actionable
     def expand(self, column, sep=","):
         """
         Expands out a 'stacked' id column to a longer-form dataframe, and re-merging
@@ -642,6 +719,7 @@ class MetaPanda(object):
         return self
 
 
+    @_actionable
     def shrink(self, column, sep=","):
         """
         Shrinks  down a 'duplicated' id column to a shorter-form dataframe, and re-merging
@@ -658,22 +736,21 @@ class MetaPanda(object):
         -------
         self
         """
-        if column not in self.df_.columns:
+        if (column not in self.df_.columns) and (column != self.df_.index.name):
             raise ValueError("column '{}' not found in df".format(column))
-        if self.meta_.loc[column, "is_unique"]:
-            raise ValueError("column '{}' found to be unique".format(column))
 
         # no changes made to columns, use hidden df
         self._df = pd.merge(
             # shrink down id column
             self.df_.groupby("counter")[column].apply(lambda x: x.str.cat(sep=sep)),
-            self.df_.drop(column, axis=1).drop_duplicates(keep="first").set_index("counter"),
+            self.df_.reset_index().drop_duplicates("counter").set_index("counter").drop(column, axis=1),
             left_index=True, right_index=True
         )
         self._df.columns.name = "colnames"
         return self
 
 
+    @_actionable
     def split_categories(self, column, sep=",", renames=None):
         """
         Splits a column into N categorical variables to be associated with df_.
@@ -704,6 +781,7 @@ class MetaPanda(object):
         return self
 
 
+    @_actionable
     def melt(self, id_vars=["counter"], *args, **kwargs):
         """
         Performs a 'melt' operation on the DataFrame, with some minor adjustments to
@@ -739,7 +817,25 @@ class MetaPanda(object):
         -------
         self
         """
-        return NotImplemented
+        if len(self.pipe_) == 0:
+            warnings.warn("self.pipe_ empty, nothing to compute.", UserWarning)
+            return
+        elif self.mode_ == "delay":
+            # temporary set mode to instant
+            self.mode_ = "instant"
+            for fn, args, kwargs in self.pipe_:
+                # check that MetaPanda has the function attribute
+                if hasattr(self, fn):
+                    # execute function with args and kwargs
+                    getattr(self, fn)(*args, **kwargs)
+
+            #set mode back to delay
+            self.mode_ = "delay"
+            # empty list to prevent repeat.
+            self._pipe = []
+            return self
+        else:
+            raise ValueError("mode_ is {}, not delay.".format(self.mode_))
 
 
     def write(self, filename=None, with_meta=True, *args, **kwargs):

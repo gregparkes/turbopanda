@@ -9,7 +9,6 @@ Created on Thu Aug 15 16:08:52 2019
 from scipy.stats import pearsonr, spearmanr
 import numpy as np
 import pandas as pd
-from sklearn.feature_selection import mutual_info_regression
 
 
 def z_score(X):
@@ -32,7 +31,3 @@ def spearman(X, y, axis=0):
 
 def pearson(X, y, axis=0):
     return X.aggregate(lambda x: pearsonr(x, y)[0], axis=axis)
-
-
-def mutual_information(X, y, axis=0):
-    return pd.Series(mutual_info_regression(X, y), index=X.index)

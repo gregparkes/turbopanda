@@ -40,7 +40,7 @@ def read(filename, name=None, metafile=None, *args, **kwargs):
     file_ext_map = {
         "csv": pd.read_csv, "xls": pd.read_excel, "xlsx": pd.read_excel,
         "html": pd.read_html, "json": pd.read_json, "hdf": pd.read_hdf,
-        "sql": pd.read_sql
+        "sql": pd.read_sql, "XLSX": pd.read_excel
     }
 
     directory, fname = filename.rsplit("/", 1)

@@ -118,7 +118,10 @@ def remove_string_spaces(df):
 
 
 def calc_mem(df):
-    return df.memory_usage().sum()/1000000
+    if df.ndim == 1:
+        return df.memory_usage()/1000000
+    else:
+        return df.memory_usage().sum()/1000000
 
 
 def factor(n):

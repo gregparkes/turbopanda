@@ -37,7 +37,7 @@ def _convert_mapper():
     }
 
 
-def _get_selector_item(df, meta, cached, selector, raise_error=True):
+def _get_selector_item(df, meta, cached, selector, raise_error=False):
     """
     Accepts:
         type [object, int, float, np.float]
@@ -90,12 +90,12 @@ def _get_selector_item(df, meta, cached, selector, raise_error=True):
                 return pd.Index([], name=df.columns.name)
         else:
             # we assume it's in the index, and we return it, else allow pandas to raise the error.
-            return selector
+            return pd.Index([selector], name=df.columns.name)
     else:
         raise TypeError("selector type '{}' not recognized".format(type(selector)))
 
 
-def get_selector(df, meta, cached, selector, raise_error=True, select_join="OR"):
+def get_selector(df, meta, cached, selector, raise_error=False, select_join="OR"):
     """
     Selector must be a list/tuple of selectors.
     """

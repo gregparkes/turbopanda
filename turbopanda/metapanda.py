@@ -9,6 +9,7 @@ Created on Fri Nov  1 15:55:38 2019
 import warnings
 import functools
 import pandas as pd
+from copy import deepcopy
 
 from pandas import DataFrame
 from pandas.core.groupby.generic import DataFrameGroupBy
@@ -211,6 +212,9 @@ class MetaPanda(object):
     @property
     def pipe_(self):
         return self._pipe
+    @pipe_.setter
+    def pipe_(self, p):
+        self._pipe = p
 
 
     ################################ FUNCTIONS ###################################################
@@ -271,6 +275,14 @@ class MetaPanda(object):
             The list of column names NOT selected, or empty
         """
         return self.df_.columns.drop(self.view(*selector))
+
+
+    def copy(self):
+        """
+        Uses 'deepcopy' to create a copy of this object which is returned. This function
+        is not affected by the 'mode' parameter.
+        """
+        return deepcopy(self)
 
 
     @_actionable
@@ -546,7 +558,7 @@ class MetaPanda(object):
 
 
     @_actionable
-    def transform(self, function, selector=None, *args):
+    def transform(self, function, selector=None, whole=False, *args, **kwargs):
         """
         Performs an inplace transformation to a group of columns within the df_
         attribute.
@@ -559,8 +571,13 @@ class MetaPanda(object):
             Contains either types, meta column names, column names or regex-compliant strings
             Allows user to specify subset to rename
             If None, applies the function to all columns.
+        whole : bool
+            If True, uses function(self.df_, *args) and relies on the same output.
+            If False, uses self.df_.transform(lambda x: function(x, *args, **kwargs))
         args : list
             Additional arguments to pass to function(x, *args)
+        kwargs : dict
+            Additional arguments to pass to function(x, *args, **kwargs)
 
         Returns
         -------
@@ -570,7 +587,10 @@ class MetaPanda(object):
         selection = self.view(selector) if selector is not None else self.df_.columns
         # modify
         if callable(function) and selection.shape[0] > 0:
-            self.df_.loc[:, selection] = self.df_.loc[:, selection].transform(lambda x: function(x, *args))
+            if whole:
+                self.df_.loc[:, selection] = function(self.df_.loc[:, selection], *args, **kwargs)
+            else:
+                self.df_.loc[:, selection] = self.df_.loc[:, selection].transform(lambda x: function(x, *args, **kwargs))
         return self
 
 
@@ -809,7 +829,7 @@ class MetaPanda(object):
 
     def compute(self):
         """
-        Computes tasks in-order depending on the pipeline cached.
+        Computes tasks inplace, in-order depending on the pipe_ cached.
 
         Does nothing if mode == 'instant'
 
@@ -836,6 +856,32 @@ class MetaPanda(object):
             return self
         else:
             raise ValueError("mode_ is {}, not delay.".format(self.mode_))
+
+
+    def compute_extern(self, pipe):
+        """
+        Computes a series of tasks using an external pipe. This creates a copy
+        and performs the tasks on the copy, and returns this copy, so no underlying
+        changes are made to this object.
+
+        Parameters
+        --------
+        pipe : list of tasks
+            A pipeline similar to self.pipe_ that we execute
+
+        Returns
+        -------
+        mdf : MetaPanda
+            A copy of the updated MetaPanda
+        """
+        # create a copy
+        cop = deepcopy(self)
+        # set pipe parameter
+        cop.pipe_ = pipe
+        cop.mode_ = "delay"
+        # compute the changes
+        cop.compute()
+        return cop
 
 
     def write(self, filename=None, with_meta=True, *args, **kwargs):

@@ -18,8 +18,12 @@ del hard_dependencies, dependency, missing_dependencies
 # import local objects
 
 from .metapanda import MetaPanda
+from .metaml import MetaML
 from .fileio import *
 from .visualise import *
+from .pipes import *
+from .metrics import correlate
+
 
 __version__ = "0.1.1"
 __name__ = "turbopanda"

@@ -11,9 +11,11 @@ import itertools as it
 from scipy import stats
 
 from .utils import nearest_square_factors
+from .metaml import MetaML
 
 
-__all__ = ["plot_scatter_grid", "plot_missing", "plot_hist_grid"]
+__all__ = ["plot_scatter_grid", "plot_missing", "plot_hist_grid",
+           "plot_coefficients"]
 
 
 def _iqr(a):
@@ -22,6 +24,15 @@ def _iqr(a):
     q1 = stats.scoreatpercentile(a, 25)
     q3 = stats.scoreatpercentile(a, 75)
     return q3 - q1
+
+
+def _data_polynomial_length(L):
+    # calculate length based on size of DF
+    # dimensions follow this polynomial
+    X = np.linspace(0, 250, 100)
+    Y = np.linspace(0, 1, 100)**(1/2) * 22 + 3
+    P = np.poly1d(np.polyfit(X,Y,deg=2))
+    return int(P(L).round())
 
 
 def _generate_square_like_grid(n, square_size=2):
@@ -57,16 +68,7 @@ def plot_missing(mdf):
     """
     Plots the missing data as a greyscale heatmap.
     """
-    # calculate length based on size of DF
-    # dimensions follow this polynomial
-    X = np.linspace(0, 250, 100)
-    Y = np.linspace(0, 1, 100)**(1/2) * 18 + 5
-    P = np.poly1d(np.polyfit(X,Y,deg=2))
-
-    def ns(p_x):
-        return int(p_x.round())
-
-    dims = (16, ns(P(mdf.df_.shape[1])))
+    dims = (16, _data_polynomial_length(mdf.df_.shape[1]))
 
     # wrangle data
     out = mdf.df_.notnull().astype(np.int).T
@@ -138,3 +140,49 @@ def plot_scatter_grid(mdf, selector, target):
             pair_corr = mdf.df_[[x, target]].corr(method="spearman").iloc[0, 1]
             axes[i].set_title("{}: r={:0.3f}".format(x, pair_corr))
         fig.tight_layout()
+
+
+def plot_coefficients(mml):
+    """
+    Plots the coefficients from a fitted machine learning model using MetaML.
+
+    Parameters
+    --------
+    mml : MetaML or list of MetaML
+        The fitted machine learning model(s). If a list, each MetaML must have
+        the same data (columns)
+
+    Returns
+    -------
+    None
+    """
+    # assumes the coef_mat variable is present
+
+    def _plot_single_box(m, ax, i):
+        if isinstance(m, MetaML):
+            if m.fit:
+                # new order
+                no = m.coef_mat.mean(axis=1).sort_values().index
+                buffer = len(m.coef_mat) / 20
+
+                if i==0:
+                    ax.boxplot(m.coef_mat.reindex(no), vert=False, labels=no)
+                else:
+                    ax.boxplot(m.coef_mat.reindex(no), vert=False)
+                    ax.set_yticks([])
+                    ax.set_yticklabels([])
+                ax.set_ylim(-buffer, len(m.coef_mat)+buffer)
+                ax.vlines([0], ymin=0, ymax=len(m.coef_mat), linestyle="--", color="red")
+                ax.set_xlabel("Coefficients")
+                ax.set_title("Model: {}".format(m.model_str))
+
+    if isinstance(mml, MetaML):
+        fig, ax = plt.subplots(figsize=(5, _data_polynomial_length(mml.coef_mat.shape[0])))
+        _plot_single_box(mml, ax, 0)
+    elif isinstance(mml, (list, tuple)):
+        fig, ax = plt.subplots(ncols=len(mml), figsize=(4*len(mml), _data_polynomial_length(mml[0].coef_mat.shape[0])))
+        for i, (m, a) in enumerate(zip(mml, ax)):
+            _plot_single_box(m, a, i)
+
+    fig.tight_layout()
+    plt.show()

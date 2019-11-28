@@ -7,14 +7,72 @@ Created on Tue Nov 26 18:01:53 2019
 
 Creates Meta Scikit-learn models.
 """
+import numpy as np
 import pandas as pd
 
-from sklearn.linear_model import LinearRegression
-from sklearn.multioutput import MultiOutputRegressor
-from sklearn.model_selection import cross_val_predict
+from sklearn import tree, linear_model, ensemble, svm, gaussian_process, neighbors
+from sklearn.base import is_classifier, is_regressor, BaseEstimator
+
+from sklearn.multioutput import MultiOutputRegressor, MultiOutputClassifier
+from sklearn.model_selection import cross_val_predict, cross_validate
 
 from .pipes import ml_pipe
 from .metrics import correlate
+
+
+__sklearn_model_packages__ = [tree, linear_model, ensemble, svm, gaussian_process,
+                              neighbors]
+
+
+def _get_hidden_coefficients(directory):
+    return [d for d in directory if d.endswith("_") and d.islower()]
+
+
+def _get_multioutput_wrap(model_t):
+    if is_classifier(model_t):
+        return MultiOutputClassifier(model_t)
+    elif is_regressor(model_t):
+        return MultiOutputRegressor(model_t)
+
+
+def _find_sklearn_model(model_str):
+    if isinstance(model_str, str):
+        for package in __sklearn_model_packages__:
+            if hasattr(package, model_str):
+                return getattr(package, model_str)
+    elif isinstance(model_str, BaseEstimator):
+        return model_str
+    else:
+        raise ImportError("model '{}' not found in any sklearn.package.".format(model_str))
+
+
+def _wrap_pandas(data, labels):
+    return pd.DataFrame(data, columns=labels) if data.ndim > 1 else pd.Series(data, index=labels)
+
+
+def _get_coefficient_matrix(fitted_models, model_string, X):
+    if hasattr(fitted_models[0], "coef_") and hasattr(fitted_models[0], "intercept_"):
+        # linear model or SVM
+        # coef matrix
+        cols = X.columns if isinstance(X, pd.DataFrame) else [X.name]
+        _coef_mat = pd.concat([
+                pd.DataFrame([mf.intercept_ for mf in fitted_models], columns=["intercept"]).T,
+                pd.DataFrame(np.vstack(([mf.coef_ for mf in fitted_models])).T, index=cols)
+        ])
+        _coef_mat.columns.name = "cv"
+        return _coef_mat
+    elif hasattr(fitted_models[0], "feature_importances_"):
+        # tree based model
+        # coef matrix
+        cols = X.columns if isinstance(X, pd.DataFrame) else [X.name]
+        _coef_mat = pd.concat([
+            pd.DataFrame(np.vstack(([mf.feature_importances_ for mf in fitted_models])).T, index=cols)
+        ])
+        _coef_mat.columns.name = "cv"
+        return _coef_mat
+    else:
+        return None
+
 
 class MetaML(object):
     """
@@ -22,7 +80,7 @@ class MetaML(object):
     scikit-learn models.
     """
 
-    def __init__(self, mp, X_select, Y_select):
+    def __init__(self, mp, X_select, Y_select, model="LinearRegression"):
         """
         Receives a MetaPanda object with all of the features ready to go(ish).
 
@@ -34,18 +92,23 @@ class MetaML(object):
             A selector of x-inputs
         Y_select : selector
             A selector of y-inputs
+        model : str, sklearn model
+            The model selected to perform a run as
         """
         # make mp ML-ready
+        self.model_str = model
         self.mdf_ = mp.compute_extern(ml_pipe(mp, X_select, Y_select))
         # create X and y
         self.X, self.y = self.mdf_[X_select], self.mdf_[Y_select]
-
         # defaults
         self.cv = 10
-        if self.mdf_.view(Y_select).shape[0] > 1:
-            self.lm = MultiOutputRegressor(LinearRegression())
+        # find and instantiate
+        model_t = _find_sklearn_model(model)()
+        # cover for multioutput
+        if self.y.ndim > 1:
+            self.lm = _get_multioutput_wrap(model_t)
         else:
-            self.lm = LinearRegression()
+            self.lm = model_t
 
         self.fit = False
 
@@ -54,21 +117,33 @@ class MetaML(object):
         """
         Performs a single run and returns predictions and scores based on defaults.
         """
+
+        # preprocess X incase we are just one column
+        X_r = self.X.values.reshape(-1,1) if self.X.ndim == 1 else self.X.values
+        # perform cross-validated scores, models
+        _scores = cross_validate(self.lm, X_r, self.y,
+                                     cv=self.cv, return_estimator=True,
+                                     return_train_score=True,
+                                     scoring="r2")
         # perform cross-validated-predictions
-        self.yp = cross_val_predict(self.lm, self.X, self.y, cv=self.cv)
-        if self.yp.ndim > 1:
-            self.yp = pd.DataFrame(self.yp, columns=self.y.columns)
-        else:
-            self.yp = pd.Series(self.yp, index=self.X.index)
+        self.yp = _wrap_pandas(cross_val_predict(self.lm, X_r, self.y, cv=self.cv), self.X.index)
         # calculate scores
-        self.score = correlate(self.y, self.yp, method="r2")
-        self.score_mean = self.score["r2"].mean()
+        self.score_pred = correlate(self.y, self.yp, method="r2")
+
+        # handle cross_validate
+        self.fitted = _scores["estimator"]
+        self.score_train = _scores["train_score"]
+        self.score_fit = _scores["fit_time"]
+        self.score_test = _scores["test_score"]
+        # attempts to get weights
+        self.coef_mat = _get_coefficient_matrix(self.fitted, self.model_str, self.X)
+
         self.fit = True
         return self
 
 
     def __repr__(self):
         if self.fit:
-            return "MetaML(X: {}, Y: {}, cv={}, score={:0.3f})".format(self.X.shape, self.y.shape, self.cv, self.score_mean)
+            return "MetaML(X: {}, Y: {}, cv={}, score={})".format(self.X.shape, self.y.shape, self.cv, self.score_pred)
         else:
             return "MetaML(X: {}, Y: {}, cv={})".format(self.X.shape, self.y.shape, self.cv)

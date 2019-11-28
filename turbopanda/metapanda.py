@@ -881,6 +881,8 @@ class MetaPanda(object):
         cop.mode_ = "delay"
         # compute the changes
         cop.compute()
+        # set back to instant
+        cop.mode_="instant"
         return cop
 
 

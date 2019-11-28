@@ -22,8 +22,8 @@ from .metaml import MetaML
 from .fileio import *
 from .visualise import *
 from .pipes import *
-from .metrics import correlate
+from .metrics import correlate, condition_number
 
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __name__ = "turbopanda"

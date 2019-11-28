@@ -13,6 +13,9 @@ from scipy.stats import pearsonr, spearmanr
 from .metapanda import MetaPanda
 
 
+__all__ = ["correlate", "condition_number"]
+
+
 def _r2(x, y):
     r, p = pearsonr(x, y)
     return np.square(r), p
@@ -117,3 +120,20 @@ def correlate(X, Y=None, method="spearman"):
             return _corr_two_matrix(X, Y, method)
         else:
             raise ValueError("Y not recognized")
+
+
+def condition_number(mdf):
+    """
+    Computes the condition number of a dataset.
+    """
+    # using an external pipe, reduce mdf to something conditionable. maybe?
+    pipe = [
+        ("drop", (object, "_id$",), {}),
+        ("apply", ("dropna",), {}),
+        ("transform", (lambda x: x / np.linalg.norm(x, axis=0),), {"whole": True}),
+        ("drop", (lambda x: x.count() < x.shape[0],), {}),
+    ]
+
+    X = mdf.compute_extern(pipe).df_
+    eigs = np.linalg.eigvals(X.T @ X)
+    return np.sqrt(eigs.max() / eigs.min())

@@ -8,10 +8,11 @@ Created on Tue Nov 26 13:17:26 2019
 
 from sklearn import preprocessing
 
+
 __all__ = ["ml_pipe"]
 
 
-def ml_pipe(mp, X_s, y_s, preprocessor="power_transform"):
+def ml_pipe(mp, X_s, y_s, preprocessor="scale"):
     """
     Creates a 'delay' pipe that will make your data 'machine-learning-ready'.
 
@@ -24,9 +25,10 @@ def ml_pipe(mp, X_s, y_s, preprocessor="power_transform"):
     y_f : str/list of str, pd.Index
         A list of y-feature(s)
     preprocessor : str
-        Name of preprocessing: default 'power_transform', choose from
+        Name of preprocessing: default 'scale', choose from
             [power_transform, minmax_scale, maxabs_scale, robust_scale,
              quantile_transform, scale, normalize]
+            Choose from sklearn.preprocessing.
     """
     # fetch columns
     y_f = mp.view(y_s)

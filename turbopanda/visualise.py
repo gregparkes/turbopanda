@@ -142,7 +142,7 @@ def plot_scatter_grid(mdf, selector, target):
         fig.tight_layout()
 
 
-def plot_coefficients(mml):
+def plot_coefficients(mml, use_absolute=False):
     """
     Plots the coefficients from a fitted machine learning model using MetaML.
 
@@ -151,6 +151,8 @@ def plot_coefficients(mml):
     mml : MetaML or list of MetaML
         The fitted machine learning model(s). If a list, each MetaML must have
         the same data (columns)
+    use_absolute : bool
+        If True, uses absolute value of coefficients instead.
 
     Returns
     -------
@@ -158,17 +160,19 @@ def plot_coefficients(mml):
     """
     # assumes the coef_mat variable is present
 
+    f_apply = np.abs if use_absolute else lambda x:x
+
     def _plot_single_box(m, ax, i):
         if isinstance(m, MetaML):
             if m.fit:
                 # new order
-                no = m.coef_mat.mean(axis=1).sort_values().index
+                no = m.coef_mat.apply(f_apply).mean(axis=1).sort_values().index
                 buffer = len(m.coef_mat) / 20
 
                 if i==0:
-                    ax.boxplot(m.coef_mat.reindex(no), vert=False, labels=no)
+                    ax.boxplot(m.coef_mat.apply(f_apply).reindex(no), vert=False, labels=no)
                 else:
-                    ax.boxplot(m.coef_mat.reindex(no), vert=False)
+                    ax.boxplot(m.coef_mat.apply(f_apply).reindex(no), vert=False)
                     ax.set_yticks([])
                     ax.set_yticklabels([])
                 ax.set_ylim(-buffer, len(m.coef_mat)+buffer)

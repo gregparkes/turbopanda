@@ -26,13 +26,13 @@ def _iqr(a):
     return q3 - q1
 
 
-def _data_polynomial_length(L):
+def _data_polynomial_length(length):
     # calculate length based on size of DF
     # dimensions follow this polynomial
-    X = np.linspace(0, 250, 100)
-    Y = np.linspace(0, 1, 100)**(1/2) * 22 + 3
-    P = np.poly1d(np.polyfit(X,Y,deg=2))
-    return int(P(L).round())
+    x = np.linspace(0, 250, 100)
+    y = np.linspace(0, 1, 100)**(1/2) * 22 + 3
+    p = np.poly1d(np.polyfit(x,y,deg=2))
+    return int(p(length).round())
 
 
 def _generate_square_like_grid(n, square_size=2):
@@ -41,7 +41,7 @@ def _generate_square_like_grid(n, square_size=2):
     """
     f1,f2 = nearest_square_factors(n)
     fig, axes = plt.subplots(ncols=f1, nrows=f2, figsize=(square_size*f1, square_size*f2))
-    if (axes.ndim > 1):
+    if axes.ndim > 1:
         axes = list(it.chain.from_iterable(axes))
     return fig, axes
 
@@ -160,7 +160,7 @@ def plot_coefficients(mml, use_absolute=False):
     """
     # assumes the coef_mat variable is present
 
-    f_apply = np.abs if use_absolute else lambda x:x
+    f_apply = np.abs if use_absolute else lambda x: x
 
     def _plot_single_box(m, ax, i):
         if isinstance(m, MetaML):
@@ -169,7 +169,7 @@ def plot_coefficients(mml, use_absolute=False):
                 no = m.coef_mat.apply(f_apply).mean(axis=1).sort_values().index
                 buffer = len(m.coef_mat) / 20
 
-                if i==0:
+                if i == 0:
                     ax.boxplot(m.coef_mat.apply(f_apply).reindex(no), vert=False, labels=no)
                 else:
                     ax.boxplot(m.coef_mat.apply(f_apply).reindex(no), vert=False)
@@ -187,6 +187,7 @@ def plot_coefficients(mml, use_absolute=False):
         fig, ax = plt.subplots(ncols=len(mml), figsize=(4*len(mml), _data_polynomial_length(mml[0].coef_mat.shape[0])))
         for i, (m, a) in enumerate(zip(mml, ax)):
             _plot_single_box(m, a, i)
-
+    else:
+        raise TypeError("mml type '{}' not recognised".format(type(mml)))
     fig.tight_layout()
     plt.show()

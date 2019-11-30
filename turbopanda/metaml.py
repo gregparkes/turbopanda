@@ -53,7 +53,7 @@ def _wrap_pandas(data, labels):
 def _get_coefficient_matrix(fitted_models, model_string, X):
     if hasattr(fitted_models[0], "coef_") and hasattr(fitted_models[0], "intercept_"):
         # linear model or SVM
-        # coef matrix
+        # coefficient matrix
         cols = X.columns if isinstance(X, pd.DataFrame) else [X.name]
         _coef_mat = pd.concat([
                 pd.DataFrame([mf.intercept_ for mf in fitted_models], columns=["intercept"]).T,

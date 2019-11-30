@@ -42,6 +42,6 @@ def ml_pipe(mp, X_s, y_s, preprocessor="scale"):
         ("drop", (object, "_id$", "_ID$"), {}),
         ("apply", ("dropna",), {"subset": y_f}),
         ("transform", (lambda x: x.fillna(x.mean()), X_s), {}),
-        ("transform", (preproc_f,), {"selector": X_s, "whole": True, "method": "yeo-johnson"}),
+        ("transform", (preproc_f,), {"selector": X_s, "whole": True}),
         ("transform", (lambda y: y - y.mean(), y_s), {}),
     ]

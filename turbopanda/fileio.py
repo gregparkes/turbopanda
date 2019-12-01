@@ -13,6 +13,7 @@ __all__ = ["read", "write"]
 
 from .metapanda import MetaPanda
 
+
 def read(filename, name=None, metafile=None, *args, **kwargs):
     """
     Reads in a datafile and creates a MetaPanda object from it.
@@ -22,9 +23,9 @@ def read(filename, name=None, metafile=None, *args, **kwargs):
     filename : str
         A relative/absolute link to the file, with extension provided.
         Accepted extensions: [csv, xls, xlsx, html, json, hdf, sql]
-    name : str
+    name : str, optional
         A custom name to use for the MetaPanda, else the filename is used
-    metafile : str
+    metafile : str, optional
         An associated meta file to join into the MetaPanda, else if None,
         attempts to find the file, otherwise just creates the raw default.
     args : list
@@ -35,7 +36,7 @@ def read(filename, name=None, metafile=None, *args, **kwargs):
     Returns
     ------
     mdf : MetaPanda
-        A metapanda object.
+        A MetaPanda object.
     """
     file_ext_map = {
         "csv": pd.read_csv, "xls": pd.read_excel, "xlsx": pd.read_excel,

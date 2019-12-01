@@ -67,6 +67,15 @@ def _freedman_diaconis_bins(a):
 def plot_missing(mdf):
     """
     Plots the missing data as a greyscale heatmap.
+
+    Parameters
+    --------
+    mdf : turb.MetaPanda
+        The dataset
+
+    Returns
+    -------
+    None
     """
     dims = (16, _data_polynomial_length(mdf.df_.shape[1]))
 

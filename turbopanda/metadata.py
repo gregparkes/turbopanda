@@ -21,7 +21,7 @@ def is_potential_ID(ser, thresh=0.5):
     return (ser.unique().shape[0] / ser.shape[0]) > thresh if not_column_float(ser) else False
 
 
-def is_potential_stacker(ser, regex=";|\t|,|\|", thresh=0.1):
+def is_potential_stacker(ser, regex=";|\t|,|", thresh=0.1):
     return ser.str.contains(regex).sum() > thresh if is_column_object(ser) else False
 
 

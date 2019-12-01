@@ -13,22 +13,19 @@ import itertools as it
 from pandas.api.types import CategoricalDtype
 
 
-
-__all__ = ["is_twotuple","instance_check",
-           "chain_intersection","chain_union",
-           "is_boolean_series","attach_name",
-            "check_list_type","not_column_float",
-            "is_column_float","is_column_object",
-            "convert_category", "convert_boolean",
-            "calc_mem"]
+__all__ = ["is_twotuple", "instance_check", "chain_intersection", "chain_union",
+           "is_boolean_series", "attach_name", "check_list_type", "not_column_float",
+           "is_column_float", "is_column_object", "convert_category", "convert_boolean",
+           "calc_mem", "remove_multi_index", "remove_string_spaces", "check_pipe_attr",
+           "nearest_square_factors"]
 
 
-def is_twotuple(L):
+def is_twotuple(t):
     """
     Checks whether an object is a list of (2,) tuples
     """
-    if isinstance(L, (list, tuple)):
-        for i in L:
+    if isinstance(t, (list, tuple)):
+        for i in t:
             if len(i) != 2:
                 raise ValueError("elem i: {} is not of length 2".format(i))
     else:
@@ -50,7 +47,7 @@ def is_column_object(ser):
 
 def convert_boolean(df, col, name_map):
     df[col] = df[col].astype(np.bool)
-    name_map[col] = "is_"+col
+    name_map[col] = "is_" + col
 
 
 def convert_category(df, col, uniques):
@@ -59,19 +56,19 @@ def convert_category(df, col, uniques):
 
 
 def attach_name(*pds):
-    return list(it.chain.from_iterable([pd.name_ + "__" + pd.df_.columns for pd in pds]))
+    return list(it.chain.from_iterable([df.name_ + "__" + df.df_.columns for df in pds]))
 
 
 def is_boolean_series(bool_s):
     if not isinstance(bool_s, pd.Series):
         raise TypeError("bool_s must be of type [pd.Series], not {}".format(type(bool_s)))
-    if not bool_s.dtype in [bool, np.bool]:
+    if bool_s.dtype not in [bool, np.bool]:
         raise TypeError("bool_s must contain booleans, not type '{}'".format(bool_s.dtype))
 
 
-def check_list_type(L, t):
-    for i, l in enumerate(L):
-        if not isinstance(l, t):
+def check_list_type(l, t):
+    for i, elem in enumerate(l):
+        if not isinstance(elem, t):
             raise TypeError("type '{}' not found in list at index [{}]".format(t, i))
     return True
 
@@ -79,6 +76,18 @@ def check_list_type(L, t):
 def instance_check(a, i):
     if not isinstance(a, i):
         raise TypeError("object '{}' does not belong to type {}".format(a, i))
+
+
+def check_pipe_attr(obj, l):
+    for i in l:
+        if len(i) != 3:
+            raise ValueError("pipe element {} needs to be of length 3".format(i))
+        if not hasattr(obj, i[0]):
+            raise ValueError("elem {} not found as attribute in obj {}".format(i[0], obj))
+        if not isinstance(i[1], (list, tuple)):
+            raise TypeError("elem {} not belong to type [list, tuple], but {}".format(i[1], type(i[1])))
+        if not isinstance(i[2], dict):
+            raise TypeError("elem {} not belong to type [dict], but {}".format(i[2], type(i[2])))
 
 
 def chain_intersection(*cgroup):
@@ -118,10 +127,7 @@ def remove_string_spaces(df):
 
 
 def calc_mem(df):
-    if df.ndim == 1:
-        return df.memory_usage()/1000000
-    else:
-        return df.memory_usage().sum()/1000000
+    return (df.memory_usage().sum() / 1000000.) if (df.ndim > 1) else (df.memory_usage() / 1000000.)
 
 
 def factor(n):
@@ -133,18 +139,18 @@ def factor(n):
 
     def prime_powers(n):
         # c goes through 2, 3, 5 then the infinite (6n+1, 6n+5) series
-        for c in it.accumulate(it.chain([2, 1, 2], it.cycle([2,4]))):
-            if c*c > n: break
+        for c in it.accumulate(it.chain([2, 1, 2], it.cycle([2, 4]))):
+            if c * c > n: break
             if n % c: continue
             d, p = (), c
             while not n % c:
                 n, p, d = n // c, p * c, d + (p,)
-            yield(d)
-        if n > 1: yield((n,))
+            yield (d)
+        if n > 1: yield ((n,))
 
     r = [1]
     for e in prime_powers(n):
-        r += [a*b for a in r for b in e]
+        r += [a * b for a in r for b in e]
     return r
 
 
@@ -164,8 +170,8 @@ def square_factors(n):
     """
     if not isinstance(n, (int, np.int, np.int64)):
         raise TypeError("'n' must of type [int, np.int, np.int64]")
-    F = np.sort(np.asarray(factor(n)))
-    return F[F.shape[0] // 2], F[-1] // F[F.shape[0] // 2]
+    arr = np.sort(np.asarray(factor(n)))
+    return arr[arr.shape[0] // 2], arr[-1] // arr[arr.shape[0] // 2]
 
 
 def nearest_square_factors(n, cutoff=6, search_range=5, W_var=1.5):
@@ -194,15 +200,15 @@ def nearest_square_factors(n, cutoff=6, search_range=5, W_var=1.5):
     # if our 'best' factors don't cut it...
     if abs(a - b) > cutoff:
         # create Range
-        R = np.arange(n, n+search_range, 1, dtype=np.int64)
+        R = np.arange(n, n + search_range, 1, dtype=np.int64)
         # calculate new scores
         nscores = np.asarray([square_factors(i) for i in R])
         # calculate distance
         dist = np.abs(nscores[:, 0] - nscores[:, 1])
         # weight our distances by a normal distribution -
         # we don't want to generate too many plots!
-        Wdist = dist * (1. - stats.norm.pdf(R, n, W_var))
+        w_dist = dist * (1. - stats.norm.pdf(R, n, W_var))
         # calculate new N
-        return tuple(nscores[Wdist.argmin()])
+        return tuple(nscores[w_dist.argmin()])
     else:
         return a, b

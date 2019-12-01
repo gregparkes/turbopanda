@@ -19,7 +19,6 @@ from sklearn.model_selection import cross_val_predict, cross_validate
 from .pipes import ml_pipe
 from .metrics import correlate
 
-
 __sklearn_model_packages__ = [tree, linear_model, ensemble, svm, gaussian_process,
                               neighbors]
 
@@ -56,8 +55,8 @@ def _get_coefficient_matrix(fitted_models, model_string, X):
         # coefficient matrix
         cols = X.columns if isinstance(X, pd.DataFrame) else [X.name]
         _coef_mat = pd.concat([
-                pd.DataFrame([mf.intercept_ for mf in fitted_models], columns=["intercept"]).T,
-                pd.DataFrame(np.vstack(([mf.coef_ for mf in fitted_models])).T, index=cols)
+            pd.DataFrame([mf.intercept_ for mf in fitted_models], columns=["intercept"]).T,
+            pd.DataFrame(np.vstack(([mf.coef_ for mf in fitted_models])).T, index=cols)
         ])
         _coef_mat.columns.name = "cv"
         return _coef_mat
@@ -97,7 +96,7 @@ class MetaML(object):
         """
         # make mp ML-ready
         self.model_str = model
-        self.mdf_ = mp.compute_extern(ml_pipe(mp, X_select, Y_select))
+        self.mdf_ = mp.compute(ml_pipe(mp, X_select, Y_select), inplace=False)
         # create X and y
         self.X, self.y = self.mdf_[X_select], self.mdf_[Y_select]
         # defaults
@@ -112,19 +111,18 @@ class MetaML(object):
 
         self.fit = False
 
-
     def single_run(self):
         """
         Performs a single run and returns predictions and scores based on defaults.
         """
 
         # preprocess X incase we are just one column
-        X_r = self.X.values.reshape(-1,1) if self.X.ndim == 1 else self.X.values
+        X_r = self.X.values.reshape(-1, 1) if self.X.ndim == 1 else self.X.values
         # perform cross-validated scores, models
         _scores = cross_validate(self.lm, X_r, self.y,
-                                     cv=self.cv, return_estimator=True,
-                                     return_train_score=True,
-                                     scoring="r2")
+                                 cv=self.cv, return_estimator=True,
+                                 return_train_score=True,
+                                 scoring="r2")
         # perform cross-validated-predictions
         self.yp = _wrap_pandas(cross_val_predict(self.lm, X_r, self.y, cv=self.cv), self.X.index)
         # calculate scores
@@ -140,7 +138,6 @@ class MetaML(object):
 
         self.fit = True
         return self
-
 
     def __repr__(self):
         if self.fit:

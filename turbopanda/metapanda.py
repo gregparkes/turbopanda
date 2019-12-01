@@ -19,7 +19,6 @@ from .selection import get_selector
 from .analyze import agglomerate, intersection_grid, dataframe_clean, dist
 from .metadata import construct_meta
 
-
 # hidden .py attributes
 
 __nondelay_functions__ = [
@@ -57,9 +56,9 @@ class MetaPanda(object):
         Parameters
         -------
         dataset : pd.DataFrame
-            The raw dataset to create as a metadataframe.
+            The raw dataset to create as a MetaDataFrame.
         name : str
-            Gives the metaframe a name, which comes into play with merging, for instance
+            Gives the MetaDataFrame a name, which comes into play with merging, for instance
         key : None, str
             Defines the primary key (unique identifier), if None does nothing.
         mode : str
@@ -69,7 +68,7 @@ class MetaPanda(object):
                 and then executes inplace when 'compute()' is called
         cat_thresh : int
             The threshold until which 'category' variables are not created
-        default_remove_one_column : bool
+        default_remove_single_col : bool
             Decides whether to drop columns with a single unique value in (default True)
         """
 
@@ -82,9 +81,7 @@ class MetaPanda(object):
         self._select = {}
         self._pipe = []
 
-
-    ############################ HIDDEN OPERATIONS #######################################
-
+    """ ############################ HIDDEN OPERATIONS ####################################### """
 
     def _actionable(function):
         @functools.wraps(function)
@@ -93,23 +90,17 @@ class MetaPanda(object):
                 self._pipe.append((function.__name__, args, kwargs))
             else:
                 return function(self, *args, **kwargs)
-        return new_function
 
+        return new_function
 
     def _rename_columns(self, old, new):
         self.df_.rename(columns=dict(zip(old, new)), inplace=True)
         self.meta_.rename(index=dict(zip(old, new)), inplace=True)
 
-
     def _drop_columns(self, select):
         if select.size > 0:
             self.df_.drop(select, axis=1, inplace=True)
             self.meta_.drop(select, axis=0, inplace=True)
-
-
-    def _add_pipe(self, fn, *fargs, **fkwargs):
-        self._pipe.append((fn, fargs, fkwargs))
-
 
     def _apply_function(self, fn, *fargs, **fkwargs):
         if hasattr(self.df_, fn):
@@ -119,60 +110,64 @@ class MetaPanda(object):
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.* API".format(fn))
 
+    def _apply_pipe(self, pipe):
+        # checks
+        if len(pipe) == 0:
+            warnings.warn("pipe_ empty, nothing to compute.", UserWarning)
+            return
+        # basic check of pipe
+        check_pipe_attr(pipe)
+        for fn, args, kwargs in pipe:
+            # check that MetaPanda has the function attribute
+            if hasattr(self, fn):
+                # execute function with args and kwargs
+                getattr(self, fn)(*args, **kwargs)
 
-    ############################## OVERIDDEN OPERATIONS ######################################
-
+    """ ############################## OVERIDDEN OPERATIONS ###################################### """
 
     def __getitem__(self, selector):
         sel = self.view(selector)
         if sel.size > 0:
             return self.df_[sel].squeeze()
 
-
     def __delitem__(self, selector):
         # drops columns inplace
-        sel = self.view(selector)
-        if sel.shape[0] > 0:
-            self.df_.drop(sel, axis=1, inplace=True)
-            # drop meta
-            self.meta_.drop(sel, axis=0, inplace=True)
-
+        self._drop_columns(self.view(selector))
 
     def __repr__(self):
         p = self.df_.shape[1] if self.df_.ndim > 1 else 1
         return "MetaPanda({}(n={}, p={}, mem={}), mode='{}')".format(self.name_,
-            self.df_.shape[0], p, self.memory_, self.mode_)
-
+                                                                     self.df_.shape[0],
+                                                                     p,
+                                                                     self.memory_,
+                                                                     self.mode_)
 
     ############################### PROPERTIES ##############################################
-
 
     @property
     def df_(self):
         return self._df
+
     @df_.setter
     def df_(self, df):
         if isinstance(df, DataFrame):
-            # cleans and preprocesses dataframe
+            # clean and preprocess DataFrame
             self._df = dataframe_clean(df, self._cat_thresh, self._def_remove_single_col)
             self._meta = construct_meta(self._df)
             if "colnames" not in self._df.columns:
                 self._df.columns.name = "colnames"
             if "counter" not in self._df.columns:
                 self._df.index.name = "counter"
-        elif isinstance(df, pd.Series):
+        elif isinstance(df, (pd.Series, DataFrameGroupBy)):
             # again, we'll just pretend the user knows what they're doing...
-            self._df = df
-        elif isinstance(df, DataFrameGroupBy):
-            # part of a groupby operation, just copy over for now...
             self._df = df
         else:
             raise TypeError("'df' must be of type [pd.Series, pd.DataFrame, DataFrameGroupBy]")
 
-
     @property
     def meta_(self):
         return self._meta
+
     @meta_.setter
     def meta_(self, meta):
         if isinstance(meta, DataFrame):
@@ -181,15 +176,14 @@ class MetaPanda(object):
         else:
             raise TypeError("'meta' must be of type [pd.DataFrame]")
 
-
     @property
     def memory_(self):
         return "{:0.3f}MB".format(calc_mem(self.df_) + calc_mem(self.meta_))
 
-
     @property
     def name_(self):
         return self._name
+
     @name_.setter
     def name_(self, n):
         if isinstance(n, str):
@@ -197,10 +191,10 @@ class MetaPanda(object):
         else:
             raise TypeError("'name_' must be of type str")
 
-
     @property
     def mode_(self):
         return self._mode
+
     @mode_.setter
     def mode_(self, mode):
         if mode in ["instant", "delay"]:
@@ -208,17 +202,15 @@ class MetaPanda(object):
         else:
             raise ValueError("'mode' must be ['instant', 'delay'], not '{}'".format(mode))
 
-
     @property
     def pipe_(self):
         return self._pipe
+
     @pipe_.setter
     def pipe_(self, p):
         self._pipe = p
 
-
-    ################################ FUNCTIONS ###################################################
-
+    """ ################################ FUNCTIONS ################################################### """
 
     def head(self, k=5):
         """
@@ -236,7 +228,6 @@ class MetaPanda(object):
             First k rows of self.df_
         """
         return self.df_.head(k)
-
 
     def view(self, *selector):
         """
@@ -258,7 +249,6 @@ class MetaPanda(object):
             warnings.warn("selection: '{}' was empty, no columns selected.".format(selector), UserWarning)
         return sel
 
-
     def view_not(self, *selector):
         """
         Select merely returns the columns of interest NOT selected using this selector. This function
@@ -276,14 +266,12 @@ class MetaPanda(object):
         """
         return self.df_.columns.drop(self.view(*selector))
 
-
     def copy(self):
         """
         Uses 'deepcopy' to create a copy of this object which is returned. This function
         is not affected by the 'mode' parameter.
         """
         return deepcopy(self)
-
 
     @_actionable
     def apply(self, f_name, *f_args, **f_kwargs):
@@ -310,7 +298,6 @@ class MetaPanda(object):
         self._apply_function(f_name, *f_args, **f_kwargs)
         return self
 
-
     @_actionable
     def drop(self, *selector):
         """
@@ -329,7 +316,6 @@ class MetaPanda(object):
         # perform inplace
         self._drop_columns(self.view(*selector))
         return self
-
 
     @_actionable
     def filter_row(self, function, selector=None, *args):
@@ -366,7 +352,6 @@ class MetaPanda(object):
         self.df_ = self.df_.loc[bs, :]
         return self
 
-
     def cache(self, name, *selector):
         """
         Saves a 'selector' to use at a later date. This can be useful if you
@@ -391,7 +376,6 @@ class MetaPanda(object):
         self._select[name] = selector
         return self
 
-
     def keys(self, prim_key=None, second_key=None):
         """
         Defines and creates primary and secondary ID keys to the dataset. A primary key is a
@@ -414,7 +398,6 @@ class MetaPanda(object):
         self
         """
         return NotImplemented
-
 
     def multi_cache(self, **caches):
         """
@@ -442,7 +425,6 @@ class MetaPanda(object):
                 self.cache(name, selector)
         return self
 
-
     @_actionable
     def rename(self, ops, selector=None):
         """
@@ -465,13 +447,10 @@ class MetaPanda(object):
         # check ops is right format
         is_twotuple(ops)
         curr_cols = sel_cols = self.view(*selector) if selector is not None else self.df_.columns
-
         for op in ops:
             curr_cols = curr_cols.str.replace(*op)
-
         self._rename_columns(sel_cols, curr_cols)
         return self
-
 
     @_actionable
     def add_prefix(self, pref, selector=None):
@@ -485,9 +464,6 @@ class MetaPanda(object):
         selector : None, str, or tuple args
             Contains either types, meta column names, column names or regex-compliant strings
             Allows user to specify subset to rename
-        apply : bool
-            If true, performs operation inplace on dataset, else returns the
-            new appearance only.
 
         Returns
         ------
@@ -495,11 +471,9 @@ class MetaPanda(object):
         """
         sel_cols = self.view(*selector) if selector is not None else self.df_.columns
         curr_cols = pref + sel_cols
-
         # set to df_ and meta_
         self._rename_columns(sel_cols, curr_cols)
         return self
-
 
     @_actionable
     def add_suffix(self, suf, selector=None):
@@ -513,9 +487,6 @@ class MetaPanda(object):
         selector : None, str, or tuple args
             Contains either types, meta column names, column names or regex-compliant strings
             Allows user to specify subset to rename
-        apply : bool
-            If true, performs operation inplace on dataset, else returns the
-            new appearance only.
 
         Returns
         ------
@@ -523,13 +494,11 @@ class MetaPanda(object):
         """
         sel_cols = self.view(*selector) if selector is not None else self.df_.columns
         curr_cols = sel_cols + suf
-
         # set to df_ and meta_
         self._rename_columns(sel_cols, curr_cols)
         return self
 
-
-    def analyze(self, functions = ["agglomerate"]):
+    def analyze(self, functions=["agglomerate"]):
         """
         Performs a series of analyses on the column names and how they might
         associate with each other.
@@ -549,13 +518,11 @@ class MetaPanda(object):
         self
         """
         options = ["agglomerate", "approx_dist"]
-
         if "agglomerate" in functions:
             self.meta_["agglomerate"] = agglomerate(self.df_.columns)
         if "approx_dist" in functions:
             self.meta_["approx_dist"] = dist(self.df_)
         return self
-
 
     @_actionable
     def transform(self, function, selector=None, whole=False, *args, **kwargs):
@@ -590,9 +557,9 @@ class MetaPanda(object):
             if whole:
                 self.df_.loc[:, selection] = function(self.df_.loc[:, selection], *args, **kwargs)
             else:
-                self.df_.loc[:, selection] = self.df_.loc[:, selection].transform(lambda x: function(x, *args, **kwargs))
+                self.df_.loc[:, selection] = self.df_.loc[:, selection].transform(
+                    lambda x: function(x, *args, **kwargs))
         return self
-
 
     @_actionable
     def multi_transform(self, ops):
@@ -615,7 +582,6 @@ class MetaPanda(object):
         for op in ops:
             self.transform(op[0], op[1])
         return self
-
 
     @_actionable
     def meta_map(self, name, selectors):
@@ -645,25 +611,23 @@ class MetaPanda(object):
             names = selectors.keys()
         elif isinstance(selectors, (list, tuple)):
             cnames = [self.view(sel) for sel in selectors]
-            names = [sel if sel in self._select else "group%d"%(i+1)
-                        for i, sel in enumerate(selectors)]
+            names = [sel if sel in self._select else "group%d" % (i + 1) for i, sel in enumerate(selectors)]
         else:
             raise TypeError("'selectors' must be of type [list, tuple, dict]")
 
         igrid = intersection_grid(cnames)
         if igrid.shape[0] == 0:
-            NG = pd.concat([
-                    pd.Series(n, index=val) for n, val in zip(names,cnames)
-                ], sort=False, axis=0)
-            NG.name = name
+            new_grid = pd.concat([
+                pd.Series(n, index=val) for n, val in zip(names, cnames)
+            ], sort=False, axis=0)
+            new_grid.name = name
         else:
             raise ValueError("shared terms: {} discovered for meta_map.".format(igrid))
         # merge into meta
-        self.meta_[name] = NG
+        self.meta_[name] = new_grid
         # categorize
-        convert_category(self.meta_, name, NG.unique())
+        convert_category(self.meta_, name, new_grid.unique())
         return self
-
 
     @_actionable
     def sort_columns(self, by="alphabet", ascending=True):
@@ -695,9 +659,10 @@ class MetaPanda(object):
                 by[by.index("alphabet")] = "colnames"
             if isinstance(ascending, bool):
                 # turn into a list with that value
-                ascending=[ascending]*len(by)
+                ascending = [ascending] * len(by)
             if len(by) != len(ascending):
-                raise ValueError("the length of 'by' {} must equal the length of 'ascending' {}".format(len(by),len(ascending)))
+                raise ValueError(
+                    "the length of 'by' {} must equal the length of 'ascending' {}".format(len(by), len(ascending)))
             if all([(col in self.meta_) or (col == "colnames") for col in by]):
                 # sort meta
                 self.meta_.sort_values(by=by, axis=0, ascending=ascending, inplace=True)
@@ -706,11 +671,10 @@ class MetaPanda(object):
         else:
             raise TypeError("'by' must be of type [str, list, tuple], not {}".format(type(by)))
 
-
     @_actionable
     def expand(self, column, sep=","):
         """
-        Expands out a 'stacked' id column to a longer-form dataframe, and re-merging
+        Expands out a 'stacked' id column to a longer-form DataFrame, and re-merging
         the data back in.
 
         Parameters
@@ -737,7 +701,6 @@ class MetaPanda(object):
         )
         self._df.columns.name = "colnames"
         return self
-
 
     @_actionable
     def shrink(self, column, sep=","):
@@ -769,7 +732,6 @@ class MetaPanda(object):
         self._df.columns.name = "colnames"
         return self
 
-
     @_actionable
     def split_categories(self, column, sep=",", renames=None):
         """
@@ -790,16 +752,15 @@ class MetaPanda(object):
         exp = self.df_[column].str.strip().str.split(sep, expand=True)
         # calculate column names
         if renames is None:
-            cnames = ["cat%d" % (i+1) for i in range(exp.shape[1])]
+            cnames = ["cat%d" % (i + 1) for i in range(exp.shape[1])]
         else:
-            cnames = renames if len(renames) == exp.shape[1] else ["cat%d" % (i+1) for i in range(exp.shape[1])]
+            cnames = renames if len(renames) == exp.shape[1] else ["cat%d" % (i + 1) for i in range(exp.shape[1])]
 
         self._df = self.df_.join(
             exp.rename(columns=dict(zip(range(exp.shape[1]), cnames)))
         )
         self._df.columns.name = "colnames"
         return self
-
 
     @_actionable
     def melt(self, id_vars=["counter"], *args, **kwargs):
@@ -822,69 +783,39 @@ class MetaPanda(object):
             if "counter" not in id_vars:
                 id_vars.insert(0, "counter")
             # modify df by resetting and melting
-            self.df_ = (self.df_.reset_index()
-                .melt(id_vars=id_vars, *args, **kwargs))
+            self.df_ = self.df_.reset_index().melt(id_vars=id_vars, *args, **kwargs)
         return self
 
-
-    def compute(self):
+    def compute(self, pipe=None, inplace=True):
         """
-        Computes tasks inplace, in-order depending on the pipe_ cached.
+        Computes a pipeline to the MetaPanda object. If there are no parameters, it computes
+        what is stored in the pipe_ attribute, if any.
 
-        Does nothing if mode == 'instant'
+        Parameters
+        -------
+        pipe : list of 3-tuple, (function name, *args, **kwargs), optional
+            A set of instructions expecting function names in MetaPanda and parameters.
+            If empty, uses the stored pipe_ attribute.
+        inplace : bool
+            If True, applies the pipe inplace, else returns a copy.
 
         Returns
         -------
-        self
+        self/copy
         """
-        if len(self.pipe_) == 0:
-            warnings.warn("self.pipe_ empty, nothing to compute.", UserWarning)
-            return
-        elif self.mode_ == "delay":
-            # temporary set mode to instant
-            self.mode_ = "instant"
-            for fn, args, kwargs in self.pipe_:
-                # check that MetaPanda has the function attribute
-                if hasattr(self, fn):
-                    # execute function with args and kwargs
-                    getattr(self, fn)(*args, **kwargs)
+        if pipe is None:
+            # use self.pipe_
+            pipe = self.pipe_
 
-            #set mode back to delay
-            self.mode_ = "delay"
-            # empty list to prevent repeat.
+        if inplace:
+            # computes inplace
+            self._apply_pipe(pipe)
             self._pipe = []
             return self
         else:
-            raise ValueError("mode_ is {}, not delay.".format(self.mode_))
-
-
-    def compute_extern(self, pipe):
-        """
-        Computes a series of tasks using an external pipe. This creates a copy
-        and performs the tasks on the copy, and returns this copy, so no underlying
-        changes are made to this object.
-
-        Parameters
-        --------
-        pipe : list of tasks
-            A pipeline similar to self.pipe_ that we execute
-
-        Returns
-        -------
-        mdf : MetaPanda
-            A copy of the updated MetaPanda
-        """
-        # create a copy
-        cop = deepcopy(self)
-        # set pipe parameter
-        cop.pipe_ = pipe
-        cop.mode_ = "delay"
-        # compute the changes
-        cop.compute()
-        # set back to instant
-        cop.mode_="instant"
-        return cop
-
+            cop = self.copy()
+            cop.compute(pipe, inplace=True)
+            return cop
 
     def write(self, filename=None, with_meta=True, *args, **kwargs):
         """
@@ -904,19 +835,18 @@ class MetaPanda(object):
             Keywords to pass to pd.to_csv
         """
         if filename is not None:
-            self.df_.to_csv(filename, sep=",",*args,**kwargs)
+            self.df_.to_csv(filename, sep=",", *args, **kwargs)
             if with_meta:
                 # uses the name stored in mp
-                dsplit = filename.rsplit("/",1)
+                dsplit = filename.rsplit("/", 1)
                 if len(dsplit) == 1:
-                    self.meta_.to_csv(dsplit[0].split(".")[0]+"__meta.csv",sep=",")
+                    self.meta_.to_csv(dsplit[0].split(".")[0] + "__meta.csv", sep=",")
                 else:
                     directory, name = dsplit
-                    self.meta_.to_csv(directory+"/"+name.split(".")[0]+"__meta.csv",sep=",")
+                    self.meta_.to_csv(directory + "/" + name.split(".")[0] + "__meta.csv", sep=",")
         else:
-            self.df_.to_csv(self.name_+".csv", sep=",",*args,**kwargs)
+            self.df_.to_csv(self.name_ + ".csv", sep=",", *args, **kwargs)
             if with_meta:
-                self.meta_.to_csv(self.name_+"__meta.csv",sep=",")
-
+                self.meta_.to_csv(self.name_ + "__meta.csv", sep=",")
 
     _actionable = staticmethod(_actionable)

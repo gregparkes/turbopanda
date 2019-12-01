@@ -20,9 +20,9 @@ def ml_pipe(mp, X_s, y_s, preprocessor="scale"):
     --------
     mp : turb.MetaPanda
         The MetaPanda object
-    X_f : list of str, pd.Index
+    X_s : list of str, pd.Index
         A list of x-features
-    y_f : str/list of str, pd.Index
+    y_s : str/list of str, pd.Index
         A list of y-feature(s)
     preprocessor : str
         Name of preprocessing: default 'scale', choose from

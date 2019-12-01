@@ -22,11 +22,11 @@ def _r2(x, y):
 
 
 def _map_correlate(method):
-    if method =="spearman":
+    if method == "spearman":
         return spearmanr
-    elif method=="pearson":
+    elif method == "pearson":
         return pearsonr
-    elif method=="r2":
+    elif method == "r2":
         return _r2
     else:
         raise NotImplementedError
@@ -37,13 +37,13 @@ def _mi_matrix(X):
     Computes a mutual information matrix given X only by correlating with every
     other column.
     """
-    MI = np.zeros((X.shape[1],X.shape[1]))
+    MI = np.zeros((X.shape[1], X.shape[1]))
     for i in range(X.shape[1]):
         for j in range(i+1, X.shape[1]):
             selector = X.iloc[:, i].notnull() & X.iloc[:, j].notnull()
             MI[i, j] = mutual_info_regression(
-                    np.atleast_2d(X.loc[selector,X.columns[i]]).T,
-                    X.loc[selector,X.columns[j]]
+                    np.atleast_2d(X.loc[selector, X.columns[i]]).T,
+                    X.loc[selector, X.columns[j]]
             )
     # mirror transpose
     MI += MI.T
@@ -61,7 +61,7 @@ def _corr_two_matrix(X, Y, method="spearman"):
     Computes the correlation between two matrices X and Y of same size.
     """
     m_f = _map_correlate(method)
-    cor = np.zeros((X.shape[1],2))
+    cor = np.zeros((X.shape[1], 2))
     if X.shape != Y.shape:
         raise ValueError("X.shape {} does not match Y.shape {}".format(X.shape, Y.shape))
     for i in range(X.shape[1]):
@@ -134,6 +134,6 @@ def condition_number(mdf):
         ("drop", (lambda x: x.count() < x.shape[0],), {}),
     ]
 
-    X = mdf.compute_extern(pipe).df_
+    X = mdf.compute(pipe, inplace=False).df_
     eigs = np.linalg.eigvals(X.T @ X)
     return np.sqrt(eigs.max() / eigs.min())

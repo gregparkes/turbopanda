@@ -1,14 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Mon Nov 11 14:34:04 2019
-
-@author: gparkes
-"""
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
 Created on Mon Nov 11 13:55:47 2019
 
 @author: gparkes
@@ -23,7 +15,7 @@ class Distribution(object):
     """
     Fits a distribution to data.
     """
-    def __init__(self, dist_names = []):
+    def __init__(self, dist_names=[]):
         if len(dist_names) == 0:
             self.dist_names = [
                 "norm", "lognorm", "expon", "pareto",
@@ -39,7 +31,6 @@ class Distribution(object):
 
         self.isFitted = False
 
-
     def Fit(self, y):
         self.dist_results = []
         self.params = {}
@@ -50,7 +41,7 @@ class Distribution(object):
 
             self.params[dist_name] = param
             # apply KS-test
-            D, p = stats.kstest(y, dist_name, args=param)
+            d, p = stats.kstest(y, dist_name, args=param)
             self.dist_results.append((dist_name, p))
 
         # select the best-fitted distribution
@@ -62,15 +53,13 @@ class Distribution(object):
         self.isFitted = True
         return self.dist_name, self.PValue
 
-
-    def Random(self, n = 1):
+    def Random(self, n=1):
         if self.isFitted:
             dist = getattr(stats, self.dist_name)
             param = self.params[self.dist_name]
             return dist.rvs(*param[:-2], loc=param[-2], scale=param[-1], size=n)
         else:
             raise ValueError("Distribution is not fitted.")
-
 
     def Plot(self, y):
         x = self.Random(n=len(y))

@@ -12,15 +12,15 @@ from sklearn import preprocessing
 __all__ = ["ml_pipe"]
 
 
-def ml_pipe(mp, X_s, y_s, preprocessor="scale"):
+def ml_pipe(mp, x_s, y_s, preprocessor="scale"):
     """
     Creates a 'delay' pipe that will make your data 'machine-learning-ready'.
 
     Parameters
     --------
-    mp : turb.MetaPanda
+    mp : MetaPanda
         The MetaPanda object
-    X_s : list of str, pd.Index
+    x_s : list of str, pd.Index
         A list of x-features
     y_s : str/list of str, pd.Index
         A list of y-feature(s)
@@ -40,8 +40,8 @@ def ml_pipe(mp, X_s, y_s, preprocessor="scale"):
 
     return [
         ("drop", (object, "_id$", "_ID$"), {}),
-        ("apply", ("dropna",), {"subset": y_f}),
-        ("transform", (lambda x: x.fillna(x.mean()), X_s), {}),
-        ("transform", (preproc_f,), {"selector": X_s, "whole": True}),
+        ("apply", ("dropna",), {"axis": 0, "subset": y_f}),
+        ("transform", (lambda x: x.fillna(x.mean()), x_s), {}),
+        ("transform", (preproc_f,), {"selector": x_s, "whole": True}),
         ("transform", (lambda y: y - y.mean(), y_s), {}),
     ]

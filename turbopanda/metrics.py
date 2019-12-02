@@ -81,19 +81,19 @@ def _corr_matrix_vector(X, y, method="spearman"):
     return pd.DataFrame(cor, index=X.columns, columns=[method, "p-val"])
 
 
-def correlate(X, Y=None, method="spearman"):
+def correlate(x, y=None, method="spearman"):
     """
     Correlates X and Y together to generate a correlation matrix.
 
     Parameters
     ---------
-    X : pd.Series, pd.DataFrame, MetaPanda
+    x : pd.Series, pd.DataFrame, MetaPanda
         set of inputs
-    Y : None, pd.Series, pd.DataFrame, MetaPanda
+    y : None, pd.Series, pd.DataFrame, MetaPanda
         set of output(s)
     method : str
         Method to correlate with. Choose from
-            [spearman, pearson, r2]
+            ['spearman', 'pearson']
 
     Returns
     -------
@@ -101,23 +101,23 @@ def correlate(X, Y=None, method="spearman"):
         correlation matrix
     """
     # reduce X, Y if metapanda
-    if isinstance(X, MetaPanda):
-        X = X.df_
-    if isinstance(Y, MetaPanda):
-        Y = Y.df_
+    if isinstance(x, MetaPanda):
+        x = x.df_
+    if isinstance(y, MetaPanda):
+        y = y.df_
 
-    if Y is None:
+    if y is None:
         # only handle X
-        return X.corr(method=method)
+        return x.corr(method=method)
     else:
-        if isinstance(X, pd.Series) and isinstance(Y, pd.Series):
-            return _corr_vector_vector(X, Y, method)
-        elif isinstance(X, pd.DataFrame) and isinstance(Y, pd.Series):
-            return _corr_matrix_vector(X, Y, method)
-        elif isinstance(Y, np.ndarray) and (Y.ndim == 1):
-            return _corr_matrix_vector(X, Y, method)
-        elif isinstance(Y, pd.DataFrame):
-            return _corr_two_matrix(X, Y, method)
+        if isinstance(x, pd.Series) and isinstance(y, pd.Series):
+            return _corr_vector_vector(x, y, method)
+        elif isinstance(x, pd.DataFrame) and isinstance(y, pd.Series):
+            return _corr_matrix_vector(x, y, method)
+        elif isinstance(y, np.ndarray) and (y.ndim == 1):
+            return _corr_matrix_vector(x, y, method)
+        elif isinstance(x, pd.DataFrame):
+            return _corr_two_matrix(x, y, method)
         else:
             raise ValueError("Y not recognized")
 

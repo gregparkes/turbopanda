@@ -1,7 +1,7 @@
 # import
 
 """ This block handles the import needs of the package """
-hard_dependencies = ("numpy", "scipy", "pandas", "matplotlib")
+hard_dependencies = ("numpy", "scipy", "pandas", "matplotlib", "sklearn")
 missing_dependencies = []
 
 for dependency in hard_dependencies:

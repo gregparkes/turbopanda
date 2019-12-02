@@ -79,7 +79,7 @@ class MetaML(object):
     scikit-learn models.
     """
 
-    def __init__(self, mp, X_select, Y_select, model="LinearRegression"):
+    def __init__(self, mp, x_select, y_select, model="LinearRegression"):
         """
         Receives a MetaPanda object with all of the features ready to go(ish).
 
@@ -87,18 +87,22 @@ class MetaML(object):
         --------
         mp : MetaPanda
             A pandas.DataFrame object containing preprocessed input/output
-        X_select : selector
+        x_select : selector
             A selector of x-inputs
-        Y_select : selector
+        y_select : selector
             A selector of y-inputs
         model : str, sklearn model
             The model selected to perform a run as
         """
         # make mp ML-ready
         self.model_str = model
-        self.mdf_ = mp.compute(ml_pipe(mp, X_select, Y_select), inplace=False)
+        # compute ML pipeline to dataset
+        self.mdf_ = mp.compute(ml_pipe(mp, x_select, y_select), inplace=False)
+        # call cache x and y selectors
+        self.mdf_.cache("input", x_select)
+        self.mdf_.cache("output", y_select)
         # create X and y
-        self.X, self.y = self.mdf_[X_select], self.mdf_[Y_select]
+        self.X, self.y = self.mdf_[x_select], self.mdf_[y_select]
         # defaults
         self.cv = 10
         # find and instantiate
@@ -111,11 +115,15 @@ class MetaML(object):
 
         self.fit = False
 
-    def single_run(self):
+    def single_run(self, scoring="r2"):
         """
         Performs a single run and returns predictions and scores based on defaults.
-        """
 
+        Parameters
+        -------
+        scoring : str
+            A scoring method in sklearn, by default use R-squared.
+        """
         # preprocess X incase we are just one column
         X_r = self.X.values.reshape(-1, 1) if self.X.ndim == 1 else self.X.values
         # perform cross-validated scores, models
@@ -138,6 +146,9 @@ class MetaML(object):
 
         self.fit = True
         return self
+
+
+
 
     def __repr__(self):
         if self.fit:

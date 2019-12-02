@@ -28,7 +28,8 @@ setup(
         "numpy>=1.11.0",
         "scipy>=1.3",
         "pandas>=0.25.1",
-        "matplotlib>=3.1.1"
+        "matplotlib>=3.1.1",
+        "scikit-learn>=0.21"
     ],
     classifiers=[
         "Natural Language :: English",

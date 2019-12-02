@@ -30,7 +30,7 @@ __delay_functions__ = [
     "drop", "apply", "transform", "multi_transform",
     "rename", "add_prefix", "add_suffix", "meta_map",
     "expand", "shrink", "sort_columns", "split_categories",
-    "melt", "filter_row"
+    "melt", "filter_rows"
 ]
 
 __functions__ = __nondelay_functions__ + __delay_functions__
@@ -116,7 +116,7 @@ class MetaPanda(object):
             warnings.warn("pipe_ empty, nothing to compute.", UserWarning)
             return
         # basic check of pipe
-        check_pipe_attr(pipe)
+        check_pipe_attr(self, pipe)
         for fn, args, kwargs in pipe:
             # check that MetaPanda has the function attribute
             if hasattr(self, fn):
@@ -134,6 +134,13 @@ class MetaPanda(object):
         # drops columns inplace
         self._drop_columns(self.view(selector))
 
+    def __enter__(self):
+        self.mode_ = "delay"
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.mode_ = "instant"
+        self.compute()
+
     def __repr__(self):
         p = self.df_.shape[1] if self.df_.ndim > 1 else 1
         return "MetaPanda({}(n={}, p={}, mem={}), mode='{}')".format(self.name_,
@@ -142,7 +149,7 @@ class MetaPanda(object):
                                                                      self.memory_,
                                                                      self.mode_)
 
-    ############################### PROPERTIES ##############################################
+    """ ############################### PROPERTIES ############################################## """
 
     @property
     def df_(self):
@@ -318,7 +325,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def filter_row(self, function, selector=None, *args):
+    def filter_rows(self, function, selector=None, *args):
         """
         Given a function, filter out rows that do not meet the functions' criteria.
 
@@ -470,9 +477,8 @@ class MetaPanda(object):
         self
         """
         sel_cols = self.view(*selector) if selector is not None else self.df_.columns
-        curr_cols = pref + sel_cols
         # set to df_ and meta_
-        self._rename_columns(sel_cols, curr_cols)
+        self._rename_columns(sel_cols, sel_cols+pref)
         return self
 
     @_actionable
@@ -493,9 +499,8 @@ class MetaPanda(object):
         self
         """
         sel_cols = self.view(*selector) if selector is not None else self.df_.columns
-        curr_cols = sel_cols + suf
         # set to df_ and meta_
-        self._rename_columns(sel_cols, curr_cols)
+        self._rename_columns(sel_cols, sel_cols+suf)
         return self
 
     def analyze(self, functions=["agglomerate"]):
@@ -653,7 +658,7 @@ class MetaPanda(object):
                 # sort the meta
                 self.meta_.sort_values(by=by, axis=0, ascending=ascending, inplace=True)
                 # sort the df
-                self.df_ = self.df_.reindex(self.meta_.index, axis=1)
+                self._df = self.df_.reindex(self.meta_.index, axis=1)
         elif isinstance(by, (list, tuple)):
             if "alphabet" in by:
                 by[by.index("alphabet")] = "colnames"
@@ -806,11 +811,12 @@ class MetaPanda(object):
         if pipe is None:
             # use self.pipe_
             pipe = self.pipe_
+            self.pipe_ = []
 
         if inplace:
             # computes inplace
+            self.mode_ = "instant"
             self._apply_pipe(pipe)
-            self._pipe = []
             return self
         else:
             cop = self.copy()

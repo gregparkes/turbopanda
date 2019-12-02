@@ -44,9 +44,16 @@ def read(filename, name=None, metafile=None, *args, **kwargs):
         "sql": pd.read_sql, "XLSX": pd.read_excel
     }
 
-    directory, fname = filename.rsplit("/", 1)
+    fs = filename.rsplit("/", 1)
+    if len(fs) == 0:
+        raise ValueError("filename '{}' not recognized".format(filename))
+    elif len(fs) == 1:
+        directory = "."
+        fname = fs[0]
+    else:
+        directory, fname = fs
     # just the name without the extension
-    jname, ext = fname.split(".",1)
+    jname, ext = fname.split(".", 1)
 
     df = file_ext_map[ext](filename, *args, **kwargs)
     # map to MetaPanda
@@ -70,7 +77,7 @@ def read(filename, name=None, metafile=None, *args, **kwargs):
 
         for potential_name in combs:
             if potential_name in dir_files:
-                met = pd.read_csv(directory+"/"+potential_name, index_col=0, header=0,sep=",")
+                met = pd.read_csv(directory + "/" + potential_name, index_col=0, header=0, sep=",")
                 # add to mp
                 mp.meta_ = met
 

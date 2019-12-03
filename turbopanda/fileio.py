@@ -70,16 +70,14 @@ def read(filename, name=None, metafile=None, *args, **kwargs):
         # try to find a metafile in the same directory.
         dir_files = os.listdir(directory)
         # potential combination of acceptable names to find
-        combs = [
-            jname + "__meta." + ext, name + "." + ext,
-            name + "__meta." + ext
-        ]
+        combs = [jname + "__meta.csv", name + "__meta.csv"]
 
         for potential_name in combs:
             if potential_name in dir_files:
                 met = pd.read_csv(directory + "/" + potential_name, index_col=0, header=0, sep=",")
                 # add to mp
                 mp.meta_ = met
+                return mp
 
     return mp
 

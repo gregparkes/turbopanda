@@ -12,12 +12,11 @@ import pandas as pd
 
 from sklearn import tree, linear_model, ensemble, svm, gaussian_process, neighbors
 from sklearn.base import is_classifier, is_regressor, BaseEstimator
-
 from sklearn.multioutput import MultiOutputRegressor, MultiOutputClassifier
-from sklearn.model_selection import cross_val_predict, cross_validate
+from sklearn.model_selection import cross_val_predict, GridSearchCV, cross_validate
+from sklearn.metrics import r2_score
 
-from .pipes import ml_pipe
-from .metrics import correlate
+from .pipes import ml_regression_pipe
 
 __sklearn_model_packages__ = [tree, linear_model, ensemble, svm, gaussian_process,
                               neighbors]
@@ -27,7 +26,11 @@ def _get_hidden_coefficients(directory):
     return [d for d in directory if d.endswith("_") and d.islower()]
 
 
-def _get_multioutput_wrap(model_t):
+def _is_multioutput_wrap(model):
+    return isinstance(model, (MultiOutputRegressor, MultiOutputClassifier))
+
+
+def _multioutput_wrap(model_t):
     if is_classifier(model_t):
         return MultiOutputClassifier(model_t)
     elif is_regressor(model_t):
@@ -49,7 +52,8 @@ def _wrap_pandas(data, labels):
     return pd.DataFrame(data, columns=labels) if data.ndim > 1 else pd.Series(data, index=labels)
 
 
-def _get_coefficient_matrix(fitted_models, model_string, X):
+def _get_coefficient_matrix(fitted_models, X):
+    # check if wrapped in multioutput first
     if hasattr(fitted_models[0], "coef_") and hasattr(fitted_models[0], "intercept_"):
         # linear model or SVM
         # coefficient matrix
@@ -97,7 +101,7 @@ class MetaML(object):
         # make mp ML-ready
         self.model_str = model
         # compute ML pipeline to dataset
-        self.mdf_ = mp.compute(ml_pipe(mp, x_select, y_select), inplace=False)
+        self.mdf_ = mp.compute(ml_regression_pipe(mp, x_select, y_select), inplace=False)
         # call cache x and y selectors
         self.mdf_.cache("input", x_select)
         self.mdf_.cache("output", y_select)
@@ -108,33 +112,112 @@ class MetaML(object):
         # find and instantiate
         model_t = _find_sklearn_model(model)()
         # cover for multioutput
-        if self.y.ndim > 1:
-            self.lm = _get_multioutput_wrap(model_t)
+        if self.multioutput:
+            self.lm = _multioutput_wrap(model_t)
         else:
             self.lm = model_t
 
         self.fit = False
 
-    def single_run(self, scoring="r2"):
+    """ ################################ PROPERTIES #############################################"""
+
+    @property
+    def cv(self):
+        return self._cv
+
+    @cv.setter
+    def cv(self, _cv):
+        if isinstance(_cv, (int, np.int)):
+            self._cv = _cv
+        else:
+            raise TypeError("cv is not of type [int]")
+
+    @property
+    def X(self):
+        return self._X
+
+    @X.setter
+    def X(self, _x):
+        if isinstance(_x, (pd.DataFrame, pd.Series)):
+            self._X = _x
+        else:
+            raise TypeError("X input is not of type [pd.DataFrame, pd.Series]")
+
+    @property
+    def y(self):
+        return self._y
+
+    @y.setter
+    def y(self, _y):
+        if isinstance(_y, (pd.DataFrame, pd.Series)):
+            self._y = _y
+        else:
+            raise TypeError("y output is not of type [pd.DataFrame, pd.Series]")
+
+    @property
+    def model_str(self):
+        return self._model_str
+
+    @model_str.setter
+    def model_str(self, ms):
+
+        self._model_str = _find_sklearn_model(ms)
+
+    @property
+    def _x_names(self):
+        return self.X.columns if self.X.ndim > 1 else [self.X.name]
+
+    @property
+    def _x_numpy(self):
+        return self.X.values.reshape(-1, 1) if self.X.ndim == 1 else self.X.values
+
+    @property
+    def _y_names(self):
+        return self.y.columns if self.multioutput else self.y.name
+
+    @property
+    def multioutput(self):
+        return self.y.ndim > 1
+
+    @property
+    def score_r2(self):
+        if not self.fit:
+            raise ValueError("model not fitted! no r2")
+        return r2_score(self.y, self.yp)
+
+    """ ################################ HIDDEN/OVERRIDES ############################################# """
+
+    def __repr__(self):
+        if self.fit:
+            return "MetaML(X: {}, Y: {}, cv={}, score={})".format(self.X.shape, self.y.shape, self.cv, self.score_r2)
+        else:
+            return "MetaML(X: {}, Y: {}, cv={})".format(self.X.shape, self.y.shape, self.cv)
+
+    """ ################################ FUNCTIONS ############################################# """
+
+    def fit(self):
         """
-        Performs a single run and returns predictions and scores based on defaults.
+        Performs a single run/fit and returns predictions and scores based on defaults.
 
         Parameters
         -------
         scoring : str
             A scoring method in sklearn, by default use R-squared.
         """
-        # preprocess X incase we are just one column
-        X_r = self.X.values.reshape(-1, 1) if self.X.ndim == 1 else self.X.values
         # perform cross-validated scores, models
-        _scores = cross_validate(self.lm, X_r, self.y,
-                                 cv=self.cv, return_estimator=True,
-                                 return_train_score=True,
-                                 scoring="r2")
+        self._grid = GridSearchCV(self.lm,
+                             param_grid={},
+                             scoring="r2",
+                             cv=self.cv,
+                             refit=True,
+                             return_train_score=True,
+        )
+        self._grid.fit(self._x_numpy, self.y)
+        # cross-validate the best model
+        _scores = cross_validate(self.lm, self._x_numpy, self.y, scoring="r2",
+                                 cv=self.cv, return_train_score=True, return_estimator=True)
         # perform cross-validated-predictions
-        self.yp = _wrap_pandas(cross_val_predict(self.lm, X_r, self.y, cv=self.cv), self.X.index)
-        # calculate scores
-        self.score_pred = correlate(self.y, self.yp, method="r2")
+        self.yp = _wrap_pandas(cross_val_predict(self.lm, self._x_numpy, self.y, cv=self.cv), self._y_names)
 
         # handle cross_validate
         self.fitted = _scores["estimator"]
@@ -146,12 +229,3 @@ class MetaML(object):
 
         self.fit = True
         return self
-
-
-
-
-    def __repr__(self):
-        if self.fit:
-            return "MetaML(X: {}, Y: {}, cv={}, score={})".format(self.X.shape, self.y.shape, self.cv, self.score_pred)
-        else:
-            return "MetaML(X: {}, Y: {}, cv={})".format(self.X.shape, self.y.shape, self.cv)

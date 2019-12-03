@@ -622,9 +622,7 @@ class MetaPanda(object):
 
         igrid = intersection_grid(cnames)
         if igrid.shape[0] == 0:
-            new_grid = pd.concat([
-                pd.Series(n, index=val) for n, val in zip(names, cnames)
-            ], sort=False, axis=0)
+            new_grid = pd.concat([pd.Series(n, index=val) for n, val in zip(names, cnames)], sort=False, axis=0)
             new_grid.name = name
         else:
             raise ValueError("shared terms: {} discovered for meta_map.".format(igrid))
@@ -675,6 +673,7 @@ class MetaPanda(object):
                 self._df = self.df_.reindex(self.meta_.index, axis=1)
         else:
             raise TypeError("'by' must be of type [str, list, tuple], not {}".format(type(by)))
+        return self
 
     @_actionable
     def expand(self, column, sep=","):

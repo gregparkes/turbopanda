@@ -9,7 +9,23 @@ Handling the construction and use of metadata associated with MetaPanda
 """
 
 import pandas as pd
-from .utils import not_column_float, is_column_object
+from .utils import not_column_float, is_column_object, is_missing_values
+
+
+def is_single_value_column(ser):
+    return ser.unique().shape[0] == 1
+
+
+def determine_dtype(ser):
+    """
+    Given a pandas.Series, determine it's true datatype if it has missing values.
+    """
+    # 1 if series is not missing values
+    if is_missing_values(ser) and ser.dtype != object:
+        cast_down = pd.to_numeric(ser.dropna(), downcast="unsigned").dtype
+        return cast_down
+    else:
+        return ser.dtype
 
 
 def is_unique_ID(ser):

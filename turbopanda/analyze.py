@@ -110,7 +110,7 @@ def dataframe_clean(df, cat_thresh=20, def_remove_single_col=True):
     ndf = df.apply(pd.to_numeric, errors="ignore", downcast="integer")
     # if multi-column, concatenate to a single column.
     remove_multi_index(ndf)
-    # perform categorization
+    # perform categorizationb
     categorize(ndf, cat_thresh, def_remove_single_col)
     # strip column names of spaces either side
     ndf.columns = ndf.columns.str.strip()

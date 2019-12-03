@@ -45,6 +45,10 @@ def is_column_object(ser):
     return ser.dtype in [object, pd.CategoricalDtype]
 
 
+def is_missing_values(ser):
+    return ser.count() < ser.shape[0]
+
+
 def convert_boolean(df, col, name_map):
     df[col] = df[col].astype(np.bool)
     name_map[col] = "is_" + col

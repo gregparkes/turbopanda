@@ -10,12 +10,14 @@ import matplotlib.pyplot as plt
 import itertools as it
 from scipy import stats
 
+from sklearn.metrics import r2_score
+
 from .utils import nearest_square_factors
 from .metaml import MetaML
 
 
 __all__ = ["plot_scatter_grid", "plot_missing", "plot_hist_grid",
-           "plot_coefficients"]
+           "plot_coefficients", "plot_actual_vs_predicted"]
 
 
 def _iqr(a):
@@ -151,6 +153,36 @@ def plot_scatter_grid(mdf, selector, target):
         fig.tight_layout()
 
 
+def plot_actual_vs_predicted(mml):
+    """
+    Plots the actual (regression) values against the predicted values. If there are multiple,
+    creates a multiplot.
+
+    Parameters
+    --------
+    mml : MetaML
+        The fitted machine learning model(s).
+
+    Returns
+    -------
+    None
+    """
+    if isinstance(mml, MetaML):
+        if mml.is_fit:
+            if mml.multioutput:
+                fig, axes = plt.subplots(ncols=mml.y.shape[1], figsize=(3*mml.y.shape[1], 4))
+                for a, col in zip(axes, mml._y_names):
+                    min_y, max_y = mml.y[col].min(), mml.y[col].max()
+                    a.scatter(mml.y[col], mml.yp[col], alpha=.3, marker="x", label=r"$r={:0.3f}$".format(r2_score(mml.y[col], mml.yp[col])))
+                    a.plot([min_y, max_y], [min_y, max_y], 'k-')
+                    a.set_title(col)
+            else:
+                fig, axes = plt.subplots(figsize=(8, 4))
+                min_y, max_y = mml.y.min(), mml.y.max()
+                axes.scatter(mml.y, mml.yp, alpha=.3, marker="x", label=r"$r={:0.3f}$".format(mml.score_r2))
+                axes.set_title(mml._y_names)
+
+
 def plot_coefficients(mml, use_absolute=False):
     """
     Plots the coefficients from a fitted machine learning model using MetaML.
@@ -173,7 +205,7 @@ def plot_coefficients(mml, use_absolute=False):
 
     def _plot_single_box(m, ax, i):
         if isinstance(m, MetaML):
-            if m.fit:
+            if m.is_fit:
                 # new order
                 no = m.coef_mat.apply(f_apply).mean(axis=1).sort_values().index
                 buffer = len(m.coef_mat) / 20

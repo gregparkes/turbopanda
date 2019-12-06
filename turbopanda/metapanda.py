@@ -16,8 +16,10 @@ from pandas.core.groupby.generic import DataFrameGroupBy
 
 from .utils import *
 from .selection import get_selector
-from .analyze import agglomerate, intersection_grid, dataframe_clean, dist
-from .metadata import construct_meta
+from .analyze import agglomerate, intersection_grid, dist
+from .metadata import add_metadata, basic_construct
+
+from .pipes import clean_pipe
 
 # hidden .py attributes
 
@@ -27,7 +29,7 @@ __nondelay_functions__ = [
 ]
 
 __delay_functions__ = [
-    "drop", "apply", "transform", "multi_transform",
+    "drop", "apply", "apply_index", "apply_columns", "transform", "multi_transform",
     "rename", "add_prefix", "add_suffix", "meta_map",
     "expand", "shrink", "sort_columns", "split_categories",
     "melt", "filter_rows"
@@ -74,12 +76,13 @@ class MetaPanda(object):
 
         self._cat_thresh = cat_thresh
         self._def_remove_single_col = default_remove_single_col
-        # set using property
-        self.df_ = dataset
+        self._with_warnings = False
         self.name_ = name
         self.mode_ = mode
         self._select = {}
         self._pipe = []
+        # set using property
+        self.df_ = dataset
 
     """ ############################ HIDDEN OPERATIONS ####################################### """
 
@@ -105,10 +108,34 @@ class MetaPanda(object):
     def _apply_function(self, fn, *fargs, **fkwargs):
         if hasattr(self.df_, fn):
             f = getattr(self.df_, fn)
-            self.df_ = f(*fargs, **fkwargs)
+            self._df = f(*fargs, **fkwargs)
             return self
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.* API".format(fn))
+
+    def _apply_index_function(self, fn, *fargs, **fkwargs):
+        if hasattr(self.df_.index, fn):
+            f = getattr(self.df_.index, fn)
+            self.df_.index = f(*fargs, **fkwargs)
+            return self
+        elif hasattr(self.df_.index.str, fn):
+            f = getattr(self.df_.index.str, fn)
+            self.df_.index = f(*fargs, **fkwargs)
+            return self
+        else:
+            raise ValueError("function '{}' not recognized in pandas.DataFrame.index.[str.]* API".format(fn))
+
+    def _apply_column_function(self, fn, *fargs, **fkwargs):
+        if hasattr(self.df_.columns, fn):
+            f = getattr(self.df_.columns, fn)
+            self.df_.columns = f(*fargs, **fkwargs)
+            return self
+        elif hasattr(self.df_.columns.str, fn):
+            f = getattr(self.df_.columns.str, fn)
+            self.df_.columns = f(*fargs, **fkwargs)
+            return self
+        else:
+            raise ValueError("function '{}' not recognized in pandas.DataFrame.columns.[str.]* API".format(fn))
 
     def _apply_pipe(self, pipe):
         # checks
@@ -158,9 +185,14 @@ class MetaPanda(object):
     @df_.setter
     def df_(self, df):
         if isinstance(df, DataFrame):
-            # clean and preprocess DataFrame
-            self._df = dataframe_clean(df, self._cat_thresh, self._def_remove_single_col)
-            self._meta = construct_meta(self._df)
+            # apply the 'cleaning pipeline' to this.
+            self._df = df
+            # allocate meta data
+            self._meta = basic_construct(self._df)
+            # compute cleaning.
+            self.compute(clean_pipe(), inplace=True)
+            # add metadata columns
+            add_metadata(self._df, self._meta)
             if "colnames" not in self._df.columns:
                 self._df.columns.name = "colnames"
             if "counter" not in self._df.columns:
@@ -178,7 +210,7 @@ class MetaPanda(object):
     @meta_.setter
     def meta_(self, meta):
         if isinstance(meta, DataFrame):
-            self._meta = dataframe_clean(meta, self._cat_thresh, self._def_remove_single_col)
+            self._meta = meta
             self._meta.index.name = "colnames"
         else:
             raise TypeError("'meta' must be of type [pd.DataFrame]")
@@ -251,8 +283,8 @@ class MetaPanda(object):
         sel : list
             The list of column names selected, or empty
         """
-        sel = get_selector(self.df_, self.meta_, self._select, selector, select_join="OR")
-        if sel.shape[0] == 0:
+        sel = get_selector(self.df_, self.meta_, self._select, selector, raise_error=False, select_join="OR")
+        if (sel.shape[0] == 0) and self._with_warnings:
             warnings.warn("selection: '{}' was empty, no columns selected.".format(selector), UserWarning)
         return sel
 
@@ -306,6 +338,56 @@ class MetaPanda(object):
         return self
 
     @_actionable
+    def apply_columns(self, f_name, *f_args, **f_kwargs):
+        """
+        Applies a pandas.DataFrame.columns.* function to the MetaPanda columns. The result is then returned
+        to the columns attribute, so it should only accept transform-like operations.
+
+        e.g mdf.apply_columns("strip")
+            applies self.df_.columns = self.df_.columns.str.strip() to columns
+
+        Parameters
+        -------
+        f_name : str
+            The name of the function. This can be in the .str accessor attribute also.
+        f_args : list/tuple
+            Arguments to pass to the function
+        f_kwargs : dict
+            Keyword arguments to pass to the function
+
+        Returns
+        -------
+        self
+        """
+        self._apply_column_function(f_name, *f_args, **f_kwargs)
+        return self
+
+    @_actionable
+    def apply_index(self, f_name, *f_args, **f_kwargs):
+        """
+        Applies a pandas.DataFrame.index.* function to the MetaPanda index. The result is then returned
+        to the index attribute, so it should only accept transform-like operations.
+
+        e.g mdf.apply_index("strip")
+            applies self.df_.index = self.df_.index.str.strip() to columns
+
+        Parameters
+        -------
+        f_name : str
+            The name of the function. This can be in the .str accessor attribute also.
+        f_args : list/tuple
+            Arguments to pass to the function
+        f_kwargs : dict
+            Keyword arguments to pass to the function
+
+        Returns
+        -------
+        self
+        """
+        self._apply_index_function(f_name, *f_args, **f_kwargs)
+        return self
+
+    @_actionable
     def drop(self, *selector):
         """
         Given a selector or group of selectors, drop all of the columns selected within
@@ -355,7 +437,7 @@ class MetaPanda(object):
         else:
             raise ValueError("parameter '{}' not callable".format(function))
         # check that bs is boolean series
-        is_boolean_series(bs)
+        boolean_series_check(bs)
         self.df_ = self.df_.loc[bs, :]
         return self
 

@@ -12,8 +12,7 @@ import numpy as np
 import pandas as pd
 from sklearn.cluster import FeatureAgglomeration
 
-from .utils import chain_union, remove_multi_index, remove_string_spaces
-from .selection import categorize
+from .utils import chain_union
 from .distribution import Distribution
 
 
@@ -102,20 +101,3 @@ def intersection_grid(indexes):
             ints = indexes[i].intersection(indexes[j])
             union_l.append(ints)
     return chain_union(*union_l)
-
-
-def dataframe_clean(df, cat_thresh=20, def_remove_single_col=True):
-    """ Given a raw, unprocessed, dataframe; clean it and prepare it. """
-    # convert columns to numeric if possible
-    ndf = df.apply(pd.to_numeric, errors="ignore", downcast="integer")
-    # if multi-column, concatenate to a single column.
-    remove_multi_index(ndf)
-    # perform categorizationb
-    categorize(ndf, cat_thresh, def_remove_single_col)
-    # strip column names of spaces either side
-    ndf.columns = ndf.columns.str.strip()
-    # strip spaces within text-based features
-    remove_string_spaces(ndf)
-    # remove spaces/tabs within the column name.
-    ndf.columns = ndf.columns.str.replace(" ", "_").str.replace("\t", "_").str.replace("-", "")
-    return ndf

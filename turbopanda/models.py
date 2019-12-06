@@ -5,21 +5,19 @@ Created on Thu Oct 31 16:39:37 2019
 
 @author: gparkes
 """
+import pandas as pd
 from numpy import nan
 
 from sklearn import linear_model as lm
-from sklearn import svm
+from sklearn import svm, tree
 from sklearn import ensemble as ens
 from sklearn import gaussian_process as gp
-from sklearn import tree
 from sklearn import neighbors as nn
 from sklearn import neural_network as neu
 
 
 def param_types():
-    return {'Parameter Name': ['alpha', 'C', 'n_estimators', 'kernel', 'max_depth', 'n_neighbors',
-               'hidden_layer_sizes', 'gamma', 'algorithm', 'leaf_size',
-               'criterion', 'loss', 'learning_rate', 'penalty', 'l1_ratio'],
+    return pd.DataFrame({
             'Context': ['lasso, ridge, elasticnet', 'logistic, svm',
                'adaboost, gbt, forest', 'gp', 'decisiontree, gbt, forest', 'nn',
                'mlp', 'svm', 'nn', 'nn', 'forest, decisiontree', 'gbt',
@@ -27,6 +25,7 @@ def param_types():
             'DataType': ['float', 'float', 'int', 'object', 'int', 'int', 'int', 'category',
                'category', 'int', 'category', 'category', 'float', 'category',
                'float'],
+            "Default": [1.0, 1.0, 50, nan, 3, 4, 10, "rbf", "auto", 3, "entropy", "deviance", 0.1, "l2", 0.5],
             'Range Min': [1.0e-03, 1.0e-02, 1.0e+01, nan, 2.0e+00, 2.0e+00, 1.0e+01,
                 nan, nan, 1.5e+01, nan, nan, 1.0e-02, nan, 5.0e-02],
             'Range Max': [1., 5., 500., nan, 5., 8., 40., nan,
@@ -38,11 +37,13 @@ def param_types():
                 nan,  10.,  nan,  10.],
             'Scale': ['log', 'log', 'normal', nan, 'normal', 'normal', 'normal', nan,
                 nan, 'normal', nan, nan, 'log', nan, 'normal']
-            }
+            }, index=['alpha', 'C', 'n_estimators', 'kernel', 'max_depth', 'n_neighbors',
+               'hidden_layer_sizes', 'gamma', 'algorithm', 'leaf_size',
+               'criterion', 'loss', 'learning_rate', 'penalty', 'l1_ratio'])
 
 
 def model_types():
-    return {
+    return pd.DataFrame({
         'Name': ['Linear Regression', 'Lasso', 'Ridge', 'Elastic Net',
            'Logistic Regression', 'Gaussian Process', 'Gaussian Process',
            'Ada Boosting', 'Ada Boosting', 'Gradient-Boosted Trees',
@@ -55,15 +56,6 @@ def model_types():
            'adaboost', 'adaboost', 'gbt', 'gbt', 'decisiontree',
            'decisiontree', 'forest', 'forest', 'nn', 'nn', 'mlp', 'mlp',
            'svm', 'svm'],
-        'SKName': ['LinearRegression', 'Lasso', 'Ridge', 'ElasticNet',
-           'LogisticRegression', 'GaussianProcessClassifier',
-           'GaussianProcessRegressor', 'AdaBoostClassifier',
-           'AdaBoostRegressor', 'GradientBoostingClassifier ',
-           'GradientBoostingRegressor', 'DecisionTreeClassifier',
-           'DecisionTreeRegressor', 'RandomForestClassifier',
-           'RandomForestRegressor', 'KneighborsClassifier',
-           'KNeighborsRegressor', 'MLPClassifier', 'MLPRegressor', 'SVC',
-           'SVR'],
         'Model Type': ['regression', 'regression', 'regression', 'regression',
            'classification', 'classification', 'regression', 'classification',
            'regression', 'classification', 'regression', 'classification',
@@ -97,4 +89,12 @@ def model_types():
             ens.RandomForestClassifier, ens.RandomForestRegressor,
             nn.KNeighborsClassifier, nn.KNeighborsRegressor,
             neu.MLPClassifier, neu.MLPRegressor, svm.SVC, svm.SVR],
-        }
+        }, index=['LinearRegression', 'Lasso', 'Ridge', 'ElasticNet',
+           'LogisticRegression', 'GaussianProcessClassifier',
+           'GaussianProcessRegressor', 'AdaBoostClassifier',
+           'AdaBoostRegressor', 'GradientBoostingClassifier ',
+           'GradientBoostingRegressor', 'DecisionTreeClassifier',
+           'DecisionTreeRegressor', 'RandomForestClassifier',
+           'RandomForestRegressor', 'KNeighborsClassifier',
+           'KNeighborsRegressor', 'MLPClassifier', 'MLPRegressor', 'SVC',
+           'SVR'])

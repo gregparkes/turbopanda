@@ -17,6 +17,7 @@ from sklearn.model_selection import cross_val_predict, GridSearchCV, cross_valid
 from sklearn.metrics import r2_score
 
 from .pipes import ml_regression_pipe
+from .models import *
 
 __sklearn_model_packages__ = [tree, linear_model, ensemble, svm, gaussian_process,
                               neighbors]
@@ -49,7 +50,12 @@ def _find_sklearn_model(model_str):
 
 
 def _wrap_pandas(data, labels):
-    return pd.DataFrame(data, columns=labels) if data.ndim > 1 else pd.Series(data, index=labels)
+    if isinstance(labels, str) and data.ndim == 1:
+        return pd.Series(data, name=labels)
+    elif data.ndim == 1:
+        return pd.Series(data, index=labels)
+    else:
+        return pd.DataFrame(data, columns=labels)
 
 
 def _get_coefficient_matrix(fitted_models, X):
@@ -111,13 +117,23 @@ class MetaML(object):
         self.cv = 10
         # find and instantiate
         model_t = _find_sklearn_model(model)()
+        # set default parameter of primary parameter
+        _mt = model_types()
+        _pt = param_types()
+
+        prim_param = _mt.loc[model, "Primary Parameter"]
+        if prim_param != np.nan:
+            def_value = _pt.loc[prim_param, "Default"]
+            # set parameter of primary value
+            model_t.set_params(**{prim_param:def_value})
+
         # cover for multioutput
         if self.multioutput:
             self.lm = _multioutput_wrap(model_t)
         else:
             self.lm = model_t
 
-        self.fit = False
+        self.is_fit = False
 
     """ ################################ PROPERTIES #############################################"""
 
@@ -181,14 +197,14 @@ class MetaML(object):
 
     @property
     def score_r2(self):
-        if not self.fit:
+        if not self.is_fit:
             raise ValueError("model not fitted! no r2")
         return r2_score(self.y, self.yp)
 
     """ ################################ HIDDEN/OVERRIDES ############################################# """
 
     def __repr__(self):
-        if self.fit:
+        if self.is_fit:
             return "MetaML(X: {}, Y: {}, cv={}, score={})".format(self.X.shape, self.y.shape, self.cv, self.score_r2)
         else:
             return "MetaML(X: {}, Y: {}, cv={})".format(self.X.shape, self.y.shape, self.cv)
@@ -221,11 +237,11 @@ class MetaML(object):
 
         # handle cross_validate
         self.fitted = _scores["estimator"]
-        self.score_train = _scores["train_score"]
+        self.score_train = np.clip(_scores["train_score"], 0, 1)
         self.score_fit = _scores["fit_time"]
-        self.score_test = _scores["test_score"]
+        self.score_test = np.clip(_scores["test_score"], 0, 1)
         # attempts to get weights
-        self.coef_mat = _get_coefficient_matrix(self.fitted, self.model_str, self.X)
+        self.coef_mat = _get_coefficient_matrix(self.fitted, self.X)
 
-        self.fit = True
+        self.is_fit = True
         return self

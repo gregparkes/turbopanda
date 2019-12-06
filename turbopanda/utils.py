@@ -8,16 +8,71 @@ Created on Mon Nov  4 13:13:38 2019
 
 import numpy as np
 import pandas as pd
-from scipy import stats
 import itertools as it
-from pandas.api.types import CategoricalDtype
 
+from pandas.api.types import CategoricalDtype
+from scipy.stats import norm
 
 __all__ = ["is_twotuple", "instance_check", "chain_intersection", "chain_union",
-           "is_boolean_series", "attach_name", "check_list_type", "not_column_float",
-           "is_column_float", "is_column_object", "convert_category", "convert_boolean",
+           "boolean_series_check", "attach_name", "check_list_type", "not_column_float",
+           "is_column_float", "is_column_object", "is_column_int", "convert_category", "convert_boolean",
            "calc_mem", "remove_multi_index", "remove_string_spaces", "check_pipe_attr",
-           "nearest_square_factors"]
+           "nearest_square_factors", "is_missing_values", "is_unique_id", "is_potential_id",
+           "is_potential_stacker", "nunique", "object_to_categorical",
+           "is_n_value_column", "boolean_to_integer", "integer_to_boolean"]
+
+
+def _cfloat():
+    return [np.float64, np.float32, np.float16, np.float, float]
+
+
+def _cint():
+    return [np.int64, np.int32, np.int16, np.int8, np.int, np.uint, np.uint8, np.uint16, np.uint16, np.uint32, int]
+
+
+def is_possible_category(ser):
+    return ser.dtype in ([object] + _cint())
+
+
+def not_column_float(ser):
+    return ser.dtype not in _cfloat()
+
+
+def is_column_float(ser):
+    return ser.dtype in _cfloat()
+
+
+def is_column_int(ser):
+    return ser.dtype in _cint()
+
+
+def is_column_object(ser):
+    return ser.dtype in [object, pd.CategoricalDtype]
+
+
+def is_missing_values(ser):
+    return ser.count() < ser.shape[0]
+
+
+def is_n_value_column(ser, n=1):
+    return nunique(ser) == n
+
+
+def is_unique_id(ser):
+    # a definite algorithm for determining a unique column IDm
+    return ser.is_unique if is_possible_category(ser) else False
+
+
+def is_potential_id(ser, thresh=0.5):
+    return (ser.unique().shape[0] / ser.shape[0]) > thresh if is_possible_category(ser) else False
+
+
+def is_potential_stacker(ser, regex=";|\t|,|", thresh=0.1):
+    return ser.dropna().str.contains(regex).sum() > thresh if (ser.dtype == object) else False
+
+
+def nunique(ser):
+    return ser.nunique() if is_possible_category(ser) else -1
 
 
 def is_twotuple(t):
@@ -33,20 +88,23 @@ def is_twotuple(t):
     return True
 
 
-def not_column_float(ser):
-    return ser.dtype not in [np.float64, np.float32, np.float, np.float16, float]
+def integer_to_boolean(ser):
+    """ Convert an integer series into boolean if possible """
+    return ser.astype(np.bool) if (is_column_int(ser) and is_n_value_column(ser, 2)) else ser
 
 
-def is_column_float(ser):
-    return ser.dtype in [np.float64, np.float32, np.float, np.float16, float]
+def object_to_categorical(ser, thresh=30):
+    # get uniques if possible
+    if 1 < nunique(ser) < thresh:
+        c_cat = CategoricalDtype(np.sort(ser.unique().dropna()), ordered=True)
+        return ser.astype(c_cat)
+    else:
+        return ser
 
 
-def is_column_object(ser):
-    return ser.dtype in [object, pd.CategoricalDtype]
-
-
-def is_missing_values(ser):
-    return ser.count() < ser.shape[0]
+def boolean_to_integer(ser):
+    """ Convert a boolean series into an integer if possible """
+    return ser.astype(np.uint8) if (ser.dtype == np.bool) else ser
 
 
 def convert_boolean(df, col, name_map):
@@ -63,11 +121,11 @@ def attach_name(*pds):
     return list(it.chain.from_iterable([df.name_ + "__" + df.df_.columns for df in pds]))
 
 
-def is_boolean_series(bool_s):
-    if not isinstance(bool_s, pd.Series):
-        raise TypeError("bool_s must be of type [pd.Series], not {}".format(type(bool_s)))
-    if bool_s.dtype not in [bool, np.bool]:
-        raise TypeError("bool_s must contain booleans, not type '{}'".format(bool_s.dtype))
+def boolean_series_check(ser):
+    if not isinstance(ser, pd.Series):
+        raise TypeError("bool_s must be of type [pd.Series], not {}".format(type(ser)))
+    if ser.dtype not in [bool, np.bool]:
+        raise TypeError("bool_s must contain booleans, not type '{}'".format(ser.dtype))
 
 
 def check_list_type(l, t):
@@ -211,7 +269,7 @@ def nearest_square_factors(n, cutoff=6, search_range=5, W_var=1.5):
         dist = np.abs(nscores[:, 0] - nscores[:, 1])
         # weight our distances by a normal distribution -
         # we don't want to generate too many plots!
-        w_dist = dist * (1. - stats.norm.pdf(R, n, W_var))
+        w_dist = dist * (1. - norm.pdf(R, n, W_var))
         # calculate new N
         return tuple(nscores[w_dist.argmin()])
     else:

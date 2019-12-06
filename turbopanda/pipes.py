@@ -5,12 +5,13 @@ Created on Tue Nov 26 13:17:26 2019
 
 @author: gparkes
 """
-
+import numpy as np
+from pandas import to_numeric
 from sklearn import preprocessing
 
-from .metadata import is_single_value_column
+from .utils import integer_to_boolean, object_to_categorical, is_n_value_column
 
-__all__ = ["ml_regression_pipe", "ml_continuous_pipe"]
+__all__ = ["ml_regression_pipe", "clean_pipe"]
 
 
 def ml_regression_pipe(mp, x_s, y_s, preprocessor="scale"):
@@ -30,11 +31,12 @@ def ml_regression_pipe(mp, x_s, y_s, preprocessor="scale"):
             [power_transform, minmax_scale, maxabs_scale, robust_scale,
              quantile_transform, scale, normalize]
             Choose from sklearn.preprocessing.
+
+    Returns
+    -------
+    pipe : list
+        The pipeline to perform on mp
     """
-    # fetch columns
-    y_f = mp.view(y_s)
-    # columns with only 1 value in
-    one_col = mp.view(is_single_value_column)
     if hasattr(preprocessing, preprocessor):
         # try to get function
         preproc_f = getattr(preprocessing, preprocessor.lower())
@@ -46,9 +48,9 @@ def ml_regression_pipe(mp, x_s, y_s, preprocessor="scale"):
         # drop objects, ids columns
         ("drop", (object, "_id$", "_ID$", "^counter"), {}),
         # drop any columns with single-value-type in
-        ("apply", ("drop", one_col), {"axis": 1})
+        ("apply", ("drop", mp.view(is_n_value_column),), {"axis": 1}),
         # drop missing values in y
-        ("apply", ("dropna",), {"axis": 0, "subset": y_f}),
+        ("apply", ("dropna",), {"axis": 0, "subset": mp.view(y_s)}),
         # fill missing values with the mean
         ("transform", (lambda x: x.fillna(x.mean()), x_s), {}),
         # apply standard scaling to X
@@ -56,45 +58,31 @@ def ml_regression_pipe(mp, x_s, y_s, preprocessor="scale"):
     ]
 
 
-def ml_continuous_pipe(mp, x_s, y_s, preprocessor="scale"):
+def clean_pipe():
     """
-    Creates a 'delay' pipe that will make your data 'machine-learning-ready'.
-    Only keeps continuous columns, i.e of type float.
+    Pipe that cleans the pandas.DataFrame. Applies a number of transformations which (attempt to) reduce the datatype,
+    cleaning column names.
 
     Parameters
     --------
-    mp : MetaPanda
-        The MetaPanda object
-    x_s : list of str, pd.Index
-        A list of x-features
-    y_s : str/list of str, pd.Index
-        A list of y-feature(s)
-    preprocessor : str
-        Name of preprocessing: default 'scale', choose from
-            [power_transform, minmax_scale, maxabs_scale, robust_scale,
-             quantile_transform, scale, normalize]
-            Choose from sklearn.preprocessing.
+    None
+
+    Returns
+    -------
+    pipe : list
+        The pipeline to perform on mp
     """
-    # fetch columns
-    y_f = mp.view(y_s)
-    # columns with only 1 value in
-    one_col = mp.view(is_single_value_column)
-
-    if hasattr(preprocessing, preprocessor):
-        # try to get function
-        preproc_f = getattr(preprocessing, preprocessor.lower())
-    else:
-        raise ValueError("preprocessor function '{}' not found in sklearn.preprocessing".format(preprocessor))
-
     return [
-        # drop objects, ids columns
-        ("drop", (object, "_id$", "_ID$", "^counter$"), {}),
-        # drop any columns with single-value-type in
-        ("apply", ("drop", one_col), {"axis": 1})
-        # drop missing values in y
-        ("apply", ("dropna",), {"axis": 0, "subset": y_f}),
-        # fill missing values with the mean
-        ("transform", (lambda x: x.fillna(x.mean()), x_s), {}),
-        # apply standard scaling to X
-        ("transform", (preproc_f,), {"selector": x_s, "whole": True}),
+        # shrink down data types where possible.
+        ("apply", ("transform", to_numeric,), {"errors": "ignore", "downcast": "unsigned"}),
+        # convert 2-ints into boolean columns
+        ("transform", (lambda x: integer_to_boolean(x),), {"selector": int}),
+        # convert int to categories
+        ("transform", (lambda x: object_to_categorical(x),), {"selector": object}),
+        # strip column names
+        ("apply_columns", ("strip",), {}),
+        # strip string object columns
+        ("transform", (lambda x: x.str.strip(),), {"selector": object}),
+        # do some string stripping
+        ("rename", ([(" ", "_"), ("\t", "_"), ("-", "")],), {}),
     ]

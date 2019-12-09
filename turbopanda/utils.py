@@ -6,9 +6,12 @@ Created on Mon Nov  4 13:13:38 2019
 @author: gparkes
 """
 
+import os
 import numpy as np
 import pandas as pd
 import itertools as it
+import matplotlib.pyplot as plt
+import warnings
 
 from pandas.api.types import CategoricalDtype
 from scipy.stats import norm
@@ -135,6 +138,11 @@ def check_list_type(l, t):
     return True
 
 
+def belongs(elem, l):
+    if elem not in l:
+        raise ValueError("element {} is not found in list: {}".format(elem,l))
+
+
 def instance_check(a, i):
     if not isinstance(a, i):
         raise TypeError("object '{}' does not belong to type {}".format(a, i))
@@ -236,7 +244,27 @@ def square_factors(n):
     return arr[arr.shape[0] // 2], arr[-1] // arr[arr.shape[0] // 2]
 
 
-def nearest_square_factors(n, cutoff=6, search_range=5, W_var=1.5):
+def diag_factors(n):
+    """
+    Given n size, calculate the 'most off-edge' factors of that integer.
+
+    Parameters
+    -------
+    n : int
+        An *even* integer that is factorizable.
+
+    Returns
+    -------
+    F_t : tuple (2,)
+        Two integers representing the most 'off-edge' factors.
+    """
+    if not isinstance(n, (int, np.int, np.int64)):
+        raise TypeError("'n' must of type [int, np.int, np.int64]")
+    arr = np.sort(np.asarray(factor(n)))
+    return arr[arr.shape[0] // 4], arr[-1] // arr[arr.shape[0] // 4]
+
+
+def nearest_factors(n, ftype="square", cutoff=6, search_range=5, W_var=1.5):
     """
     Given n size that may not be even, return the 'most square' factors
     of that integer. Uses square_factors and searches linearly around
@@ -246,6 +274,8 @@ def nearest_square_factors(n, cutoff=6, search_range=5, W_var=1.5):
     -------
     n : int
         An integer.
+    ftype : str
+        ['diag' or 'square'], by default uses square factors.
     cutoff : int
         The distance between factors whereby any higher requires a search
     search_range : int
@@ -258,7 +288,13 @@ def nearest_square_factors(n, cutoff=6, search_range=5, W_var=1.5):
     F_t : tuple (2,)
         Two integers representing the most 'square' factors.
     """
-    a, b = square_factors(n)
+    if ftype=="square":
+        a, b = square_factors(n)
+    elif ftype=="diag":
+        a, b = diag_factors(n)
+    else:
+        raise ValueError("ftype must be [diag, square]")
+
     # if our 'best' factors don't cut it...
     if abs(a - b) > cutoff:
         # create Range
@@ -274,3 +310,80 @@ def nearest_square_factors(n, cutoff=6, search_range=5, W_var=1.5):
         return tuple(nscores[w_dist.argmin()])
     else:
         return a, b
+
+
+def save_figure(fig_obj,
+                plot_type,
+                name="example1",
+                save_types=["png", "pdf"],
+                fp="./",
+                dpi=360,
+                savemode="first"):
+    """
+    Given a matplotlib.Figure object, save appropriate numbers of Figures to the respective
+    folders.
+
+    Parameters
+    -------
+    fig : matplotlib.Figure
+        The figure object to save.
+    plot_type : str
+        The type of plot this is, accepted inputs are:
+        ["scatter", "kde", "heatmap", "cluster", "bar", "hist", "kde", "quiver",
+        "box", "line", "venn", "multi", "pie"]
+    name : str (optional)
+        The name of the file, this may be added to based on the other parameters
+    save_types : list (optional)
+        Contains every unique save type to use e.g ["png", "pdf", "svg"]..
+    fp : str (optional)
+        The file path to the root directory of saving images
+    dpi : int
+        The resolution in dots per inch; set to high if you want a good image
+    savemode : str
+        ['first', 'update']: if first, only saves if file isn't present, if update,
+        overrides saved figure
+
+    Returns
+    -------
+    success : bool
+        Whether it was successful or not
+    """
+    instance_check(fig_obj, plt.Figure)
+    accepted_types = [
+        "scatter", "kde", "heatmap", "cluster", "bar", "hist", "kde", "quiver",
+        "box", "line", "venn", "multi", "pie"
+    ]
+    file_types_supported = ["png", "pdf", "svg", "eps", "ps"]
+    accepted_savemodes = ['first', 'update']
+
+    if plot_type not in accepted_types:
+        raise TypeError("plot_type: [%s] not found in accepted types!" % plot_type)
+
+    for st in save_types:
+        if st not in file_types_supported:
+            TypeError("save_type: [%s] not supported" % st)
+    if savemode not in accepted_savemodes:
+        raise ValueError("savemode: '{}' not found in {}".format(savemode, accepted_savemodes))
+
+    # correct to ensure filepath has / at end
+    if not fp.endswith("/"):
+        fp += "/"
+
+    # check whether the filepath exists
+    if os.path.exists(fp):
+        for t in save_types:
+            # if the directory does not exist, create it!
+            if not os.path.isdir(fp + "_" + t):
+                os.mkdir(fp + "_" + t)
+            # check if the figures themselves already exist.
+            filename = "{}_{}/{}_{}.{}".format(fp, t, plot_type, name, t)
+            if os.path.isfile(filename):
+                warnings.warn("Figure: '{}' already exists: Using savemode: {}".format(filename, savemode), UserWarning)
+                if savemode == 'update':
+                    fig_obj.savefig(filename, format=t, bbox_inches='tight', dpi=dpi)
+            else:
+                # make the file
+                fig_obj.savefig(filename, format=t, bbox_inches="tight", dpi=dpi)
+    else:
+        raise IOError("filepath: [%s] does not exist." % fp)
+    return True

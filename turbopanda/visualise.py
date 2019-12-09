@@ -12,9 +12,8 @@ from scipy import stats
 
 from sklearn.metrics import r2_score
 
-from .utils import nearest_square_factors
+from .utils import nearest_factors, save_figure, belongs
 from .metaml import MetaML
-
 
 __all__ = ["plot_scatter_grid", "plot_missing", "plot_hist_grid",
            "plot_coefficients", "plot_actual_vs_predicted"]
@@ -32,17 +31,32 @@ def _data_polynomial_length(length):
     # calculate length based on size of DF
     # dimensions follow this polynomial
     x = np.linspace(0, 250, 100)
-    y = np.linspace(0, 1, 100)**(1/2) * 22 + 3
-    p = np.poly1d(np.polyfit(x,y,deg=2))
+    y = np.linspace(0, 1, 100) ** (1 / 2) * 22 + 3
+    p = np.poly1d(np.polyfit(x, y, deg=2))
     return int(p(length).round())
 
 
-def _generate_square_like_grid(n, square_size=2):
+def _generate_square_like_grid(n, ax_size=2):
     """
     Given n, returns a fig, ax pairing of square-like grid objects
     """
-    f1,f2 = nearest_square_factors(n)
-    fig, axes = plt.subplots(ncols=f1, nrows=f2, figsize=(square_size*f1, square_size*f2))
+    f1, f2 = nearest_factors(n, ftype="square")
+    fig, axes = plt.subplots(ncols=f1, nrows=f2, figsize=(ax_size * f1, ax_size * f2))
+    if axes.ndim > 1:
+        axes = list(it.chain.from_iterable(axes))
+    return fig, axes
+
+
+def _generate_diag_like_grid(n, direction, ax_size=2):
+    """ Direction is in [row, column]"""
+    belongs(direction, ["row", "column"])
+    f1, f2 = nearest_factors(n, ftype="diag")
+    fmax, fmin = max(f1, f2), min(f1, f2)
+    # get longest one
+    if direction == "row":
+        fig, axes = plt.subplots(ncols=fmin, nrows=fmax, figsize=(ax_size * fmin, ax_size * fmax))
+    elif direction == "column":
+        fig, axes = plt.subplots(ncols=fmax, nrows=fmin, figsize=(ax_size * fmax, ax_size * fmin))
     if axes.ndim > 1:
         axes = list(it.chain.from_iterable(axes))
     return fig, axes
@@ -64,6 +78,9 @@ def _freedman_diaconis_bins(a):
         return int(np.sqrt(a.size))
     else:
         return int(np.ceil((np.nanmax(a) - np.nanmin(a)) / h))
+
+
+""" ################################### USEFUL FUNCTIONS ######################################"""
 
 
 def plot_missing(mdf):
@@ -93,7 +110,7 @@ def plot_missing(mdf):
     ax.set_yticklabels(mdf.df_.columns)
 
 
-def plot_hist_grid(mdf, selector):
+def plot_hist_grid(mdf, selector, arrange="square", savepath=None):
     """
     Plots a grid of histograms comparing the distributions in a MetaPanda
     selector.
@@ -103,17 +120,26 @@ def plot_hist_grid(mdf, selector):
     mdf : turb.MetaPanda
         The dataset
     selector : str or list/tuple of str
-            Contains either types, meta column names, column names or regex-compliant strings
+        Contains either types, meta column names, column names or regex-compliant strings
+    arrange : str
+        Choose from ['square', 'row', 'column']. Square arranges the plot as square-like as possible. Row
+        prioritises plots row-like, and column-wise for column.
+    savepath : None, bool, str
+        saves the figure to file. If bool, uses the name in mdf, else uses given string. If None, no fig is saved.
 
     Returns
     -------
     None
     """
+    belongs(arrange, ["square","row","column"])
     # get selector
     selection = mdf.view(selector)
     if selection.size > 0:
         # gets grid-like coordinates for our selector length.
-        fig, axes = _generate_square_like_grid(len(selection))
+        if arrange == "square":
+            fig, axes = _generate_square_like_grid(len(selection))
+        elif arrange in ["row", "column"]:
+            fig, axes = _generate_diag_like_grid(len(selection), "arrange")
         for i, x in enumerate(selection):
             # calculate the bins
             bins_ = min(_freedman_diaconis_bins(mdf.df_[x]), 50)
@@ -121,8 +147,13 @@ def plot_hist_grid(mdf, selector):
             axes[i].set_title(x)
         fig.tight_layout()
 
+        if isinstance(savepath, bool):
+            save_figure(fig, "hist", mdf.name_)
+        elif isinstance(savepath, str):
+            save_figure(fig, "hist", mdf.name_, fp=savepath)
 
-def plot_scatter_grid(mdf, selector, target):
+
+def plot_scatter_grid(mdf, selector, target, savepath=None):
     """
     Plots a grid of scatter plots comparing each column for MetaPanda
     in selector to y target value.
@@ -135,6 +166,8 @@ def plot_scatter_grid(mdf, selector, target):
             Contains either types, meta column names, column names or regex-compliant strings
     target : str
         The y-response variable to plot
+    savepath : None, bool, str
+        saves the figure to file. If bool, uses the name in mdf, else uses given string.
 
     Returns
     -------
@@ -151,6 +184,14 @@ def plot_scatter_grid(mdf, selector, target):
             pair_corr = mdf.df_[[x, target]].corr(method="spearman").iloc[0, 1]
             axes[i].set_title("{}: r={:0.3f}".format(x, pair_corr))
         fig.tight_layout()
+
+        if isinstance(savepath, bool):
+            save_figure(fig, "scatter", mdf.name_)
+        elif isinstance(savepath, str):
+            save_figure(fig, "scatter", mdf.name_, fp=savepath)
+
+
+
 
 
 def plot_actual_vs_predicted(mml):
@@ -170,10 +211,11 @@ def plot_actual_vs_predicted(mml):
     if isinstance(mml, MetaML):
         if mml.is_fit:
             if mml.multioutput:
-                fig, axes = plt.subplots(ncols=mml.y.shape[1], figsize=(3*mml.y.shape[1], 4))
+                fig, axes = plt.subplots(ncols=mml.y.shape[1], figsize=(3 * mml.y.shape[1], 4))
                 for a, col in zip(axes, mml._y_names):
                     min_y, max_y = mml.y[col].min(), mml.y[col].max()
-                    a.scatter(mml.y[col], mml.yp[col], alpha=.3, marker="x", label=r"$r={:0.3f}$".format(r2_score(mml.y[col], mml.yp[col])))
+                    a.scatter(mml.y[col], mml.yp[col], alpha=.3, marker="x",
+                              label=r"$r={:0.3f}$".format(r2_score(mml.y[col], mml.yp[col])))
                     a.plot([min_y, max_y], [min_y, max_y], 'k-')
                     a.set_title(col)
             else:
@@ -216,7 +258,7 @@ def plot_coefficients(mml, use_absolute=False):
                     ax.boxplot(m.coef_mat.apply(f_apply).reindex(no), vert=False)
                     ax.set_yticks([])
                     ax.set_yticklabels([])
-                ax.set_ylim(-buffer, len(m.coef_mat)+buffer)
+                ax.set_ylim(-buffer, len(m.coef_mat) + buffer)
                 ax.vlines([0], ymin=0, ymax=len(m.coef_mat), linestyle="--", color="red")
                 ax.set_xlabel("Coefficients")
                 ax.set_title("Model: {}".format(m.model_str))
@@ -225,7 +267,8 @@ def plot_coefficients(mml, use_absolute=False):
         fig, ax = plt.subplots(figsize=(5, _data_polynomial_length(mml.coef_mat.shape[0])))
         _plot_single_box(mml, ax, 0)
     elif isinstance(mml, (list, tuple)):
-        fig, ax = plt.subplots(ncols=len(mml), figsize=(4*len(mml), _data_polynomial_length(mml[0].coef_mat.shape[0])))
+        fig, ax = plt.subplots(ncols=len(mml),
+                               figsize=(4 * len(mml), _data_polynomial_length(mml[0].coef_mat.shape[0])))
         for i, (m, a) in enumerate(zip(mml, ax)):
             _plot_single_box(m, a, i)
     else:

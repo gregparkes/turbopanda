@@ -19,12 +19,12 @@ del hard_dependencies, dependency, missing_dependencies
 
 from .metapanda import MetaPanda
 from .metaml import MetaML
-from .fileio import *
 from .visualise import *
+from .fileio import *
 from .pipes import *
 from .merger import *
 from .metrics import correlate, condition_number
 
 
-__version__ = "0.1.3"
+__version__ = "0.1.5"
 __name__ = "turbopanda"

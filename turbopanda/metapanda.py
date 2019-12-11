@@ -6,6 +6,7 @@ Created on Fri Nov  1 15:55:38 2019
 @author: gparkes
 """
 
+import os
 import warnings
 import functools
 import pandas as pd
@@ -16,9 +17,9 @@ from pandas import DataFrame
 from pandas.core.groupby.generic import DataFrameGroupBy
 
 from .utils import *
-from .selection import get_selector
+from .selection import get_selector, _type_encoder_map
 from .analyze import agglomerate, intersection_grid, dist
-from .metadata import add_metadata, basic_construct
+from .metadata import add_metadata, basic_construct, _meta_columns_default
 
 from .pipes import clean_pipe
 
@@ -88,7 +89,6 @@ class MetaPanda(object):
 
     """ ############################ STATIC FUNCTIONS ######################################## """
 
-    @staticmethod
     def _actionable(function):
         @functools.wraps(function)
         def new_function(self, *args, **kwargs):
@@ -98,10 +98,10 @@ class MetaPanda(object):
                 return function(self, *args, **kwargs)
         return new_function
 
-    @staticmethod
-    def from_csv(filename, name=None, metafile=None, key=None, *args, **kwargs):
+    @classmethod
+    def from_csv(cls, filename, name=None, metafile=None, key=None, *args, **kwargs):
         """
-        Reads in a datafile and creates a MetaPanda object from it.
+        Reads in a datafile from CSV and creates a MetaPanda object from it.
 
         Parameters
         -------
@@ -125,12 +125,103 @@ class MetaPanda(object):
         mdf : MetaPanda
             A MetaPanda object.
         """
+        instance_check(filename, str)
+        if not os.path.isfile(filename):
+            raise IOError("file at '{}' does not exist".format(filename))
+
+        file_ext_map = {
+            "csv": pd.read_csv, "xls": pd.read_excel, "xlsx": pd.read_excel,
+            "html": pd.read_html, "json": pd.read_json, "hdf": pd.read_hdf,
+            "sql": pd.read_sql, "XLSX": pd.read_excel
+        }
+
+        fs = filename.rsplit("/", 1)
+        if len(fs) == 0:
+            raise ValueError("filename '{}' not recognized".format(filename))
+        elif len(fs) == 1:
+            directory = "."
+            fname = fs[0]
+        else:
+            directory, fname = fs
+        # just the name without the extension
+        jname, ext = fname.split(".", 1)
+
+        df = file_ext_map[ext](filename, *args, **kwargs)
+        # map to MetaPanda
+        if name is not None:
+            mp = cls(df, name=name, key=key)
+        else:
+            mp = cls(df, name=jname, key=key)
+            name = "_"
+
+        if metafile is not None:
+            met = pd.read_csv(metafile, index_col=0, header=0, sep=",")
+            mp.meta_ = met
+        else:
+            # try to find a metafile in the same directory.
+            dir_files = os.listdir(directory)
+            # potential combination of acceptable names to find
+            combs = [jname + "__meta.csv", name + "__meta.csv"]
+
+            for potential_name in combs:
+                if potential_name in dir_files:
+                    met = pd.read_csv(directory + "/" + potential_name, index_col=0, header=0, sep=",")
+                    # add to mp
+                    mp.meta_ = met
+                    return mp
+
+        return mp
 
         pass
 
-    @staticmethod
-    def from_json(filename):
-        pass
+    @classmethod
+    def from_json(cls, filename):
+        """
+        Reads in a datafile from JSON and creates a MetaPanda object from it.
+        Pipe attributes are not saved currently due to the problem of storing
+        potential lambda functions.
+
+        Parameters
+        -------
+        filename : str
+            A relative/absolute link to the JSON file, with extension optional.
+
+        Returns
+        ------
+        mdf : MetaPanda
+            A MetaPanda object.
+        """
+        instance_check(filename, str)
+        # look for attributes 'data', 'meta', 'name', 'pipe' and 'cache'
+        if not os.path.isfile(filename):
+            raise IOError("file at '{}' does not exist".format(filename))
+        # check if ends with .json
+        if not filename.endswith(".json"):
+            filename += ".json"
+        # read in JSON
+        with open(filename, "r") as f:
+            recvr = json.load(f)
+        # go over attributes and assign where available
+        if "data" in recvr:
+            ndf = pd.DataFrame.from_dict(recvr["data"])
+            ndf.index.name = "counter"
+            ndf.columns.name = "colnames"
+            # assign to self
+            mp = cls(ndf)
+        else:
+            raise ValueError("column 'data' not found in MetaPandaJSON")
+        if "meta" in recvr:
+            met = pd.DataFrame.from_dict(recvr["meta"])
+            met.index.name = "colnames"
+            # set to MP
+            mp.meta_ = met
+            # include metadata
+            add_metadata(mp._df, mp._meta)
+        if "name" in recvr:
+            mp.name_ = recvr["name"]
+        if "cache" in recvr:
+            mp._select = recvr["cache"]
+        return mp
 
     """ ############################ HIDDEN OPERATIONS ####################################### """
 
@@ -177,10 +268,12 @@ class MetaPanda(object):
         if hasattr(self.df_.columns, fn):
             f = getattr(self.df_.columns, fn)
             self.df_.columns = f(*fargs, **fkwargs)
+            self.meta_.index = f(*fargs, **fkwargs)
             return self
         elif hasattr(self.df_.columns.str, fn):
             f = getattr(self.df_.columns.str, fn)
             self.df_.columns = f(*fargs, **fkwargs)
+            self.meta_.index = f(*fargs, **fkwargs)
             return self
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.columns.[str.]* API".format(fn))
@@ -210,14 +303,17 @@ class MetaPanda(object):
                 self.meta_.to_csv(directory + "/" + name.split(".")[0] + "__meta.csv", sep=",")
 
     def _write_json(self, filename):
-        saving_dict = {"data": self.df_.to_dict(), "meta": self.meta_.to_dict(), "cache": self._select,
-                       "pipe": self.pipe_, "name": self.name_}
+        saving_dict = {"data": self.df_.to_dict(),
+                       "meta": self.meta_.drop(_meta_columns_default(), axis=1).to_dict(),
+                       "cache": self._select,
+                       "name": self.name_
+        }
         if filename is None:
             with open(self.name_ + ".json", "w") as f:
-                json.dump(saving_dict, f)
+                json.dump(saving_dict, f, separators=(",",":"))
         else:
             with open(filename, "w") as f:
-                json.dump(saving_dict, f)
+                json.dump(saving_dict, f, separators=(",",":"))
 
     """ ############################## OVERIDDEN OPERATIONS ###################################### """
 
@@ -548,6 +644,15 @@ class MetaPanda(object):
         """
         if name in self._select:
             warnings.warn("cache name '{}' already exists in .cache, overriding".format(name), UserWarning)
+        # convert selector over to list to make it mutable
+        selector = list(selector)
+        # encode to string
+        enc_map = _type_encoder_map()
+        # encode the selector as a string ALWAYS.
+        for i, s in enumerate(selector):
+            if s in enc_map:
+                selector[i] = enc_map[s]
+        # store to select
         self._select[name] = selector
         return self
 
@@ -998,3 +1103,5 @@ class MetaPanda(object):
             self._write_json(filename)
         else:
             raise IOError("Doesn't recognize filename or type: '{}', must end in [csv, json]".format(filename))
+
+    _actionable = staticmethod(_actionable)

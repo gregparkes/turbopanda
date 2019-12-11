@@ -9,6 +9,7 @@ Handles selection of handles.
 """
 
 import numpy as np
+import pandas as pd
 import re
 from pandas import CategoricalDtype, concat, Index, Series
 
@@ -18,22 +19,39 @@ from .utils import boolean_series_check, chain_intersection, chain_union
 __all__ = ["get_selector"]
 
 
-def _accepted_dtypes():
-    return [
-         float, int, bool, "category", "float", "int", "bool", "boolean",
-         np.float64, np.int64, object, np.int32, np.int16, np.int8,
-         np.float32, np.float16
-    ]
+def _numpy_types():
+    return [np.int, np.bool, np.float, np.float64, np.float32, np.float16, np.int64,
+            np.int32, np.int16, np.int8, np.uint8, np.uint16, np.uint32, np.uint64]
 
 
-def _convert_mapper():
+def _numpy_string_types():
+    return [n.__name__ for n in _numpy_types()]
+
+
+def _extra_types():
+    return [float, int, bool, object, CategoricalDtype]
+
+
+def _extra_string_types():
+    return ["object", "category"]
+
+
+def _type_encoder_map():
     return {
-         "category": CategoricalDtype,
-         "float": np.float64,
-         "int": np.int64,
-         "bool": np.bool,
-         "boolean": np.bool
+        **{object: "object", CategoricalDtype: "category"},
+        **dict(zip(_numpy_types(), _numpy_string_types()))
     }
+
+
+def _type_decoder_map():
+    return {
+        **{"object":object, "category":CategoricalDtype},
+        **dict(zip(_numpy_string_types(), _numpy_types()))
+    }
+
+
+def _accepted_dtypes():
+    return _numpy_types() + _numpy_string_types() + _extra_types() + _extra_string_types()
 
 
 def _get_selector_item(df, meta, cached, selector, raise_error=False):
@@ -51,8 +69,9 @@ def _get_selector_item(df, meta, cached, selector, raise_error=False):
         return meta.index.intersection(selector)
     elif selector in _accepted_dtypes():
         # if it's a string option, convert to type
-        if selector in _convert_mapper():
-            selector = _convert_mapper()[selector]
+        dec_map = _type_decoder_map()
+        if selector in dec_map:
+            selector = dec_map[selector]
         return df.columns[df.dtypes.eq(selector)]
     # check if selector is a callable object (i.e function)
     elif callable(selector):

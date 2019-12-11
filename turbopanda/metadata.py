@@ -13,13 +13,18 @@ import pandas as pd
 from .utils import is_missing_values, is_unique_id, is_potential_id, is_potential_stacker, nunique
 
 
+def _meta_columns_default():
+    return ["e_types", "is_unique", "is_potential_id", "is_potential_stacker",
+            "is_missing", "n_uniques"]
+
+
 def reduce_numeric_series(ser):
     """
     Given a pandas.Series, determine it's true datatype if it has missing values.
     """
     # return 'reduced' Series if we're missing data and dtype is not an object, else just return the default dtype
 
-    return pd.to_numeric(ser.dropna(), errors="ignore", downcast="unsigned").dtype if ((ser.dtype != object) and (ser.dropna().shape[0]>0)) else ser.dtype
+    return pd.to_numeric(ser.dropna(), errors="ignore", downcast="unsigned").dtype if ((ser.dtype != object) and (ser.dropna().shape[0] > 0)) else ser.dtype
 
 
 def basic_construct(df):

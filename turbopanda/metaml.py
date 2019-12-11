@@ -19,8 +19,7 @@ from sklearn.metrics import r2_score
 from .pipes import ml_regression_pipe
 from .models import *
 
-__sklearn_model_packages__ = [tree, linear_model, ensemble, svm, gaussian_process,
-                              neighbors]
+__sklearn_model_packages__ = [tree, linear_model, ensemble, svm, gaussian_process, neighbors]
 
 
 def _get_hidden_coefficients(directory):
@@ -130,7 +129,6 @@ def _get_coefficient_matrix_multioutput(fitted_multi, X, y, cv):
         t_X.columns = n_col
 
 
-
 class MetaML(object):
     """
     An object that handles complex operations on a MetaPanda object to run
@@ -173,7 +171,7 @@ class MetaML(object):
         if prim_param != np.nan:
             def_value = _pt.loc[prim_param, "Default"]
             # set parameter of primary value
-            model_t.set_params(**{prim_param:def_value})
+            model_t.set_params(**{prim_param: def_value})
 
         # cover for multioutput
         if self.multioutput:
@@ -259,7 +257,6 @@ class MetaML(object):
             self._coef_mat = _get_coefficient_normal(self.fitted, self.X)
         return self._coef_mat
 
-
     """ ################################ HIDDEN/OVERRIDES ############################################# """
 
     def __repr__(self):
@@ -273,20 +270,15 @@ class MetaML(object):
     def fit(self):
         """
         Performs a single run/fit and returns predictions and scores based on defaults.
-
-        Parameters
-        -------
-        scoring : str
-            A scoring method in sklearn, by default use R-squared.
         """
         # perform cross-validated scores, models
         self._grid = GridSearchCV(self.lm,
-                             param_grid={},
-                             scoring="r2",
-                             cv=self.cv,
-                             refit=True,
-                             return_train_score=True,
-        )
+                                  param_grid={},
+                                  scoring="r2",
+                                  cv=self.cv,
+                                  refit=True,
+                                  return_train_score=True,
+                                  )
         self._grid.fit(self._x_numpy, self.y)
         # cross-validate the best model
         _scores = cross_validate(self.lm, self._x_numpy, self.y, scoring="r2",

@@ -12,7 +12,53 @@ from sklearn import preprocessing
 from .utils import integer_to_boolean, object_to_categorical, is_n_value_column
 
 
-__all__ = ["ml_regression_pipe", "clean_pipe"]
+__all__ = ["pipe", "ml_regression_pipe", "clean_pipe"]
+
+
+def _single_pipe(argument):
+    """
+    Converts a single command line into pipeable code for MetaPanda.
+    """
+    pipe_command = [argument[0]]
+    pipe_d = {}
+    pipe_t = []
+    for arg in argument[1:]:
+        if isinstance(arg, str):
+            # if it's a string, check whether it's a param with = **kwarg
+            if arg.find("=") != -1:
+                sp = arg.split("=",1)
+                pipe_d[sp[0]] = sp[1]
+            else:
+                # otherwise tupleize it as an *arg
+                pipe_t.append(arg)
+        else:
+            pipe_t.append(arg)
+    pipe_command.append(tuple(pipe_t))
+    pipe_command.append(pipe_d)
+    return tuple(pipe_command)
+
+
+def pipe(arguments):
+    """
+    Creates a 'pipeline' for you using relative shorthand.
+
+    e.g pipe("apply_columns", "lower") returns simply:
+        ('apply_columns', ('lower',), {})
+
+    Parameters
+    -------
+    arguments : list of arguments
+        A series of arguments which can be converted into a suitable and cheap pipeline
+
+    Returns
+    -------
+    pipe : list of arguments
+        A full pipe that can be passed to MetaPanda.compute
+    """
+    mpipe = []
+    for arg in arguments:
+        mpipe.append(_single_pipe(arg))
+    return mpipe
 
 
 def ml_regression_pipe(mp, x_s, y_s, preprocessor="scale"):

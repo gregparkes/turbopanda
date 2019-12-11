@@ -58,7 +58,37 @@ def _wrap_pandas(data, labels):
         return pd.DataFrame(data, columns=labels)
 
 
-def _get_coefficient_matrix(fitted_models, X):
+def _coefficient_multioutput_block(fitted, X, y):
+    if hasattr(fitted[0], "coef_") and hasattr(fitted[0], "intercept_"):
+        cols = X.columns if isinstance(X, pd.DataFrame) else [X.name]
+        _coef_mat = pd.concat([
+            pd.DataFrame([mf.intercept_ for mf in fitted], columns=["intercept"]).T,
+            pd.DataFrame(np.vstack(([mf.coef_ for mf in fitted])).T, index=cols)
+        ])
+        _coef_mat.columns = y.columns
+        return _coef_mat
+    elif hasattr(fitted[0], "feature_importances_"):
+        cols = X.columns if isinstance(X, pd.DataFrame) else [X.name]
+        _coef_mat = pd.concat([
+            pd.DataFrame(np.vstack(([mf.feature_importances_ for mf in fitted])).T, index=cols)
+        ])
+        _coef_mat.columns = y.columns
+        return _coef_mat
+    else:
+        return []
+
+
+def _coefficient_multioutput(fitted, X, y, cv):
+    # generate blocks, where each block is a CV
+    blocks = [_coefficient_multioutput_block(b.estimators_, X, y) for b in fitted]
+    nd = pd.concat(blocks, axis=1)
+    # create multicolumn
+    z_t = zip(nd.columns, np.repeat(np.arange(0, cv, 1, dtype=int), y.columns.shape[0]))
+    nd.columns = pd.MultiIndex.from_tuples(z_t, names=("cv", "y"))
+    return nd
+
+
+def _get_coefficient_normal(fitted_models, X):
     # check if wrapped in multioutput first
     if hasattr(fitted_models[0], "coef_") and hasattr(fitted_models[0], "intercept_"):
         # linear model or SVM
@@ -81,6 +111,24 @@ def _get_coefficient_matrix(fitted_models, X):
         return _coef_mat
     else:
         return None
+
+
+def _get_coefficient_matrix_multioutput(fitted_multi, X, y, cv):
+    if _is_multioutput_wrap(fitted_multi[0]):
+        t_X = pd.concat([
+            pd.DataFrame([
+                e.coef_ for e in m.estimators_
+            ], columns=X.columns, index=y.columns).T \
+            for m in fitted_multi],
+            axis=1
+        )
+        # assign multiindex
+        z_t = zip(
+            np.repeat(np.arange(0, cv, 1, dtype=np.int), y.columns.shape[0]), X.columns
+        )
+        n_col = pd.MultiIndex.from_tuples(z_t, names=("cv", "y"))
+        t_X.columns = n_col
+
 
 
 class MetaML(object):
@@ -176,8 +224,7 @@ class MetaML(object):
 
     @model_str.setter
     def model_str(self, ms):
-
-        self._model_str = _find_sklearn_model(ms)
+        self._model_str = ms
 
     @property
     def _x_names(self):
@@ -200,6 +247,18 @@ class MetaML(object):
         if not self.is_fit:
             raise ValueError("model not fitted! no r2")
         return r2_score(self.y, self.yp)
+
+    @property
+    def coef_mat(self):
+        if not self.is_fit:
+            raise ValueError("model not fitted! no coef_mat")
+        if self.multioutput:
+            # each element is a 'multioutputregressor' object
+            self._coef_mat = _coefficient_multioutput(self.fitted, self.X, self.y, self.cv)
+        else:
+            self._coef_mat = _get_coefficient_normal(self.fitted, self.X)
+        return self._coef_mat
+
 
     """ ################################ HIDDEN/OVERRIDES ############################################# """
 
@@ -240,8 +299,6 @@ class MetaML(object):
         self.score_train = np.clip(_scores["train_score"], 0, 1)
         self.score_fit = _scores["fit_time"]
         self.score_test = np.clip(_scores["test_score"], 0, 1)
-        # attempts to get weights
-        self.coef_mat = _get_coefficient_matrix(self.fitted, self.X)
 
         self.is_fit = True
         return self

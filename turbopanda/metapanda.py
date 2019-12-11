@@ -10,6 +10,7 @@ import warnings
 import functools
 import pandas as pd
 from copy import deepcopy
+import json
 
 from pandas import DataFrame
 from pandas.core.groupby.generic import DataFrameGroupBy
@@ -25,7 +26,7 @@ from .pipes import clean_pipe
 
 __nondelay_functions__ = [
     "head", "cache", "multi_cache", "view", "view_not",
-    "analyze", "keys", "compute", "write"
+    "analyze", "compute", "write", "write_json"
 ]
 
 __delay_functions__ = [
@@ -83,9 +84,11 @@ class MetaPanda(object):
         self._pipe = []
         # set using property
         self.df_ = dataset
+        self._key = key
 
-    """ ############################ HIDDEN OPERATIONS ####################################### """
+    """ ############################ STATIC FUNCTIONS ######################################## """
 
+    @staticmethod
     def _actionable(function):
         @functools.wraps(function)
         def new_function(self, *args, **kwargs):
@@ -93,8 +96,43 @@ class MetaPanda(object):
                 self._pipe.append((function.__name__, args, kwargs))
             else:
                 return function(self, *args, **kwargs)
-
         return new_function
+
+    @staticmethod
+    def from_csv(filename, name=None, metafile=None, key=None, *args, **kwargs):
+        """
+        Reads in a datafile and creates a MetaPanda object from it.
+
+        Parameters
+        -------
+        filename : str
+            A relative/absolute link to the file, with extension provided.
+            Accepted extensions: [csv, xls, xlsx, html, json, hdf, sql]
+        name : str, optional
+            A custom name to use for the MetaPanda, else the filename is used
+        metafile : str, optional
+            An associated meta file to join into the MetaPanda, else if None,
+            attempts to find the file, otherwise just creates the raw default.
+        key : None, str, optional
+            Sets one of the columns as the 'primary key' in the Dataset
+        args : list
+            Additional args to pass to pd.read_csv
+        kwargs : dict
+            Additional args to pass to pd.read_csv
+
+        Returns
+        ------
+        mdf : MetaPanda
+            A MetaPanda object.
+        """
+
+        pass
+
+    @staticmethod
+    def from_json(filename):
+        pass
+
+    """ ############################ HIDDEN OPERATIONS ####################################### """
 
     def _rename_columns(self, old, new):
         self.df_.rename(columns=dict(zip(old, new)), inplace=True)
@@ -110,6 +148,16 @@ class MetaPanda(object):
             f = getattr(self.df_, fn)
             self._df = f(*fargs, **fkwargs)
             return self
+        # if we start with groupby, then we are coupling groupby with an aggregation.
+        elif fn.startswith("groupby__"):
+            _, fn2 = fn.split("__", 1)
+            groupby_f = getattr(self.df_, "groupby")
+            _grouped = groupby_f(*fargs, **fkwargs)
+            if hasattr(_grouped, fn2):
+                self._df = _grouped.agg(fn2)
+                return self
+            else:
+                raise ValueError("function '{}' not recognized in pandas.DataFrame.* API".format(fn2))
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.* API".format(fn))
 
@@ -150,6 +198,27 @@ class MetaPanda(object):
                 # execute function with args and kwargs
                 getattr(self, fn)(*args, **kwargs)
 
+    def _write_csv(self, filename, with_meta=False, *args, **kwargs):
+        self.df_.to_csv(filename, sep=",", *args, **kwargs)
+        if with_meta:
+            # uses the name stored in mp
+            dsplit = filename.rsplit("/", 1)
+            if len(dsplit) == 1:
+                self.meta_.to_csv(dsplit[0].split(".")[0] + "__meta.csv", sep=",")
+            else:
+                directory, name = dsplit
+                self.meta_.to_csv(directory + "/" + name.split(".")[0] + "__meta.csv", sep=",")
+
+    def _write_json(self, filename):
+        saving_dict = {"data": self.df_.to_dict(), "meta": self.meta_.to_dict(), "cache": self._select,
+                       "pipe": self.pipe_, "name": self.name_}
+        if filename is None:
+            with open(self.name_ + ".json", "w") as f:
+                json.dump(saving_dict, f)
+        else:
+            with open(filename, "w") as f:
+                json.dump(saving_dict, f)
+
     """ ############################## OVERIDDEN OPERATIONS ###################################### """
 
     def __getitem__(self, selector):
@@ -170,11 +239,15 @@ class MetaPanda(object):
 
     def __repr__(self):
         p = self.df_.shape[1] if self.df_.ndim > 1 else 1
-        return "MetaPanda({}(n={}, p={}, mem={}), mode='{}')".format(self.name_,
-                                                                     self.df_.shape[0],
-                                                                     p,
-                                                                     self.memory_,
-                                                                     self.mode_)
+        k = self.key_ if self.key_ is not None else "None"
+        return "MetaPanda({}(n={}, p={}, mem={}, key='{}'), mode='{}')".format(
+            self.name_,
+            self.df_.shape[0],
+            p,
+            self.memory_,
+            k,
+            self.mode_
+        )
 
     """ ############################### PROPERTIES ############################################## """
 
@@ -249,7 +322,20 @@ class MetaPanda(object):
     def pipe_(self, p):
         self._pipe = p
 
-    """ ################################ FUNCTIONS ################################################### """
+    @property
+    def key_(self):
+        return self._key
+
+    @key_.setter
+    def key_(self, k):
+        if (k in self.df_.columns) and k in (self.view("is_unique") & self.view_not("is_missing")):
+            self._key = k
+        elif k is None:
+            return
+        else:
+            raise ValueError("key '{}' belong in set:{}".format(k, k in self.df_.columns))
+
+    """ ################################ PUBLIC FUNCTIONS ################################################### """
 
     def head(self, k=5):
         """
@@ -464,29 +550,6 @@ class MetaPanda(object):
             warnings.warn("cache name '{}' already exists in .cache, overriding".format(name), UserWarning)
         self._select[name] = selector
         return self
-
-    def keys(self, prim_key=None, second_key=None):
-        """
-        Defines and creates primary and secondary ID keys to the dataset. A primary key is a
-        unique identifier to each row within a dataset as defined by third normal
-        form theory.
-
-        This function is not affected by the 'mode' parameter.
-
-        Parameters
-        --------
-        prim_key : str, None
-            If None, creates a primary key from 'counter', else assigns column name
-            as this key.
-        second_key : None, str, list/tuple
-            Assigns one or more columns to be 'secondary' keys for other MetaPanda
-            datasets.
-
-        Returns
-        -------
-        self
-        """
-        return NotImplemented
 
     def multi_cache(self, **caches):
         """
@@ -872,7 +935,7 @@ class MetaPanda(object):
             self.df_ = self.df_.reset_index().melt(id_vars=id_vars, *args, **kwargs)
         return self
 
-    def compute(self, pipe=None, inplace=True):
+    def compute(self, pipe=None, inplace=False):
         """
         Computes a pipeline to the MetaPanda object. If there are no parameters, it computes
         what is stored in the pipe_ attribute, if any.
@@ -881,9 +944,10 @@ class MetaPanda(object):
         -------
         pipe : list of 3-tuple, (function name, *args, **kwargs), optional
             A set of instructions expecting function names in MetaPanda and parameters.
-            If empty, uses the stored pipe_ attribute.
-        inplace : bool
-            If True, applies the pipe inplace, else returns a copy.
+            If empty, computes the stored pipe_ attribute.
+        inplace : bool, optional
+            If True, applies the pipe inplace, else returns a copy. Default has now changed
+            to return a copy.
 
         Returns
         -------
@@ -904,7 +968,7 @@ class MetaPanda(object):
             cop.compute(pipe, inplace=True)
             return cop
 
-    def write(self, filename=None, with_meta=True, *args, **kwargs):
+    def write(self, filename=None, with_meta=False, *args, **kwargs):
         """
         Saves a MetaPanda to disk.
 
@@ -912,28 +976,25 @@ class MetaPanda(object):
 
         Parameters
         -------
-        filename : str
-            The name of the file to save, or None it will use the name found in MetaPanda
-        with_meta : bool
+        filename : str, optional
+            The name of the file to save, or None it will create a JSON file with Data.
+            Accepts filename that end in [.csv, .json]
+        with_meta : bool, optional
             If true, saves metafile also, else doesn't
         *args : list
-            Arguments to pass to pd.to_csv
+            Arguments to pass to pandas.to_csv, not used with JSON file
         **kwargs : dict
-            Keywords to pass to pd.to_csv
-        """
-        if filename is not None:
-            self.df_.to_csv(filename, sep=",", *args, **kwargs)
-            if with_meta:
-                # uses the name stored in mp
-                dsplit = filename.rsplit("/", 1)
-                if len(dsplit) == 1:
-                    self.meta_.to_csv(dsplit[0].split(".")[0] + "__meta.csv", sep=",")
-                else:
-                    directory, name = dsplit
-                    self.meta_.to_csv(directory + "/" + name.split(".")[0] + "__meta.csv", sep=",")
-        else:
-            self.df_.to_csv(self.name_ + ".csv", sep=",", *args, **kwargs)
-            if with_meta:
-                self.meta_.to_csv(self.name_ + "__meta.csv", sep=",")
+            Keywords to pass to pandas.to_csv, not used with JSON file
 
-    _actionable = staticmethod(_actionable)
+        Returns
+        -------
+        None
+        """
+        if filename is None:
+            self._write_json(self.name_ + ".json")
+        elif filename.endswith(".csv"):
+            self._write_csv(filename, with_meta, *args, **kwargs)
+        elif filename.endswith(".json"):
+            self._write_json(filename)
+        else:
+            raise IOError("Doesn't recognize filename or type: '{}', must end in [csv, json]".format(filename))

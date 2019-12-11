@@ -18,7 +18,8 @@ def reduce_numeric_series(ser):
     Given a pandas.Series, determine it's true datatype if it has missing values.
     """
     # return 'reduced' Series if we're missing data and dtype is not an object, else just return the default dtype
-    return pd.to_numeric(ser.dropna(), errors="ignore", downcast="unsigned").dtype if (ser.dtype != object) else ser.dtype
+
+    return pd.to_numeric(ser.dropna(), errors="ignore", downcast="unsigned").dtype if ((ser.dtype != object) and (ser.dropna().shape[0]>0)) else ser.dtype
 
 
 def basic_construct(df):

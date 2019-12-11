@@ -139,7 +139,8 @@ def plot_hist_grid(mdf, selector, arrange="square", savepath=None):
         if arrange == "square":
             fig, axes = _generate_square_like_grid(len(selection))
         elif arrange in ["row", "column"]:
-            fig, axes = _generate_diag_like_grid(len(selection), "arrange")
+            fig, axes = _generate_diag_like_grid(len(selection), arrange)
+
         for i, x in enumerate(selection):
             # calculate the bins
             bins_ = min(_freedman_diaconis_bins(mdf.df_[x]), 50)
@@ -153,7 +154,7 @@ def plot_hist_grid(mdf, selector, arrange="square", savepath=None):
             save_figure(fig, "hist", mdf.name_, fp=savepath)
 
 
-def plot_scatter_grid(mdf, selector, target, savepath=None):
+def plot_scatter_grid(mdf, selector, target, arrange="square", savepath=None):
     """
     Plots a grid of scatter plots comparing each column for MetaPanda
     in selector to y target value.
@@ -166,6 +167,9 @@ def plot_scatter_grid(mdf, selector, target, savepath=None):
             Contains either types, meta column names, column names or regex-compliant strings
     target : str
         The y-response variable to plot
+    arrange : str
+        Choose from ['square', 'row', 'column']. Square arranges the plot as square-like as possible. Row
+        prioritises plots row-like, and column-wise for column.
     savepath : None, bool, str
         saves the figure to file. If bool, uses the name in mdf, else uses given string.
 
@@ -173,11 +177,15 @@ def plot_scatter_grid(mdf, selector, target, savepath=None):
     -------
     None
     """
+    belongs(arrange, ["square", "row", "column"])
     # get selector
     selection = mdf.view(selector)
     if selection.size > 0:
-        # gets grid-like coordinates for our selector length.
-        fig, axes = _generate_square_like_grid(len(selection))
+        if arrange == "square":
+            fig, axes = _generate_square_like_grid(len(selection))
+        elif arrange in ["row", "column"]:
+            fig, axes = _generate_diag_like_grid(len(selection), arrange)
+
         for i, x in enumerate(selection):
             axes[i].scatter(mdf.df_[x], mdf.df_[target], alpha=.5)
             # spearman correlation
@@ -189,9 +197,6 @@ def plot_scatter_grid(mdf, selector, target, savepath=None):
             save_figure(fig, "scatter", mdf.name_)
         elif isinstance(savepath, str):
             save_figure(fig, "scatter", mdf.name_, fp=savepath)
-
-
-
 
 
 def plot_actual_vs_predicted(mml):
@@ -222,10 +227,11 @@ def plot_actual_vs_predicted(mml):
                 fig, axes = plt.subplots(figsize=(8, 4))
                 min_y, max_y = mml.y.min(), mml.y.max()
                 axes.scatter(mml.y, mml.yp, alpha=.3, marker="x", label=r"$r={:0.3f}$".format(mml.score_r2))
+                axes.plot([min_y, max_y], [min_y, max_y], 'k-')
                 axes.set_title(mml._y_names)
 
 
-def plot_coefficients(mml, use_absolute=False):
+def plot_coefficients(mml, normalize=False, use_absolute=False):
     """
     Plots the coefficients from a fitted machine learning model using MetaML.
 
@@ -234,6 +240,8 @@ def plot_coefficients(mml, use_absolute=False):
     mml : MetaML or list of MetaML
         The fitted machine learning model(s). If a list, each MetaML must have
         the same data (columns)
+    normalize : bool
+        Use standardization on the values if True
     use_absolute : bool
         If True, uses absolute value of coefficients instead.
 
@@ -244,18 +252,21 @@ def plot_coefficients(mml, use_absolute=False):
     # assumes the coef_mat variable is present
 
     f_apply = np.abs if use_absolute else lambda x: x
+    norm_apply = lambda x: (x - x.mean()) / x.std() if normalize else lambda x: x
 
     def _plot_single_box(m, ax, i):
         if isinstance(m, MetaML):
             if m.is_fit:
                 # new order
-                no = m.coef_mat.apply(f_apply).mean(axis=1).sort_values().index
+                no = m.coef_mat.apply(f_apply).apply(norm_apply).mean(axis=1).sort_values().index
                 buffer = len(m.coef_mat) / 20
+                # perform transformations and get data
+                data = m.coef_mat.apply(f_apply).apply(norm_apply).reindex(no)
 
                 if i == 0:
-                    ax.boxplot(m.coef_mat.apply(f_apply).reindex(no), vert=False, labels=no)
+                    ax.boxplot(data, vert=False, labels=no)
                 else:
-                    ax.boxplot(m.coef_mat.apply(f_apply).reindex(no), vert=False)
+                    ax.boxplot(data, vert=False)
                     ax.set_yticks([])
                     ax.set_yticklabels([])
                 ax.set_ylim(-buffer, len(m.coef_mat) + buffer)
@@ -264,6 +275,8 @@ def plot_coefficients(mml, use_absolute=False):
                 ax.set_title("Model: {}".format(m.model_str))
 
     if isinstance(mml, MetaML):
+        if not hasattr(mml, "coef_mat"):
+            return
         fig, ax = plt.subplots(figsize=(5, _data_polynomial_length(mml.coef_mat.shape[0])))
         _plot_single_box(mml, ax, 0)
     elif isinstance(mml, (list, tuple)):

@@ -11,6 +11,7 @@ from sklearn import preprocessing
 
 from .utils import integer_to_boolean, object_to_categorical, is_n_value_column
 
+
 __all__ = ["ml_regression_pipe", "clean_pipe"]
 
 
@@ -73,6 +74,8 @@ def clean_pipe():
         The pipeline to perform on mp
     """
     return [
+        # drop columns with only one value in
+        ("drop", (lambda x: x.dropna().unique().shape[0] == 1,), {}),
         # shrink down data types where possible.
         ("apply", ("transform", to_numeric,), {"errors": "ignore", "downcast": "unsigned"}),
         # convert 2-ints into boolean columns

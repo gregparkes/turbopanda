@@ -22,6 +22,7 @@ from .metaml import MetaML
 from .fileio import *
 from .visualise import *
 from .pipes import *
+from .merger import *
 from .metrics import correlate, condition_number
 
 

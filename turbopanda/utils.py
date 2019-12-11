@@ -20,7 +20,7 @@ __all__ = ["is_twotuple", "instance_check", "chain_intersection", "chain_union",
            "boolean_series_check", "attach_name", "check_list_type", "not_column_float",
            "is_column_float", "is_column_object", "is_column_int", "convert_category", "convert_boolean",
            "calc_mem", "remove_multi_index", "remove_string_spaces", "check_pipe_attr",
-           "nearest_square_factors", "is_missing_values", "is_unique_id", "is_potential_id",
+           "nearest_factors", "is_missing_values", "is_unique_id", "is_potential_id",
            "is_potential_stacker", "nunique", "object_to_categorical",
            "is_n_value_column", "boolean_to_integer", "integer_to_boolean"]
 

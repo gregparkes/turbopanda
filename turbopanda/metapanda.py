@@ -806,7 +806,10 @@ class MetaPanda(object):
         self
         """
         # perform inplace
-        selection = self.view(selector) if selector is not None else self.df_.columns
+        if isinstance(selector, (tuple, list)):
+            selection = self.view(*selector)
+        else:
+            selection = self.view(selector) if selector is not None else self.df_.columns
         # modify
         if callable(function) and selection.shape[0] > 0:
             if whole:

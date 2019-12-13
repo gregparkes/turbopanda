@@ -318,8 +318,10 @@ class MetaPanda(object):
     """ ############################## OVERIDDEN OPERATIONS ###################################### """
 
     def __getitem__(self, selector):
+        # we take the columns that are NOT this selection, then drop to keep order.
         sel = self.view(selector)
         if sel.size > 0:
+            # drop anti-selection to maintain order/sorting
             return self.df_[sel].squeeze()
 
     def __delitem__(self, selector):
@@ -385,6 +387,14 @@ class MetaPanda(object):
             raise TypeError("'meta' must be of type [pd.DataFrame]")
 
     @property
+    def n_(self):
+        return self.df_.shape[0]
+
+    @property
+    def p_(self):
+        return self.df_.shape[1]
+
+    @property
     def memory_(self):
         return "{:0.3f}MB".format(calc_mem(self.df_) + calc_mem(self.meta_))
 
@@ -431,6 +441,7 @@ class MetaPanda(object):
         else:
             raise ValueError("key '{}' belong in set:{}".format(k, k in self.df_.columns))
 
+
     """ ################################ PUBLIC FUNCTIONS ################################################### """
 
     def head(self, k=5):
@@ -465,10 +476,8 @@ class MetaPanda(object):
         sel : list
             The list of column names selected, or empty
         """
-        sel = get_selector(self.df_, self.meta_, self._select, selector, raise_error=False, select_join="OR")
-        if (sel.shape[0] == 0) and self._with_warnings:
-            warnings.warn("selection: '{}' was empty, no columns selected.".format(selector), UserWarning)
-        return sel
+        # we do this 'double-drop' to maintain the order of the dataframe, because of set operations.
+        return self.df_.columns.drop(self.view_not(*selector))
 
     def view_not(self, *selector):
         """
@@ -485,7 +494,11 @@ class MetaPanda(object):
         sel : list
             The list of column names NOT selected, or empty
         """
-        return self.df_.columns.drop(self.view(*selector))
+        sel = get_selector(self.df_, self.meta_, self._select, selector, raise_error=False, select_join="OR")
+        if (sel.shape[0] == 0) and self._with_warnings:
+            warnings.warn("selection: '{}' was empty, no columns selected.".format(selector), UserWarning)
+        # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
+        return self.df_.columns.drop(sel)
 
     def copy(self):
         """

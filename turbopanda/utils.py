@@ -33,6 +33,10 @@ def _cint():
     return [np.int64, np.int32, np.int16, np.int8, np.int, np.uint, np.uint8, np.uint16, np.uint16, np.uint32, int]
 
 
+def _intcat():
+    return [np.uint8, np.uint16]
+
+
 def is_possible_category(ser):
     return ser.dtype in ([object] + _cint())
 

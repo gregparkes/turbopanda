@@ -127,6 +127,7 @@ def get_selector(df, meta, cached, selector, raise_error=False, select_join="OR"
     if isinstance(selector, (tuple, list)):
         # iterate over all selector elements and get pd.Index es.
         s_groups = [_get_selector_item(df, meta, cached, s, raise_error) for s in selector]
+        # print(s_groups)
         if select_join == "AND":
             return chain_intersection(*s_groups)
         elif select_join == "OR":

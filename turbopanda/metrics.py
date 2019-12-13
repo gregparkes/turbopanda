@@ -8,9 +8,10 @@ Created on Thu Aug 15 16:08:52 2019
 import numpy as np
 import pandas as pd
 from sklearn.feature_selection import mutual_info_regression
-from scipy.stats import pearsonr, spearmanr
+from scipy.stats import pearsonr, spearmanr, pointbiserialr
 
 from .metapanda import MetaPanda
+from .utils import _cfloat, _intcat
 
 
 __all__ = ["correlate", "condition_number"]
@@ -70,6 +71,57 @@ def _corr_two_matrix(X, Y, method="spearman"):
     return pd.DataFrame(cor, index=X.columns, columns=[method, "p-val"])
 
 
+def _corr_matrix_singular(X, method="spearman"):
+    """
+    Assumes X is of type MetaPanda to allow for type inference. Assumes e_types exists.
+
+    Drops columns of type 'object' as these cannot be correlated.
+
+    Where:
+        - f_i, f_j is continuous: pearson/spearman (method function)
+        - f_i is continuous, f_j is categorical: spearman
+        - f_i is continuous, f_j is boolean: point biserial correlation
+        - f_i, f_j is boolean: pearson product-moment correlation (assuming both are true dichotomous variables)
+    """
+    # drop 'object' columns
+    contig_X = X.compute([("drop", (object,), {})])
+    m_func = _map_correlate(method)
+
+    # assign zeros
+    R = np.zeros((contig_X.p_, contig_X.p_))
+
+    # iterate over i,j pairs
+    for i in range(contig_X.p_):
+        for j in range(i+1, contig_X.p_):
+            # get column types
+            c1 = contig_X.meta_.index[i]; c2 = contig_X.meta_.index[j]
+            dt1 = contig_X.meta_.loc[c1, "e_types"]
+            dt2 = contig_X.meta_.loc[c2, "e_types"]
+            # generate selector
+            sel = contig_X.df_.iloc[:, i].notnull() & contig_X.df_.iloc[:, j].notnull()
+            # generate subsets - downcasting if necessary
+            x = pd.to_numeric(contig_X.df_.loc[sel, c1], downcast="unsigned", errors="ignore")
+            y = pd.to_numeric(contig_X.df_.loc[sel, c2], downcast="unsigned", errors="ignore")
+            # if both floats, use method correlation
+            if dt1 in _cfloat() and dt2 in _cfloat():
+                R[i, j] = m_func(x, y)[0]
+            elif dt1 in _cfloat() and dt2 in _intcat():
+                R[i, j] = pointbiserialr(y, x)[0]
+            elif dt1 in _intcat() and dt2 in _cfloat():
+                R[i, j] = pointbiserialr(x, y)[0]
+            elif dt1 in _intcat() and dt2 in _intcat():
+                # both booleans/categorical
+                R[i, j] = spearmanr(x, y)[0]
+            else:
+                raise TypeError("pairing of type [{}] with [{}] not recognized in _corr_matrix_singular".format(dt1, dt2))
+    # match other side
+    R += R.T
+    # set diagonal to 1
+    R[np.diag_indices(contig_X.p_)] = 1.
+    # wrap pandas and return
+    return pd.DataFrame(R, index=contig_X.meta_.index, columns=contig_X.meta_.index)
+
+
 def _corr_matrix_vector(X, y, method="spearman"):
     m_f = _map_correlate(method)
     cor = np.zeros((X.shape[1],2))
@@ -81,15 +133,28 @@ def _corr_matrix_vector(X, y, method="spearman"):
     return pd.DataFrame(cor, index=X.columns, columns=[method, "p-val"])
 
 
-def correlate(x, y=None, method="spearman"):
+def _correlate_options(X, Y, method):
+    if isinstance(X, pd.Series) and isinstance(Y, pd.Series):
+        return _corr_vector_vector(X, Y, method)
+    elif isinstance(X, pd.DataFrame) and isinstance(Y, pd.Series):
+        return _corr_matrix_vector(X, Y, method)
+    elif isinstance(X, pd.DataFrame) and isinstance(Y, pd.DataFrame):
+        return _corr_two_matrix(X, Y, method)
+    else:
+        raise TypeError("X of type [{}], Y of type [{}], cannot compare".format(type(X), type(Y)))
+
+
+def correlate(X,
+              Y=None,
+              method="spearman"):
     """
     Correlates X and Y together to generate a correlation matrix.
 
     Parameters
     ---------
-    x : pd.Series, pd.DataFrame, MetaPanda
+    X : pd.Series, pd.DataFrame, MetaPanda
         set of inputs
-    y : None, pd.Series, pd.DataFrame, MetaPanda
+    Y : None, pd.Series, pd.DataFrame, MetaPanda
         set of output(s)
     method : str
         Method to correlate with. Choose from
@@ -97,29 +162,24 @@ def correlate(x, y=None, method="spearman"):
 
     Returns
     -------
-    R : np.ndarray
-        correlation matrix
+    R : float/pd.DataFrame
+        correlation values
     """
-    # reduce X, Y if metapanda
-    if isinstance(x, MetaPanda):
-        x = x.df_
-    if isinstance(y, MetaPanda):
-        y = y.df_
-
-    if y is None:
-        # only handle X
-        return x.corr(method=method)
+    if Y is None and isinstance(X, MetaPanda):
+        # use custom correlation.
+        return _corr_matrix_singular(X, method)
+    elif Y is None and isinstance(X, pd.DataFrame):
+        # use default pandas.DataFrame.corr
+        return X.corr(method=method)
     else:
-        if isinstance(x, pd.Series) and isinstance(y, pd.Series):
-            return _corr_vector_vector(x, y, method)
-        elif isinstance(x, pd.DataFrame) and isinstance(y, pd.Series):
-            return _corr_matrix_vector(x, y, method)
-        elif isinstance(y, np.ndarray) and (y.ndim == 1):
-            return _corr_matrix_vector(x, y, method)
-        elif isinstance(x, pd.DataFrame):
-            return _corr_two_matrix(x, y, method)
+        if isinstance(X, MetaPanda) and isinstance(Y, MetaPanda):
+            return _correlate_options(X.df_, Y.df_, method)
+        elif isinstance(X, MetaPanda) and isinstance(Y, pd.DataFrame):
+            return _correlate_options(X.df_, Y, method)
+        elif isinstance(X, pd.DataFrame) and isinstance(Y, MetaPanda):
+            return _correlate_options(X, Y.df_, method)
         else:
-            raise ValueError("Y not recognized")
+            return _correlate_options(X, Y, method)
 
 
 def condition_number(mdf):

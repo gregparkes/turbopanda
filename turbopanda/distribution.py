@@ -11,10 +11,12 @@ Taken from blog: http://www.insightsbot.com/blog/WEjdW/fitting-probability-distr
 from scipy import stats
 import matplotlib.pyplot as plt
 
+
 class Distribution(object):
     """
     Fits a distribution to data.
     """
+
     def __init__(self, dist_names=[]):
         if len(dist_names) == 0:
             self.dist_names = [

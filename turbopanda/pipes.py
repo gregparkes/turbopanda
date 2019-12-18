@@ -15,6 +15,34 @@ from .utils import integer_to_boolean, object_to_categorical, is_n_value_column
 __all__ = ["pipe", "ml_regression_pipe", "clean_pipe"]
 
 
+def _attempt_float_cast(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+
+
+def _is_bool_true(s):
+    return s in ["true", "True"]
+
+
+def _is_bool_false(s):
+    return s in ["false", "False"]
+
+
+def _type_cast_argument(s):
+    if s.isdigit():
+        value = int(s)
+    elif _attempt_float_cast(s):
+        value = float(s)
+    elif _is_bool_true(s):
+        value = True
+    elif _is_bool_false(s):
+        value = False
+    return value
+
+
 def _single_pipe(argument):
     """
     Converts a single command line into pipeable code for MetaPanda.
@@ -26,8 +54,10 @@ def _single_pipe(argument):
         if isinstance(arg, str):
             # if it's a string, check whether it's a param with = **kwarg
             if arg.find("=") != -1:
-                sp = arg.split("=",1)
-                pipe_d[sp[0]] = sp[1]
+                key, value = arg.split("=",1)
+                value = _type_cast_argument(value)
+                # attempt to convert sp[1] from str to int, float, bool or other basic type.
+                pipe_d[key] = value
             else:
                 # otherwise tupleize it as an *arg
                 pipe_t.append(arg)
@@ -36,6 +66,9 @@ def _single_pipe(argument):
     pipe_command.append(tuple(pipe_t))
     pipe_command.append(pipe_d)
     return tuple(pipe_command)
+
+
+################################## PUBLIC FUNCTIONS ####################################################
 
 
 def pipe(arguments):

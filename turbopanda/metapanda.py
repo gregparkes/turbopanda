@@ -27,7 +27,7 @@ from .pipes import clean_pipe
 
 __nondelay_functions__ = [
     "head", "cache", "multi_cache", "view", "view_not",
-    "analyze", "compute", "write", "write_json"
+    "analyze", "compute", "multi_compute", "write", "write_json"
 ]
 
 __delay_functions__ = [
@@ -79,13 +79,13 @@ class MetaPanda(object):
         self._cat_thresh = cat_thresh
         self._def_remove_single_col = default_remove_single_col
         self._with_warnings = False
-        self.name_ = name
         self.mode_ = mode
         self._select = {}
         self._pipe = []
         # set using property
         self.df_ = dataset
         self._key = key
+        self.name_ = name
 
     """ ############################ STATIC FUNCTIONS ######################################## """
 
@@ -225,9 +225,14 @@ class MetaPanda(object):
 
     """ ############################ HIDDEN OPERATIONS ####################################### """
 
-    def _rename_columns(self, old, new):
-        self.df_.rename(columns=dict(zip(old, new)), inplace=True)
-        self.meta_.rename(index=dict(zip(old, new)), inplace=True)
+    def _rename_axis(self, old, new, axis=0):
+        if axis == 0:
+            self.df_.rename(columns=dict(zip(old, new)), inplace=True)
+            self.meta_.rename(index=dict(zip(old, new)), inplace=True)
+        elif axis == 1:
+            self.df_.rename(index=dict(zip(old, new)), inplace=True)
+        else:
+            raise ValueError("axis '{}' not recognized".format(axis))
 
     def _drop_columns(self, select):
         if select.size > 0:
@@ -284,12 +289,12 @@ class MetaPanda(object):
             warnings.warn("pipe_ empty, nothing to compute.", UserWarning)
             return
         # basic check of pipe
-        check_pipe_attr(self, pipe)
-        for fn, args, kwargs in pipe:
-            # check that MetaPanda has the function attribute
-            if hasattr(self, fn):
-                # execute function with args and kwargs
-                getattr(self, fn)(*args, **kwargs)
+        if is_metapanda_pipe(pipe):
+            for fn, args, kwargs in pipe:
+                # check that MetaPanda has the function attribute
+                if hasattr(self, fn):
+                    # execute function with args and kwargs
+                    getattr(self, fn)(*args, **kwargs)
 
     def _write_csv(self, filename, with_meta=False, *args, **kwargs):
         self.df_.to_csv(filename, sep=",", *args, **kwargs)
@@ -333,7 +338,7 @@ class MetaPanda(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.mode_ = "instant"
-        self.compute()
+        self.compute(inplace=True)
 
     def __repr__(self):
         p = self.df_.shape[1] if self.df_.ndim > 1 else 1
@@ -388,11 +393,22 @@ class MetaPanda(object):
 
     @property
     def n_(self):
+        """
+        Returns the number of rows within the df_ attribute.
+        """
         return self.df_.shape[0]
 
     @property
     def p_(self):
+        """
+        Returns the number of columns/dimensions within the df_ attribute.
+        """
         return self.df_.shape[1]
+
+    @property
+    def selectors_(self):
+        """ Returns the cached selectors available. """
+        return self._select
 
     @property
     def memory_(self):
@@ -405,6 +421,9 @@ class MetaPanda(object):
     @name_.setter
     def name_(self, n):
         if isinstance(n, str):
+            # if name is found as a column name, block it.
+            if n in self.df_.columns:
+                raise ValueError("name: {} for df_ found as a column attribute; not allowed!".format(n))
             self._name = n
         else:
             raise TypeError("'name_' must be of type str")
@@ -446,8 +465,7 @@ class MetaPanda(object):
 
     def head(self, k=5):
         """
-        Simply displays the top k rows of the pandas.DataFrame. This function is not affected by
-        the 'mode' parameter.
+        A wrapper for pandas.DataFrame.head(). See pandas documentation for details.
 
         Parameters
         --------
@@ -456,20 +474,30 @@ class MetaPanda(object):
 
         Returns
         -------
-        ndf_ : pandas.DataFrame
-            First k rows of self.df_
+        ndf : pandas.DataFrame
+            First k rows of df_
         """
         return self.df_.head(k)
 
     def view(self, *selector):
         """
         Select merely returns the columns of interest selected using this selector. This function
-        is not affected by the 'mode' parameter.
+        is not affected by the 'mode' parameter. Note that view() *preserves* the order in which columns
+        appear within the DataFrame.
+
+        Selections of columns can be done by:
+            type [object, int, float, numpy.dtype*, pandas.CategoricalDtype]
+            callable (function) that returns [bool list] of length p
+            pd.Index
+            str [regex, df.column name, cached name, meta.column name (that references a boolean column)]
+            list/tuple of the above
+
+        *: any numpy data type, like np.float64, np.uint8
 
         Parameters
         -------
         selector : str or tuple args
-            Contains either types, meta column names, column names or regex-compliant strings
+            See above for what constitutes an *appropriate selector*.
 
         Returns
         ------
@@ -482,12 +510,22 @@ class MetaPanda(object):
     def view_not(self, *selector):
         """
         Select merely returns the columns of interest NOT selected using this selector. This function
-        is not affected by the 'mode' parameter.
+        is not affected by the 'mode' parameter. Note that view_not() *preserves* the order in which columns
+        appear within the DataFrame.
+
+        Selections of columns can be done by:
+            type [object, int, float, numpy.dtype*, pandas.CategoricalDtype]
+            callable (function) that returns [bool list] of length p
+            pd.Index
+            str [regex, df.column name, cached name, meta.column name (that references a boolean column)]
+            list/tuple of the above
+
+        *: any numpy data type, like np.float64, np.uint8
 
         Parameters
         -------
         selector : str or tuple args
-            Contains either types, meta column names, column names or regex-compliant strings
+            See above for what constitutes an *appropriate selector*.
 
         Returns
         ------
@@ -696,7 +734,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def rename(self, ops, selector=None):
+    def rename(self, ops, selector=None, axis=0):
         """
         Renames the column names within the pandas.DataFrame in a flexible fashion.
 
@@ -709,6 +747,8 @@ class MetaPanda(object):
         selector : None, str, or tuple args
             Contains either types, meta column names, column names or regex-compliant strings
             Allows user to specify subset to rename
+        axis : int
+            0 for columns, 1 for index
 
         Returns
         -------
@@ -719,7 +759,7 @@ class MetaPanda(object):
         curr_cols = sel_cols = self.view(*selector) if selector is not None else self.df_.columns
         for op in ops:
             curr_cols = curr_cols.str.replace(*op)
-        self._rename_columns(sel_cols, curr_cols)
+        self._rename_axis(sel_cols, curr_cols, axis)
         return self
 
     @_actionable
@@ -741,7 +781,7 @@ class MetaPanda(object):
         """
         sel_cols = self.view(*selector) if selector is not None else self.df_.columns
         # set to df_ and meta_
-        self._rename_columns(sel_cols, sel_cols+pref)
+        self._rename_axis(sel_cols, sel_cols+pref, 0)
         return self
 
     @_actionable
@@ -763,7 +803,7 @@ class MetaPanda(object):
         """
         sel_cols = self.view(*selector) if selector is not None else self.df_.columns
         # set to df_ and meta_
-        self._rename_columns(sel_cols, sel_cols+suf)
+        self._rename_axis(sel_cols, sel_cols+suf, 0)
         return self
 
     def analyze(self, functions=["agglomerate"]):
@@ -1063,7 +1103,7 @@ class MetaPanda(object):
 
         Parameters
         -------
-        pipe : list of 3-tuple, (function name, *args, **kwargs), optional
+        pipe : list of 3-tuple, (function name, *args, **kwargs), multiple pipes, optional
             A set of instructions expecting function names in MetaPanda and parameters.
             If empty, computes the stored pipe_ attribute.
         inplace : bool, optional
@@ -1085,9 +1125,32 @@ class MetaPanda(object):
             self._apply_pipe(pipe)
             return self
         else:
-            cop = self.copy()
-            cop.compute(pipe, inplace=True)
-            return cop
+            # full deepcopy, including dicts, lists, hidden etc.
+            cpy = self.copy()
+            # compute on cop
+            cpy.compute(pipe, inplace=True)
+            return cpy
+
+    def multi_compute(self, pipes, inplace=False):
+        """
+        Computes multiple pipeslines to the MetaPanda object. This version does not compute on the pipe_ attribute.
+        By default, this method does NOT
+
+        Parameters
+        --------
+        pipes : list of (list of (list of 3-tuple, (function name, *args, **kwargs))
+            A set of instructions expecting function names in MetaPanda and parameters.
+            If empty, computes nothing.
+        inplace : bool, optional
+            If True, applies the pipes inplace, else returns a copy. Default has now changed
+            to return a copy.
+
+        Returns
+        -------
+        self/copy
+        """
+        # join and execute
+        return self.compute(join(*pipes), inplace=inplace)
 
     def write(self, filename=None, with_meta=False, *args, **kwargs):
         """

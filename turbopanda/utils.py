@@ -19,10 +19,11 @@ from scipy.stats import norm
 __all__ = ["is_twotuple", "instance_check", "chain_intersection", "chain_union",
            "boolean_series_check", "attach_name", "check_list_type", "not_column_float",
            "is_column_float", "is_column_object", "is_column_int", "convert_category", "convert_boolean",
-           "calc_mem", "remove_multi_index", "remove_string_spaces", "check_pipe_attr",
+           "calc_mem", "remove_multi_index", "remove_string_spaces",
            "nearest_factors", "is_missing_values", "is_unique_id", "is_potential_id",
            "is_potential_stacker", "nunique", "object_to_categorical",
-           "is_n_value_column", "boolean_to_integer", "integer_to_boolean"]
+           "is_n_value_column", "boolean_to_integer", "integer_to_boolean",
+           "is_metapanda_pipe", "join"]
 
 
 def _cfloat():
@@ -76,6 +77,17 @@ def is_potential_id(ser, thresh=0.5):
 
 def is_potential_stacker(ser, regex=";|\t|,|", thresh=0.1):
     return ser.dropna().str.contains(regex).sum() > thresh if (ser.dtype == object) else False
+
+
+def is_metapanda_pipe(p):
+    for pipe in p:
+        if len(pipe) != 3:
+            raise ValueError("pipe of length 3 is of length {}".format(len(pipe)))
+        # element 1: string
+        instance_check(pipe[0], str)
+        instance_check(pipe[1], (list, tuple))
+        instance_check(pipe[2], dict)
+    return True
 
 
 def nunique(ser):
@@ -152,16 +164,8 @@ def instance_check(a, i):
         raise TypeError("object '{}' does not belong to type {}".format(a, i))
 
 
-def check_pipe_attr(obj, l):
-    for i in l:
-        if len(i) != 3:
-            raise ValueError("pipe element {} needs to be of length 3".format(i))
-        if not hasattr(obj, i[0]):
-            raise ValueError("elem {} not found as attribute in obj {}".format(i[0], obj))
-        if not isinstance(i[1], (list, tuple)):
-            raise TypeError("elem {} not belong to type [list, tuple], but {}".format(i[1], type(i[1])))
-        if not isinstance(i[2], dict):
-            raise TypeError("elem {} not belong to type [dict], but {}".format(i[2], type(i[2])))
+def join(*pipes):
+    return list(it.chain.from_iterable(pipes))
 
 
 def chain_intersection(*cgroup):

@@ -23,8 +23,8 @@ from .visualise import *
 from .fileio import *
 from .pipes import *
 from .merger import *
-from .metrics import correlate, condition_number
+from .correlate import *
 
 
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 __name__ = "turbopanda"

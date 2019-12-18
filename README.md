@@ -6,7 +6,7 @@ The aim of this library is to re-haul the `pandas` library package, which is ext
 
 This library creates two `pandas.DataFrames`, the raw data and a *metadata* frame.
 
-**Current version: 0.1.0**
+**Current version: 0.1.6**
 
 ## Installation
 
@@ -16,6 +16,7 @@ This library creates two `pandas.DataFrames`, the raw data and a *metadata* fram
 * numpy (>=1.11.0)
 * scipy (>=1.3)
 * pandas (>=0.25.1)
+* sklearn
 
 The following packages are not required but significantly improve the usage of this package. If you are unfamiliar with the Jupyter project see [here](https://jupyter.org/):
 
@@ -51,7 +52,7 @@ We recommend using `turb` as a shorthand to reduce the amount of writing out you
 # where df is a pandas.DataFrame object.
 >>> g = turb.MetaPanda(df)
 >>> g
-MetaPanda(DataSet(n=3000, p=9, mem=0.214MB))
+MetaPanda(DataSet(n=3000, p=9, mem=0.214MB), mode='instant')
 ```
 
 Alternatively a `MetaPanda` object can be created using the in-built `read` function found in `turbopanda`:
@@ -59,7 +60,7 @@ Alternatively a `MetaPanda` object can be created using the in-built `read` func
 ```python
 >>> g = turb.read("translation.csv")
 >>> g
-MetaPanda(DataSet(n=3000, p=9, mem=0.214MB))
+MetaPanda(translation(n=3000, p=9, mem=0.214MB), mode='instant')
 ```
 
 here you see the `__repr__` of the object presents the dataset in terms of dimensions and memory usage which is incredibly useful to know at a cursory glance.
@@ -67,7 +68,7 @@ here you see the `__repr__` of the object presents the dataset in terms of dimen
 The raw pandas object can be accessed through the `df_` attribute:
 
 ```python
->>> g.df_.head()
+>>> g.head()
 ```
 
 | | **Protein_IDs** | **Majority_protein_IDs** | **Protein_names** | **...** |
@@ -128,13 +129,7 @@ Sometimes the columns returned may not be as expected for the user, so we provid
 
 ### Complex access by multi-views
 
-`turbopanda` helps to facilitate more complex-like selections of columns, by default, by keeping the **union** of search terms:
-
-$$
-S=\bigcup_i t_i
-$$
-
-For example:
+`turbopanda` helps to facilitate more complex-like selections of columns, by default, by keeping the **union** of search terms, for example:
 
 ```python
 >>> g.view(float, "Gene")
@@ -147,7 +142,7 @@ Returns all of the columns of type `float` and where the string name contains th
 Often in `pandas`, operations are applied across the entire dataframe, which can be annoying if you just want to transform a **selection** of columns and return the changes inplace, or create a new column. `turbopanda` solves this with the `transform` function:
 
 ```python
->>> g.transform(float, lambda x: x**2)
+>>> g.transform(lambda x: x**2, float)
 ```
 
 This takes every column of type `float` and applies a square-function to it. `lambda` in this case accepts a `pandas.Series` object representing a given column, and expects the return type to be the same size as before.

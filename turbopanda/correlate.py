@@ -16,6 +16,17 @@ from .utils import _cfloat, _intcat
 __all__ = ["correlate"]
 
 
+def _wrap_corr_metapanda(df_corr, pdm):
+    C = MetaPanda(df_corr)
+    # copy over metadata - dropping columns that aren't present in df_corr
+    C.meta_ = pdm.meta_.loc[df_corr.columns]
+    # copy over selector
+    C._select = pdm.selectors_
+    # copy over name
+    C.name_ = pdm.name_
+    return C
+
+
 def _handle_debug(debug, xn, yn, r, corr_t):
     if isinstance(debug, bool):
         if debug:
@@ -180,6 +191,8 @@ def correlate(X,
     """
     Correlates X and Y together to generate a correlation matrix.
 
+    If X/Y are MetaPandas, returns a MetaPanda object, else returns pandas.DataFrame
+
     Parameters
     ---------
     X : pd.Series, pd.DataFrame, MetaPanda
@@ -199,32 +212,32 @@ def correlate(X,
 
     Returns
     -------
-    R : float/pd.DataFrame
+    R : float/pd.DataFrame/turb.MetaPanda
         correlation matrix/rows
     """
     # select pandas.DataFrame
-    if isinstance(X, MetaPanda):
-        X = X.df_
-    if isinstance(Y, MetaPanda):
-        Y = Y.df_
-
-    # handle different use-cases.
+    NX = X.df_ if isinstance(X, MetaPanda) else X
+    NY = Y.df_ if isinstance(Y, MetaPanda) else Y
 
     # if no Y. do singular matrix.
-    if Y is None and isinstance(X, pd.DataFrame):
-        return _corr_matrix_singular(X, method, style=style, debug=debug)
+    if NY is None and isinstance(NX, pd.DataFrame):
+        mat = _corr_matrix_singular(NX, method, style=style, debug=debug)
+        if isinstance(X, MetaPanda):
+            return _wrap_corr_metapanda(mat, X)
+        else:
+            return mat
     # two series.
-    if isinstance(X, pd.Series) and isinstance(Y, pd.Series):
-        return _corr_two_variables(X, Y, method, debug=debug)
+    if isinstance(NX, pd.Series) and isinstance(NY, pd.Series):
+        return _corr_two_variables(NX, NY, method, debug=debug)
     # one matrix, one vector
-    elif isinstance(X, pd.DataFrame) and isinstance(Y, pd.Series):
-        return _corr_matrix_vector(X, Y, method, style=style, debug=debug)
+    elif isinstance(NX, pd.DataFrame) and isinstance(NY, pd.Series):
+        return _corr_matrix_vector(NX, NY, method, style=style, debug=debug)
     # one vector, one matrix
-    elif isinstance(X, pd.Series) and isinstance(Y, pd.DataFrame):
+    elif isinstance(NX, pd.Series) and isinstance(NY, pd.DataFrame):
         # swap them over
-        return _corr_matrix_vector(Y, X, method, style=style, debug=debug)
+        return _corr_matrix_vector(NY, NX, method, style=style, debug=debug)
     # two matrices of same shape
-    elif isinstance(X, pd.DataFrame) and isinstance(Y, pd.DataFrame):
-        return _corr_two_matrix(X, Y, method, debug=debug)
+    elif isinstance(NX, pd.DataFrame) and isinstance(NY, pd.DataFrame):
+        return _corr_two_matrix(NX, NY, method, debug=debug)
     else:
-        raise TypeError("X of type [{}], Y of type [{}], cannot compare".format(type(X), type(Y)))
+        raise TypeError("X of type [{}], Y of type [{}], cannot compare".format(type(NX), type(NY)))

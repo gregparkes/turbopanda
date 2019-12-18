@@ -17,13 +17,13 @@ from pandas.api.types import CategoricalDtype
 from scipy.stats import norm
 
 __all__ = ["is_twotuple", "instance_check", "chain_intersection", "chain_union",
-           "boolean_series_check", "attach_name", "check_list_type", "not_column_float",
-           "is_column_float", "is_column_object", "is_column_int", "convert_category", "convert_boolean",
-           "calc_mem", "remove_multi_index", "remove_string_spaces",
-           "nearest_factors", "is_missing_values", "is_unique_id", "is_potential_id",
+           "boolean_series_check", "check_list_type", "not_column_float",
+           "is_column_float", "is_column_object", "is_column_int",
+           "calc_mem", "remove_string_spaces", "nearest_factors", "is_missing_values",
+           "is_unique_id", "is_potential_id",
            "is_potential_stacker", "nunique", "object_to_categorical",
            "is_n_value_column", "boolean_to_integer", "integer_to_boolean",
-           "is_metapanda_pipe", "join"]
+           "is_metapanda_pipe", "join", "belongs", "is_possible_category"]
 
 
 def _cfloat():
@@ -39,7 +39,7 @@ def _intcat():
 
 
 def is_possible_category(ser):
-    return ser.dtype in ([object] + _cint())
+    return ser.dtype in ([object] + _intcat())
 
 
 def not_column_float(ser):
@@ -68,11 +68,11 @@ def is_n_value_column(ser, n=1):
 
 def is_unique_id(ser):
     # a definite algorithm for determining a unique column IDm
-    return ser.is_unique if is_possible_category(ser) else False
+    return ser.is_unique if is_column_int(ser) else False
 
 
 def is_potential_id(ser, thresh=0.5):
-    return (ser.unique().shape[0] / ser.shape[0]) > thresh if is_possible_category(ser) else False
+    return (ser.unique().shape[0] / ser.shape[0]) > thresh if is_column_int(ser) else False
 
 
 def is_potential_stacker(ser, regex=";|\t|,|", thresh=0.1):
@@ -91,7 +91,7 @@ def is_metapanda_pipe(p):
 
 
 def nunique(ser):
-    return ser.nunique() if is_possible_category(ser) else -1
+    return ser.nunique() if not_column_float(ser) else -1
 
 
 def is_twotuple(t):
@@ -115,7 +115,7 @@ def integer_to_boolean(ser):
 def object_to_categorical(ser, thresh=30):
     # get uniques if possible
     if 1 < nunique(ser) < thresh:
-        c_cat = CategoricalDtype(np.sort(ser.unique().dropna()), ordered=True)
+        c_cat = CategoricalDtype(np.sort(ser.dropna().unique()), ordered=True)
         return ser.astype(c_cat)
     else:
         return ser
@@ -124,20 +124,6 @@ def object_to_categorical(ser, thresh=30):
 def boolean_to_integer(ser):
     """ Convert a boolean series into an integer if possible """
     return ser.astype(np.uint8) if (ser.dtype == np.bool) else ser
-
-
-def convert_boolean(df, col, name_map):
-    df[col] = df[col].astype(np.bool)
-    name_map[col] = "is_" + col
-
-
-def convert_category(df, col, uniques):
-    c_cat = CategoricalDtype(np.sort(uniques), ordered=True)
-    df[col] = df[col].astype(c_cat)
-
-
-def attach_name(*pds):
-    return list(it.chain.from_iterable([df.name_ + "__" + df.df_.columns for df in pds]))
 
 
 def boolean_series_check(ser):
@@ -190,12 +176,6 @@ def chain_union(*cgroup):
     return res
 
 
-def remove_multi_index(df):
-    if isinstance(df.columns, pd.MultiIndex):
-        indices = [n if n is not None else ("Index%d" % i) for i, n in enumerate(df.columns.names)]
-        df.columns = pd.Index(["__".join(col) for col in df.columns], name="__".join(indices))
-
-
 def remove_string_spaces(df):
     for c in df.columns[df.dtypes.eq(object)]:
         df[c] = df[c].str.strip()
@@ -208,7 +188,7 @@ def calc_mem(df):
     return (df.memory_usage().sum() / 1000000.) if (df.ndim > 1) else (df.memory_usage() / 1000000.)
 
 
-def factor(n):
+def _factor(n):
     """
     Collect a list of factors given an integer, excluding 1 and n
     """
@@ -232,7 +212,7 @@ def factor(n):
     return r
 
 
-def square_factors(n):
+def _square_factors(n):
     """
     Given n size, calculate the 'most square' factors of that integer.
 
@@ -248,11 +228,11 @@ def square_factors(n):
     """
     if not isinstance(n, (int, np.int, np.int64)):
         raise TypeError("'n' must of type [int, np.int, np.int64]")
-    arr = np.sort(np.asarray(factor(n)))
+    arr = np.sort(np.asarray(_factor(n)))
     return arr[arr.shape[0] // 2], arr[-1] // arr[arr.shape[0] // 2]
 
 
-def diag_factors(n):
+def _diag_factors(n):
     """
     Given n size, calculate the 'most off-edge' factors of that integer.
 
@@ -268,7 +248,7 @@ def diag_factors(n):
     """
     if not isinstance(n, (int, np.int, np.int64)):
         raise TypeError("'n' must of type [int, np.int, np.int64]")
-    arr = np.sort(np.asarray(factor(n)))
+    arr = np.sort(np.asarray(_factor(n)))
     return arr[arr.shape[0] // 4], arr[-1] // arr[arr.shape[0] // 4]
 
 
@@ -297,18 +277,20 @@ def nearest_factors(n, ftype="square", cutoff=6, search_range=5, W_var=1.5):
         Two integers representing the most 'square' factors.
     """
     if ftype=="square":
-        a, b = square_factors(n)
+        f_ = _square_factors
     elif ftype=="diag":
-        a, b = diag_factors(n)
+        f_ = _diag_factors
     else:
         raise ValueError("ftype must be [diag, square]")
+
+    a, b = f_(n)
 
     # if our 'best' factors don't cut it...
     if abs(a - b) > cutoff:
         # create Range
         R = np.arange(n, n + search_range, 1, dtype=np.int64)
-        # calculate new scores
-        nscores = np.asarray([square_factors(i) for i in R])
+        # calculate new scores - using function
+        nscores = np.asarray([f_(i) for i in R])
         # calculate distance
         dist = np.abs(nscores[:, 0] - nscores[:, 1])
         # weight our distances by a normal distribution -

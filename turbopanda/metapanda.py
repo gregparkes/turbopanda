@@ -7,6 +7,8 @@ Created on Fri Nov  1 15:55:38 2019
 """
 
 import os
+import sys
+import numpy as np
 import warnings
 import functools
 import pandas as pd
@@ -17,10 +19,9 @@ from pandas import DataFrame
 from pandas.core.groupby.generic import DataFrameGroupBy
 
 from .utils import *
+from .metadata import *
 from .selection import get_selector, _type_encoder_map
 from .analyze import agglomerate, intersection_grid, dist
-from .metadata import add_metadata, basic_construct, _meta_columns_default
-
 from .pipes import clean_pipe
 
 # hidden .py attributes
@@ -31,10 +32,10 @@ __nondelay_functions__ = [
 ]
 
 __delay_functions__ = [
-    "drop", "apply", "apply_index", "apply_columns", "transform", "multi_transform",
-    "rename", "add_prefix", "add_suffix", "meta_map",
-    "expand", "shrink", "sort_columns", "split_categories",
-    "melt", "filter_rows"
+    "drop", "keep", "apply", "apply_index", "apply_columns",
+    "transform", "multi_transform", "rename", "add_prefix",
+    "add_suffix", "meta_map", "expand", "shrink", "sort_columns",
+    "split_categories", "melt", "filter_rows"
 ]
 
 __functions__ = __nondelay_functions__ + __delay_functions__
@@ -96,6 +97,7 @@ class MetaPanda(object):
                 self._pipe.append((function.__name__, args, kwargs))
             else:
                 return function(self, *args, **kwargs)
+
         return new_function
 
     @classmethod
@@ -212,7 +214,6 @@ class MetaPanda(object):
             raise ValueError("column 'data' not found in MetaPandaJSON")
         if "meta" in recvr:
             met = pd.DataFrame.from_dict(recvr["meta"])
-            met.index.name = "colnames"
             # set to MP
             mp.meta_ = met
             # include metadata
@@ -225,11 +226,11 @@ class MetaPanda(object):
 
     """ ############################ HIDDEN OPERATIONS ####################################### """
 
-    def _rename_axis(self, old, new, axis=0):
-        if axis == 0:
+    def _rename_axis(self, old, new, axis=1):
+        if axis == 1:
             self.df_.rename(columns=dict(zip(old, new)), inplace=True)
             self.meta_.rename(index=dict(zip(old, new)), inplace=True)
-        elif axis == 1:
+        elif axis == 0:
             self.df_.rename(index=dict(zip(old, new)), inplace=True)
         else:
             raise ValueError("axis '{}' not recognized".format(axis))
@@ -309,16 +310,16 @@ class MetaPanda(object):
 
     def _write_json(self, filename):
         saving_dict = {"data": self.df_.to_dict(),
-                       "meta": self.meta_.drop(_meta_columns_default(), axis=1).to_dict(),
+                       "meta": self.meta_.drop(meta_columns_default(), axis=1).to_dict(),
                        "cache": self._select,
                        "name": self.name_
-        }
+                       }
         if filename is None:
             with open(self.name_ + ".json", "w") as f:
-                json.dump(saving_dict, f, separators=(",",":"))
+                json.dump(saving_dict, f, separators=(",", ":"))
         else:
             with open(filename, "w") as f:
-                json.dump(saving_dict, f, separators=(",",":"))
+                json.dump(saving_dict, f, separators=(",", ":"))
 
     """ ############################## OVERIDDEN OPERATIONS ###################################### """
 
@@ -354,6 +355,7 @@ class MetaPanda(object):
 
     """ ############################### PROPERTIES ############################################## """
 
+    """ DataFrame attributes """
     @property
     def df_(self):
         return self._df
@@ -387,6 +389,9 @@ class MetaPanda(object):
     def meta_(self, meta):
         if isinstance(meta, DataFrame):
             self._meta = meta
+            # categorize
+            categorize_meta(self._meta)
+            # set colnames
             self._meta.index.name = "colnames"
         else:
             raise TypeError("'meta' must be of type [pd.DataFrame]")
@@ -404,6 +409,8 @@ class MetaPanda(object):
         Returns the number of columns/dimensions within the df_ attribute.
         """
         return self.df_.shape[1]
+
+    """ Additional meta information """
 
     @property
     def selectors_(self):
@@ -460,6 +467,29 @@ class MetaPanda(object):
         else:
             raise ValueError("key '{}' belong in set:{}".format(k, k in self.df_.columns))
 
+    """ ############################### BOOLEAN PROPERTIES ##################################################"""
+
+    @property
+    def is_square(self):
+        return self.n_ == self.p_
+
+    @property
+    def is_symmetric(self):
+        """ Defines whether a matrix is symmetric """
+        return self.is_square and (np.allclose(self.df_, self.df_.T))
+
+    @property
+    def is_positive_definite(self):
+        return np.all(np.linalg.eigvals(self.df_.values) > 0)
+
+    @property
+    def is_singular(self):
+        return np.linalg.cond(self.df_.values) >= (1. / sys.float_info.epsilon)
+
+    @property
+    def is_orthogonal(self):
+        """ An orthogonal matrix is square matrix whose columns are orthogonal unit vectors """
+        return self.is_square and np.allclose(np.dot(self.df_.values, self.df_.values.T), np.eye(self.p_))
 
     """ ################################ PUBLIC FUNCTIONS ################################################### """
 
@@ -640,6 +670,24 @@ class MetaPanda(object):
         return self
 
     @_actionable
+    def keep(self, *selector):
+        """
+        Given a selector or group of selectors, keep all of the columns selected within
+        this group, applied to df_, dropping ALL others.
+
+        Parameters
+        --------
+        selector : str or tuple args
+            Contains either types, meta column names, column names or regex-compliant strings
+
+        Returns
+        -------
+        self
+        """
+        self._drop_columns(self.view_not(*selector))
+        return self
+
+    @_actionable
     def filter_rows(self, function, selector=None, *args):
         """
         Given a function, filter out rows that do not meet the functions' criteria.
@@ -734,7 +782,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def rename(self, ops, selector=None, axis=0):
+    def rename(self, ops, selector=None, axis=1):
         """
         Renames the column names within the pandas.DataFrame in a flexible fashion.
 
@@ -747,8 +795,8 @@ class MetaPanda(object):
         selector : None, str, or tuple args
             Contains either types, meta column names, column names or regex-compliant strings
             Allows user to specify subset to rename
-        axis : int
-            0 for columns, 1 for index
+        axis : int, optional
+            0 for columns, 1 for index. default is 1 (for columns)
 
         Returns
         -------
@@ -756,7 +804,16 @@ class MetaPanda(object):
         """
         # check ops is right format
         is_twotuple(ops)
-        curr_cols = sel_cols = self.view(*selector) if selector is not None else self.df_.columns
+        belongs(axis, [0, 1])
+
+        if selector is None:
+            curr_cols = sel_cols = self.df_.columns if axis == 1 else self.df_.index
+        elif axis==1:
+            # ignore axis==0
+            curr_cols = sel_cols = self.view(*selector)
+        else:
+            raise ValueError("cannot use argument [selector] with axis=0, for rows")
+
         for op in ops:
             curr_cols = curr_cols.str.replace(*op)
         self._rename_axis(sel_cols, curr_cols, axis)
@@ -781,7 +838,7 @@ class MetaPanda(object):
         """
         sel_cols = self.view(*selector) if selector is not None else self.df_.columns
         # set to df_ and meta_
-        self._rename_axis(sel_cols, sel_cols+pref, 0)
+        self._rename_axis(sel_cols, sel_cols + pref, 0)
         return self
 
     @_actionable
@@ -803,7 +860,7 @@ class MetaPanda(object):
         """
         sel_cols = self.view(*selector) if selector is not None else self.df_.columns
         # set to df_ and meta_
-        self._rename_axis(sel_cols, sel_cols+suf, 0)
+        self._rename_axis(sel_cols, sel_cols + suf, 0)
         return self
 
     def analyze(self, functions=["agglomerate"]):
@@ -933,9 +990,7 @@ class MetaPanda(object):
         else:
             raise ValueError("shared terms: {} discovered for meta_map.".format(igrid))
         # merge into meta
-        self.meta_[name] = new_grid
-        # categorize
-        convert_category(self.meta_, name, new_grid.unique())
+        self.meta_[name] = object_to_categorical(new_grid)
         return self
 
     @_actionable

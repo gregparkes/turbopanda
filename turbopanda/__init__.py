@@ -24,6 +24,7 @@ from .fileio import *
 from .pipes import *
 from .merger import *
 from .correlate import *
+from .cache import cache
 
 
 __version__ = "0.1.6"

@@ -817,9 +817,9 @@ class MetaPanda(object):
         belongs(axis, [0, 1])
 
         curr_cols = sel_cols = self._selector_group(selector, axis)
-
-        for op in ops:
-            curr_cols = curr_cols.str.replace(*op)
+        # performs the replacement operation inplace
+        curr_cols = string_replace(curr_cols, ops)
+        # rename using mapping
         self._rename_axis(sel_cols, curr_cols, axis)
         return self
 

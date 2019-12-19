@@ -20,7 +20,7 @@ __all__ = ["is_twotuple", "instance_check", "chain_intersection", "chain_union",
            "boolean_series_check", "check_list_type", "not_column_float",
            "is_column_float", "is_column_object", "is_column_int",
            "calc_mem", "remove_string_spaces", "nearest_factors", "is_missing_values",
-           "is_unique_id", "is_potential_id",
+           "is_unique_id", "is_potential_id", "string_replace",
            "is_potential_stacker", "nunique", "object_to_categorical",
            "is_n_value_column", "boolean_to_integer", "integer_to_boolean",
            "is_metapanda_pipe", "join", "belongs", "is_possible_category"]
@@ -36,6 +36,10 @@ def _cint():
 
 def _intcat():
     return [np.uint8, np.uint16]
+
+
+def list_dir(obj):
+    return [a for a in dir(obj) if not a.startswith("__") and not a.startswith("_")]
 
 
 def is_possible_category(ser):
@@ -105,6 +109,13 @@ def is_twotuple(t):
     else:
         raise TypeError("L must be of type [list, tuple]")
     return True
+
+
+def string_replace(l, operations):
+    """ Performs all replace operations on the string inplace """
+    for op in operations:
+        l = l.str.replace(*op)
+    return l
 
 
 def integer_to_boolean(ser):

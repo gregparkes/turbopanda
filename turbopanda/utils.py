@@ -112,11 +112,13 @@ def integer_to_boolean(ser):
     return ser.astype(np.bool) if (is_column_int(ser) and is_n_value_column(ser, 2)) else ser
 
 
-def object_to_categorical(ser, thresh=30):
+def object_to_categorical(ser, order=None, thresh=30):
     # get uniques if possible
     if 1 < nunique(ser) < thresh:
-        c_cat = CategoricalDtype(np.sort(ser.dropna().unique()), ordered=True)
-        return ser.astype(c_cat)
+        if order is None:
+            return ser.astype(CategoricalDtype(np.sort(ser.dropna().unique()), ordered=True))
+        else:
+            return ser.astype(CategoricalDtype(order, ordered=True))
     else:
         return ser
 

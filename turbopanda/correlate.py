@@ -100,7 +100,6 @@ def _corr_two_matrix(X, Y, method="spearman", debug=False):
         raise ValueError("X.shape {} does not match Y.shape {}".format(X.shape, Y.shape))
 
     for i in range(X.shape[1]):
-
         cor[i, :] = _corr_two_variables(X.iloc[:, i], Y.iloc[:, i], method, debug=debug)
     return pd.DataFrame(cor, index=X.columns, columns=[method, "p-val"])
 
@@ -130,18 +129,18 @@ def _corr_matrix_singular(X, method="spearman", style="matrix", debug=False):
     else:
         contin_X = X.loc[:, sel_keep]
         # assign zeros
-        if style=="matrix":
+        if style == "matrix":
             R = np.zeros((contin_X.shape[1], contin_X.shape[1]))
-        elif style=="rows":
+        elif style == "rows":
             R = []
         # iterate over i,j pairs
         for i in range(contin_X.shape[1]):
             for j in range(i+1, contin_X.shape[1]):
                 # get column types
-                if style=="matrix":
+                if style == "matrix":
                     _, _, R[i, j], _, _, _ = _corr_two_variables(contin_X.iloc[:, i], contin_X.iloc[:, j],
                                                   method=method, debug=debug)
-                elif style=="rows":
+                elif style == "rows":
                     R.append(
                         pd.Series(
                             _corr_two_variables(contin_X.iloc[:, i], contin_X.iloc[:, j],
@@ -150,7 +149,7 @@ def _corr_matrix_singular(X, method="spearman", style="matrix", debug=False):
                         )
                     )
 
-        if style=="matrix":
+        if style == "matrix":
             # match other side
             R += R.T
             # set diagonal to 1
@@ -166,12 +165,12 @@ def _corr_matrix_vector(X, y, method="spearman", style="matrix", debug=None):
     if X.shape[0] != y.shape[0]:
         raise ValueError("X.shape {} does not match Y.shape {}".format(X.shape, y.shape))
 
-    if style=="matrix":
+    if style == "matrix":
         cor = np.zeros((X.shape[1], 2))
         for i in range(X.shape[1]):
             _, _, cor[i, 0], cor[i, 1], _, _ = _corr_two_variables(X.iloc[:, i], y, method, debug=debug)
         return pd.DataFrame(cor, index=X.columns, columns=[method, "p-val"])
-    elif style=="rows":
+    elif style == "rows":
         cor = []
         for i in range(X.shape[1]):
             cor.append(
@@ -222,7 +221,7 @@ def correlate(X,
     # if no Y. do singular matrix.
     if NY is None and isinstance(NX, pd.DataFrame):
         mat = _corr_matrix_singular(NX, method, style=style, debug=debug)
-        if isinstance(X, MetaPanda):
+        if isinstance(X, MetaPanda) and style == "matrix":
             return _wrap_corr_metapanda(mat, X)
         else:
             return mat

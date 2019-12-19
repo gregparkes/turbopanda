@@ -33,14 +33,15 @@ def _is_bool_false(s):
 
 def _type_cast_argument(s):
     if s.isdigit():
-        value = int(s)
+        return int(s)
     elif _attempt_float_cast(s):
-        value = float(s)
+        return float(s)
     elif _is_bool_true(s):
-        value = True
+        return True
     elif _is_bool_false(s):
-        value = False
-    return value
+        return False
+    else:
+        return s
 
 
 def _single_pipe(argument):

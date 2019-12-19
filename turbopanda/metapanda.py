@@ -97,7 +97,6 @@ class MetaPanda(object):
                 self._pipe.append((function.__name__, args, kwargs))
             else:
                 return function(self, *args, **kwargs)
-
         return new_function
 
     @classmethod
@@ -225,6 +224,17 @@ class MetaPanda(object):
         return mp
 
     """ ############################ HIDDEN OPERATIONS ####################################### """
+
+    def _selector_group(self, s, axis=1):
+        if s is None:
+            return self.df_.columns if axis == 1 else self.df_.index
+        elif axis==1:
+            if isinstance(s, (tuple, list)):
+                return self.view(*s)
+            else:
+                return self.view(s)
+        else:
+            raise ValueError("cannot use argument [selector] with axis=0, for rows")
 
     def _rename_axis(self, old, new, axis=1):
         if axis == 1:
@@ -480,7 +490,7 @@ class MetaPanda(object):
 
     @property
     def is_positive_definite(self):
-        return np.all(np.linalg.eigvals(self.df_.values) > 0)
+        return self.is_square and np.all(np.linalg.eigvals(self.df_.values) > 0)
 
     @property
     def is_singular(self):
@@ -709,7 +719,7 @@ class MetaPanda(object):
         self
         """
         # perform inplace
-        selection = self.view(selector) if selector is not None else self.df_.columns
+        selection = self._selector_group(selector, axis=1)
         # modify
         if callable(function) and selection.shape[0] == 1:
             bs = function(self.df_[selection[0]], *args)
@@ -806,13 +816,7 @@ class MetaPanda(object):
         is_twotuple(ops)
         belongs(axis, [0, 1])
 
-        if selector is None:
-            curr_cols = sel_cols = self.df_.columns if axis == 1 else self.df_.index
-        elif axis==1:
-            # ignore axis==0
-            curr_cols = sel_cols = self.view(*selector)
-        else:
-            raise ValueError("cannot use argument [selector] with axis=0, for rows")
+        curr_cols = sel_cols = self._selector_group(selector, axis)
 
         for op in ops:
             curr_cols = curr_cols.str.replace(*op)
@@ -836,7 +840,7 @@ class MetaPanda(object):
         ------
         self
         """
-        sel_cols = self.view(*selector) if selector is not None else self.df_.columns
+        sel_cols = self._selector_group(selector)
         # set to df_ and meta_
         self._rename_axis(sel_cols, sel_cols + pref, 0)
         return self
@@ -858,7 +862,7 @@ class MetaPanda(object):
         ------
         self
         """
-        sel_cols = self.view(*selector) if selector is not None else self.df_.columns
+        sel_cols = self._selector_group(selector)
         # set to df_ and meta_
         self._rename_axis(sel_cols, sel_cols + suf, 0)
         return self
@@ -916,10 +920,7 @@ class MetaPanda(object):
         self
         """
         # perform inplace
-        if isinstance(selector, (tuple, list)):
-            selection = self.view(*selector)
-        else:
-            selection = self.view(selector) if selector is not None else self.df_.columns
+        selection = self._selector_group(selector)
         # modify
         if callable(function) and selection.shape[0] > 0:
             if whole:
@@ -1055,7 +1056,7 @@ class MetaPanda(object):
         """
         if column not in self.df_.columns:
             raise ValueError("column '{}' not found in df".format(column))
-        if not self.meta_.loc[column, "potential_stacker"]:
+        if not self.meta_.loc[column, "is_potential_stacker"]:
             raise ValueError("column '{}' not found to be stackable".format(column))
 
         self._df = pd.merge(
@@ -1173,7 +1174,6 @@ class MetaPanda(object):
             # use self.pipe_
             pipe = self.pipe_
             self.pipe_ = []
-
         if inplace:
             # computes inplace
             self.mode_ = "instant"

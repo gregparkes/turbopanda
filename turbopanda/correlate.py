@@ -64,7 +64,7 @@ def _corr_two_variables(x, y, method="spearman", debug=False):
     nx = pd.to_numeric(x[shared], downcast="unsigned", errors="ignore")
     ny = pd.to_numeric(y[shared], downcast="unsigned", errors="ignore")
     # check to see if x or y are constants (all values are the same)
-    if nx.unique().shape[0]==1 or ny.unique().shape[0]==1:
+    if nx.unique().shape[0] == 1 or ny.unique().shape[0] == 1:
         return x.name, y.name, 0., 1., "constant", shared.sum()
     # nx and ny may have new data types
     if nx.dtype in _cfloat() and ny.dtype in _cfloat():
@@ -81,7 +81,7 @@ def _corr_two_variables(x, y, method="spearman", debug=False):
         r = spearmanr(nx, ny)
         t = "spearman"
     else:
-        raise ValueError("x.dtype '{}' not compatible with y.dtype '{}'".format(x.dtype, y.dtype))
+        raise ValueError("x.dtype '{}' not compatible with y.dtype '{}'".format(nx.dtype, ny.dtype))
 
     # handles debug message
     _handle_debug(debug, x.name, y.name, r, t)

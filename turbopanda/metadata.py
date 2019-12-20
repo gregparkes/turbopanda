@@ -8,11 +8,10 @@ Created on Wed Nov  6 17:10:17 2019
 Handling the construction and use of metadata associated with MetaPanda
 """
 
-import numpy as np
 import pandas as pd
+
 from .utils import is_missing_values, is_unique_id, is_potential_id, \
     is_potential_stacker, nunique, is_possible_category, object_to_categorical
-
 
 __all__ = ["meta_columns_default", "basic_construct", "categorize_meta", "add_metadata"]
 

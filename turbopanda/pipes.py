@@ -12,7 +12,7 @@ from sklearn import preprocessing
 from .utils import integer_to_boolean, object_to_categorical, is_n_value_column
 
 
-__all__ = ["pipe", "ml_regression_pipe", "clean_pipe"]
+__all__ = ["pipe", "ml_regression_pipe", "clean_pipe", "noid_pipe"]
 
 
 def _attempt_float_cast(s):
@@ -168,4 +168,23 @@ def clean_pipe():
         ("transform", (lambda x: x.str.strip(),), {"selector": object}),
         # do some string stripping
         ("rename", ([(" ", "_"), ("\t", "_"), ("-", "")],), {}),
+    ]
+
+
+def noid_pipe():
+    """
+    Pipe that drops ID-like columns from the dataset. Includes regex string search for terms like id, ID, etc.
+
+    Parameters
+    --------
+    None
+
+    Returns
+    -------
+    pipe : list
+        The pipeline to perform on mp
+    """
+    return [
+        # drops elements of type object, id selectors
+        ("drop", (object, ".*id$", ".*ID$", "^ID.*", "^id.*"), {})
     ]

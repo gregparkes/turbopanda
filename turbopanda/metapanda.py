@@ -953,7 +953,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def meta_map(self, name, selector, order=None):
+    def meta_map(self, name, selectors):
         """
         Maps a group of selectors into a column in the meta-information
         describing some groupings/associations between features.
@@ -969,20 +969,19 @@ class MetaPanda(object):
             At least 2 or more selectors identifying subgroups. If you use
             cached names, the ID of the cache name is used as an identifier, and
             likewise with a dict, else list/tuple uses default group1...groupk.
-        order : list, tuple, optional
-            Specifies the order in which the subsequent groups should have.
+            Assumes the selectors ARE IN THE ORDER presented.
 
         Returns
         -------
         self
         """
         # for each selector, get the group view.
-        if isinstance(selector, dict):
-            cnames = [self.view(sel) for n, sel in selector.items()]
-            names = selector.keys()
-        elif isinstance(selector, (list, tuple)):
-            cnames = [self.view(sel) for sel in selector]
-            names = [sel if sel in self._select else "group%d" % (i + 1) for i, sel in enumerate(selector)]
+        if isinstance(selectors, dict):
+            cnames = [self.view(sel) for n, sel in selectors.items()]
+            names = selectors.keys()
+        elif isinstance(selectors, (list, tuple)):
+            cnames = [self.view(sel) for sel in selectors]
+            names = [sel if sel in self._select else "group%d" % (i + 1) for i, sel in enumerate(selectors)]
         else:
             raise TypeError("'selectors' must be of type [list, tuple, dict]")
 
@@ -993,7 +992,7 @@ class MetaPanda(object):
         else:
             raise ValueError("shared terms: {} discovered for meta_map.".format(igrid))
         # merge into meta
-        self.meta_[name] = object_to_categorical(new_grid, order)
+        self.meta_[name] = object_to_categorical(new_grid, selectors)
         return self
 
     @_actionable

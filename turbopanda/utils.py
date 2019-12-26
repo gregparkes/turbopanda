@@ -161,6 +161,9 @@ def belongs(elem, l):
 def instance_check(a, i):
     if not isinstance(a, i):
         raise TypeError("object '{}' does not belong to type {}".format(a, i))
+    elif isinstance(i, (list, tuple)):
+        if None in i and a is not None:
+            raise TypeError("object '{}' is not of type None".format(a))
 
 
 def join(*pipes):

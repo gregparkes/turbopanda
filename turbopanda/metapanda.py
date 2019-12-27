@@ -27,7 +27,7 @@ from .pipes import clean_pipe
 # hidden .py attributes
 
 __nondelay_functions__ = [
-    "head", "cache", "multi_cache", "view", "view_not",
+    "head", "cache", "cache_pipe", "multi_cache", "view", "view_not",
     "analyze", "compute", "multi_compute", "write", "write_json"
 ]
 
@@ -55,13 +55,13 @@ class MetaPanda(object):
                  cat_thresh=20,
                  default_remove_single_col=True):
         """
-        Creates a Meta DataFrame with the raw data and parameterization of
-        the dataframe by its grouped columns.
+        Creates a Meta DataFrame with the raw data and parametrization of
+        the DataFrame by its grouped columns.
 
         Parameters
         -------
         dataset : pd.DataFrame
-            The raw dataset to create as a MetaDataFrame.
+            The raw data set to create as a MetaDataFrame.
         name : str
             Gives the MetaDataFrame a name, which comes into play with merging, for instance
         key : None, str
@@ -82,7 +82,7 @@ class MetaPanda(object):
         self._with_warnings = False
         self.mode_ = mode
         self._select = {}
-        self._pipe = []
+        self._pipe = {"current": []}
         # set using property
         self.df_ = dataset
         self.name_ = name
@@ -93,7 +93,7 @@ class MetaPanda(object):
         @functools.wraps(function)
         def new_function(self, *args, **kwargs):
             if self.mode_ == "delay":
-                self._pipe.append((function.__name__, args, kwargs))
+                self._pipe["current"].append((function.__name__, args, kwargs))
             else:
                 return function(self, *args, **kwargs)
         return new_function
@@ -206,6 +206,8 @@ class MetaPanda(object):
             mp.name_ = recvr["name"]
         if "cache" in recvr:
             mp._select = recvr["cache"]
+        if "pipe" in recvr:
+            mp._pipe = recvr["pipe"]
         return mp
 
     """ ############################ HIDDEN OPERATIONS ####################################### """
@@ -213,7 +215,7 @@ class MetaPanda(object):
     def _selector_group(self, s, axis=1):
         if s is None:
             return self.df_.columns if axis == 1 else self.df_.index
-        elif axis==1:
+        elif axis == 1:
             if isinstance(s, (tuple, list)):
                 return self.view(*s)
             else:
@@ -230,10 +232,16 @@ class MetaPanda(object):
         else:
             raise ValueError("axis '{}' not recognized".format(axis))
 
+    def _remove_unused_categories(self):
+        for col in self.meta_.columns[self.meta_.dtypes == "category"]:
+            self.meta_[col].cat.remove_unused_categories(inplace=True)
+
     def _drop_columns(self, select):
         if select.size > 0:
             self.df_.drop(select, axis=1, inplace=True)
             self.meta_.drop(select, axis=0, inplace=True)
+            # remove any unused categories that might've been dropped
+            self._remove_unused_categories()
 
     def _apply_function(self, fn, *fargs, **fkwargs):
         if hasattr(self.df_, fn):
@@ -281,16 +289,23 @@ class MetaPanda(object):
 
     def _apply_pipe(self, pipe):
         # checks
-        if len(pipe) == 0:
-            warnings.warn("pipe_ empty, nothing to compute.", UserWarning)
-            return
-        # basic check of pipe
-        if is_metapanda_pipe(pipe):
-            for fn, args, kwargs in pipe:
-                # check that MetaPanda has the function attribute
-                if hasattr(self, fn):
-                    # execute function with args and kwargs
-                    getattr(self, fn)(*args, **kwargs)
+        if isinstance(pipe, str):
+            # see if name is cached away.
+            if pipe in self.pipe_.keys():
+                pipe = self.pipe_[pipe]
+            else:
+                raise ValueError("pipe name '{}' not found in .pipe attribute".format(pipe))
+        if isinstance(pipe, (list, tuple)):
+            if len(pipe) == 0:
+                warnings.warn("pipe_ element empty, nothing to compute.", UserWarning)
+                return
+            # basic check of pipe
+            if is_metapanda_pipe(pipe):
+                for fn, args, kwargs in pipe:
+                    # check that MetaPanda has the function attribute
+                    if hasattr(self, fn):
+                        # execute function with args and kwargs
+                        getattr(self, fn)(*args, **kwargs)
 
     def _write_csv(self, filename, with_meta=False, *args, **kwargs):
         self.df_.to_csv(filename, sep=",", *args, **kwargs)
@@ -307,6 +322,7 @@ class MetaPanda(object):
         saving_dict = {"data": self.df_.to_dict(),
                        "meta": self.meta_.drop(meta_columns_default(), axis=1).to_dict(),
                        "cache": self._select,
+                       "pipe": self.pipe_,
                        "name": self.name_
                        }
         if filename is None:
@@ -442,10 +458,6 @@ class MetaPanda(object):
     @property
     def pipe_(self):
         return self._pipe
-
-    @pipe_.setter
-    def pipe_(self, p):
-        self._pipe = p
 
     """ ############################### BOOLEAN PROPERTIES ##################################################"""
 
@@ -733,6 +745,29 @@ class MetaPanda(object):
                 selector[i] = enc_map[s]
         # store to select
         self._select[name] = selector
+        return self
+
+    def cache_pipe(self, name, pipeline):
+        """
+        Saves a pipeline to use at a later date. Calls to compute() can reference the name
+        of the pipeline. This function is not affected by the 'mode' parameter.
+
+        Parameters
+        ----------
+        name : str
+            A name to reference the pipeline with.
+        pipeline : list, tuple
+            list of 3-tuple, (function name, *args, **kwargs), multiple pipes, optional
+            A set of instructions expecting function names in MetaPanda and parameters.
+            If empty, computes the stored pipe_ attribute.
+
+        Returns
+        -------
+        self
+        """
+        if name in self.pipe_.keys():
+            warnings.warn("pipe name '{}' already exists in .pipe, overriding".format(name), UserWarning)
+        self.pipe_[name] = pipeline
         return self
 
     def multi_cache(self, **caches):
@@ -1130,9 +1165,10 @@ class MetaPanda(object):
 
         Parameters
         -------
-        pipe : list of 3-tuple, (function name, *args, **kwargs), multiple pipes, optional
+        pipe : str, list of 3-tuple, (function name, *args, **kwargs), multiple pipes, optional
             A set of instructions expecting function names in MetaPanda and parameters.
-            If empty, computes the stored pipe_ attribute.
+            If None, computes the stored pipe_.current pipeline.
+            If str, computes the stored pipe_.<name> pipeline.
         inplace : bool, optional
             If True, applies the pipe inplace, else returns a copy. Default has now changed
             to return a copy.
@@ -1143,8 +1179,8 @@ class MetaPanda(object):
         """
         if pipe is None:
             # use self.pipe_
-            pipe = self.pipe_
-            self.pipe_ = []
+            pipe = self.pipe_["current"]
+            self.pipe_["current"] = []
         if inplace:
             # computes inplace
             self.mode_ = "instant"
@@ -1159,12 +1195,11 @@ class MetaPanda(object):
 
     def multi_compute(self, pipes, inplace=False):
         """
-        Computes multiple pipeslines to the MetaPanda object. This version does not compute on the pipe_ attribute.
-        By default, this method does NOT
+        Computes multiple pipelines to the MetaPanda object, including cached types such as .current
 
         Parameters
         --------
-        pipes : list of (list of (list of 3-tuple, (function name, *args, **kwargs))
+        pipes : list of (str, list of (list of 3-tuple, (function name, *args, **kwargs))
             A set of instructions expecting function names in MetaPanda and parameters.
             If empty, computes nothing.
         inplace : bool, optional
@@ -1175,6 +1210,7 @@ class MetaPanda(object):
         -------
         self/copy
         """
+
         # join and execute
         return self.compute(join(*pipes), inplace=inplace)
 

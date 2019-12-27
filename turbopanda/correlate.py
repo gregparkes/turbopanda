@@ -55,7 +55,14 @@ def _row_to_matrix(rows):
     """
     Takes the verbose row output and converts to lighter matrix format.
     """
-    return rows.pivot_table(index="column1", columns="column2", values="r")
+    square = rows.pivot("column1", "column2", "r")
+    # fillna
+    square.fillna(0.0, inplace=True)
+    # ready for transpose
+    square += square.T
+    # eliminate 1 from diag
+    square.values[np.diag_indices_from(square.values)] -= 1.
+    return square
 
 
 def _corr_two_variables(x, y, method="spearman", debug=False):
@@ -156,14 +163,14 @@ def _corr_matrix_singular(X, method="spearman", style="matrix", debug=False):
         return 1.0, 0.0
     elif sel_keep.sum() == 2:
         cols = X.columns[sel_keep]
-        return _corr_two_variables(X[cols[0]], X[cols[1]], method, debug=debug)
+        return pd.Series(_corr_two_variables(X[cols[0]], X[cols[1]], method, debug=debug))
     else:
         contin_X = X.loc[:, sel_keep]
         # assign zeros/empty
         R = []
         # iterate over i,j pairs
         for i in range(contin_X.shape[1]):
-            for j in range(i + 1, contin_X.shape[1]):
+            for j in range(i, contin_X.shape[1]):
                 R.append(
                     pd.Series(
                         _corr_two_variables(contin_X.iloc[:, i], contin_X.iloc[:, j],
@@ -229,7 +236,8 @@ def correlate(X,
     if data is None:
         # assert that X is pd.Series, pd.DataFrame, MetaPanda
         instance_check(X, (pd.Series, pd.DataFrame, MetaPanda))
-        instance_check(Y, (None, pd.Series, pd.DataFrame, MetaPanda))
+        if Y is not None:
+            instance_check(Y, (pd.Series, pd.DataFrame, MetaPanda))
         # select pandas.DataFrame
         NX = X.df_ if isinstance(X, MetaPanda) else X
         NY = Y.df_ if isinstance(Y, MetaPanda) else Y

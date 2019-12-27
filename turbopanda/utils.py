@@ -24,7 +24,7 @@ __all__ = ["fself", "is_twotuple", "instance_check", "chain_intersection", "chai
            "is_potential_stacker", "nunique", "object_to_categorical",
            "is_n_value_column", "boolean_to_integer", "integer_to_boolean",
            "is_metapanda_pipe", "join", "belongs", "is_possible_category",
-           "standardize"]
+           "standardize", "dict_to_tuple", "set_like", "union", "difference", "intersect"]
 
 
 def _cfloat():
@@ -41,6 +41,11 @@ def _intcat():
 
 def fself(x):
     return x
+
+
+def dict_to_tuple(d):
+    return list((a, b) for a, b in d.items())
+
 
 def list_dir(obj):
     return [a for a in dir(obj) if not a.startswith("__") and not a.startswith("_")]
@@ -172,6 +177,87 @@ def instance_check(a, i):
 
 def join(*pipes):
     return list(it.chain.from_iterable(pipes))
+
+
+def set_like(x):
+    """
+    Convert x to something unique, set-like.
+
+    Parameters
+    ----------
+    x : list, tuple, pd.Series, set, pd.Index
+        A list of variables
+
+    Returns
+    -------
+    y : pd.Index
+        Set-like result.
+    """
+    if isinstance(x, (list, tuple)):
+        return pd.Index(set(x))
+    elif isinstance(x, pd.Series):
+        return pd.Index(x.dropna().unique())
+    elif isinstance(x, set):
+        return pd.Index(x)
+    else:
+        raise TypeError("x must be in {}, not of type {}".format(['list', 'tuple', 'pd.Series', 'pd.Index', 'set'], type(x)))
+
+
+def union(a, b):
+    """
+    Performs set union on a and b, whatever type they are.
+
+    Parameters
+    ----------
+    a : list, tuple, pd.Series, set, pd.Index
+        List-like a
+    b : list, tuple, pd.Series, set, pd.Index
+        List-like b
+
+    Returns
+    -------
+    c : pd.Index
+        Union between a | b
+    """
+    return set_like(a) | set_like(b)
+
+
+def intersect(a, b):
+    """
+    Performs set intersect on a and b, whatever type they are.
+
+    Parameters
+    ----------
+    a : list, tuple, pd.Series, set, pd.Index
+        List-like a
+    b : list, tuple, pd.Series, set, pd.Index
+        List-like b
+
+    Returns
+    -------
+    c : pd.Index
+        Intersect between a & b
+    """
+    return set_like(a) & set_like(b)
+
+
+def difference(a, b):
+    """
+    Performs set symmetric difference on a and b, whatever type they are.
+
+    Parameters
+    ----------
+    a : list, tuple, pd.Series, set, pd.Index
+        List-like a
+    b : list, tuple, pd.Series, set, pd.Index
+        List-like b
+
+    Returns
+    -------
+    c : pd.Index
+        Symmetric difference between a & b
+    """
+    return set_like(a).symmetric_difference(set_like(b))
 
 
 def chain_intersection(*cgroup):

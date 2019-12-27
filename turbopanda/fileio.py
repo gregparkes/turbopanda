@@ -7,12 +7,11 @@ Created on Tue Nov  5 14:48:53 2019
 """
 
 import os
-import json
-import pandas as pd
 
 __all__ = ["read", "read_mp"]
 
 from .metapanda import MetaPanda
+from .utils import instance_check
 
 
 def read(filename, name=None, metafile=None, key=None, *args, **kwargs):
@@ -23,7 +22,8 @@ def read(filename, name=None, metafile=None, key=None, *args, **kwargs):
     -------
     filename : str
         A relative/absolute link to the file, with extension provided.
-        Accepted extensions: [csv, xls, xlsx, html, json, hdf, sql]
+        Accepted extensions: [csv, CSV, xls, xlsx, XLSX, json, hdf]
+        .json is a special use case and will use the MetaPanda format, NOT the pd.read_json function.
     name : str, optional
         A custom name to use for the MetaPanda, else the filename is used
     metafile : str, optional
@@ -41,9 +41,16 @@ def read(filename, name=None, metafile=None, key=None, *args, **kwargs):
     mdf : MetaPanda
         A MetaPanda object.
     """
-    if filename.endswith(".csv"):
-        return MetaPanda.from_csv(filename, name, metafile, key, *args, **kwargs)
-    elif filename.endswith(".json"):
+    instance_check(filename, str)
+    if not os.path.isfile(filename):
+        raise IOError("file at '{}' does not exist".format(filename))
+    # maps the filetype to a potential pandas function.
+    pandas_types = [".csv", ".CSV", ".xls", ".xlsx", ".XLSX", ".hdf"]
+    # iterate and return if present
+    for ft in pandas_types:
+        if filename.endswith(ft):
+            return MetaPanda.from_pandas(filename, name, metafile, key, *args, **kwargs)
+    if filename.endswith(".json"):
         return MetaPanda.from_json(filename)
     else:
         raise IOError("file ending '{}' not recognized, must end with [csv, json]".format(filename))

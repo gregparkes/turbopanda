@@ -8,12 +8,12 @@ Created on Tue Nov  5 11:31:39 2019
 
 from setuptools import setup, find_packages
 
-with open("README.md","r") as fh:
+with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(
     name="turbopanda",
-    version="0.1.6",
+    version="0.1.7",
     description="Turbo-charging the Pandas library in an integrative, meta-orientated style",
     long_description=long_description,
     long_description_content_type="text/markdown",

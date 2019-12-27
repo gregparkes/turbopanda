@@ -168,7 +168,7 @@ class MetaML(object):
         _pt = param_types()
 
         prim_param = _mt.loc[model, "Primary Parameter"]
-        if prim_param != np.nan:
+        if prim_param is not np.nan:
             def_value = _pt.loc[prim_param, "Default"]
             # set parameter of primary value
             model_t.set_params(**{prim_param: def_value})

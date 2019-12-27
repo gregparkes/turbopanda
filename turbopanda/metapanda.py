@@ -85,7 +85,6 @@ class MetaPanda(object):
         self._pipe = []
         # set using property
         self.df_ = dataset
-        self._key = key
         self.name_ = name
 
     """ ############################ STATIC FUNCTIONS ######################################## """
@@ -100,7 +99,7 @@ class MetaPanda(object):
         return new_function
 
     @classmethod
-    def from_csv(cls, filename, name=None, metafile=None, key=None, *args, **kwargs):
+    def from_pandas(cls, filename, name=None, metafile=None, key=None, *args, **kwargs):
         """
         Reads in a datafile from CSV and creates a MetaPanda object from it.
 
@@ -108,7 +107,7 @@ class MetaPanda(object):
         -------
         filename : str
             A relative/absolute link to the file, with extension provided.
-            Accepted extensions: [csv, xls, xlsx, html, json, hdf, sql]
+            Accepted extensions: [csv, CSV]
         name : str, optional
             A custom name to use for the MetaPanda, else the filename is used
         metafile : str, optional
@@ -126,10 +125,6 @@ class MetaPanda(object):
         mdf : MetaPanda
             A MetaPanda object.
         """
-        instance_check(filename, str)
-        if not os.path.isfile(filename):
-            raise IOError("file at '{}' does not exist".format(filename))
-
         file_ext_map = {
             "csv": pd.read_csv, "xls": pd.read_excel, "xlsx": pd.read_excel,
             "html": pd.read_html, "json": pd.read_json, "hdf": pd.read_hdf,
@@ -170,10 +165,7 @@ class MetaPanda(object):
                     # add to mp
                     mp.meta_ = met
                     return mp
-
         return mp
-
-        pass
 
     @classmethod
     def from_json(cls, filename):
@@ -192,13 +184,6 @@ class MetaPanda(object):
         mdf : MetaPanda
             A MetaPanda object.
         """
-        instance_check(filename, str)
-        # look for attributes 'data', 'meta', 'name', 'pipe' and 'cache'
-        if not os.path.isfile(filename):
-            raise IOError("file at '{}' does not exist".format(filename))
-        # check if ends with .json
-        if not filename.endswith(".json"):
-            filename += ".json"
         # read in JSON
         with open(filename, "r") as f:
             recvr = json.load(f)
@@ -353,13 +338,11 @@ class MetaPanda(object):
 
     def __repr__(self):
         p = self.df_.shape[1] if self.df_.ndim > 1 else 1
-        k = self.key_ if self.key_ is not None else "None"
-        return "MetaPanda({}(n={}, p={}, mem={}, key='{}'), mode='{}')".format(
+        return "MetaPanda({}(n={}, p={}, mem={}), mode='{}')".format(
             self.name_,
             self.df_.shape[0],
             p,
             self.memory_,
-            k,
             self.mode_
         )
 
@@ -463,19 +446,6 @@ class MetaPanda(object):
     @pipe_.setter
     def pipe_(self, p):
         self._pipe = p
-
-    @property
-    def key_(self):
-        return self._key
-
-    @key_.setter
-    def key_(self, k):
-        if (k in self.df_.columns) and k in (self.view("is_unique") & self.view_not("is_missing")):
-            self._key = k
-        elif k is None:
-            return
-        else:
-            raise ValueError("key '{}' belong in set:{}".format(k, k in self.df_.columns))
 
     """ ############################### BOOLEAN PROPERTIES ##################################################"""
 

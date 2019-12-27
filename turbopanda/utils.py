@@ -16,14 +16,15 @@ import warnings
 from pandas.api.types import CategoricalDtype
 from scipy.stats import norm
 
-__all__ = ["is_twotuple", "instance_check", "chain_intersection", "chain_union",
+__all__ = ["fself", "is_twotuple", "instance_check", "chain_intersection", "chain_union",
            "boolean_series_check", "check_list_type", "not_column_float",
            "is_column_float", "is_column_object", "is_column_int",
            "calc_mem", "remove_string_spaces", "nearest_factors", "is_missing_values",
            "is_unique_id", "is_potential_id", "string_replace",
            "is_potential_stacker", "nunique", "object_to_categorical",
            "is_n_value_column", "boolean_to_integer", "integer_to_boolean",
-           "is_metapanda_pipe", "join", "belongs", "is_possible_category"]
+           "is_metapanda_pipe", "join", "belongs", "is_possible_category",
+           "standardize"]
 
 
 def _cfloat():
@@ -37,6 +38,9 @@ def _cint():
 def _intcat():
     return [np.uint8, np.uint16]
 
+
+def fself(x):
+    return x
 
 def list_dir(obj):
     return [a for a in dir(obj) if not a.startswith("__") and not a.startswith("_")]
@@ -316,6 +320,22 @@ def nearest_factors(n, ftype="square", cutoff=6, search_range=5, W_var=1.5):
         return tuple(nscores[w_dist.argmin()])
     else:
         return a, b
+
+
+def standardize(x):
+    """
+    Performs z-score standardization on vector x.
+
+    Accepts x as [np.ndarray, pd.Series, pd.DataFrame]
+    """
+    if isinstance(x, pd.Series):
+        return (x - x.mean()) / x.std()
+    elif isinstance(x, pd.DataFrame):
+        return (x - x.mean(axis=0)) / x.std(axis=0)
+    elif isinstance(x, np.ndarray):
+        return (x - np.nanmean(x, axis=0)) / np.nanstd(x, axis=0)
+    else:
+        raise TypeError("x must be of type [pd.Series, pd.DataFrame, np.ndarray]")
 
 
 def save_figure(fig_obj,

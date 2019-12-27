@@ -6,7 +6,7 @@ The aim of this library is to re-haul the `pandas` library package, which is ext
 
 This library creates two `pandas.DataFrames`, the raw data and a *metadata* frame.
 
-**Current version: 0.1.6**
+**Current version: 0.1.7**
 
 ## Installation
 
@@ -71,13 +71,13 @@ The raw pandas object can be accessed through the `df_` attribute:
 >>> g.head()
 ```
 
-| | **Protein_IDs** | **Majority_protein_IDs** | **Protein_names** | **...** |
+| - | **Protein_IDs** | **Majority_protein_IDs** | **Protein_names** | **...** |
 | --- | --------------------- | -------------------------- | ------------------- | ---------------- |
 | 0 | Q96IC2;Q96IC2-2;H3BM72;H3BV93;H3BSC5 | Q96IC2;Q96IC2-2;H3BM72;H3BV93;H3BSC5 | Putative RNA exonuclease NEF-sp | ... |
 | 1 | H0YGH4;P01023;H0YGH6;F8W7L3 | H0YGH4;P01023 | Alpha-2-macroglobulin | ... |
 | 2 | A8K2U0;F5H2W3;H0YGG5;F5H2Z2;F5GXP1 | A8K2U0;F5H2W3;H0YGG5;F5H2Z2 | Alpha-2-macroglobulin-like protein 1 | ... |
 | 3 | Q9NRG9;Q9NRG9-2;F8VZ44;H3BU82;F8VUB6 | Q9NRG9;Q9NRG9-2;F8VZ44;H3BU82 | Aladin | ... |
-| 4 |  	Q86V21;Q86V21-2;E7EW25;F5H790;F8W8B5;Q86V21-3;... | Q86V21;Q86V21-2;E7EW25;F5H790 | Acetoacetyl-CoA synthetase | ... |
+| 4 | Q86V21;Q86V21-2;E7EW25;F5H790;F8W8B5;Q86V21-3;... | Q86V21;Q86V21-2;E7EW25;F5H790 | Acetoacetyl-CoA synthetase | ... |
 
 Whereas **metadata** can be accessed through the `meta_` which is automatically created upon instantiation:
 

@@ -12,7 +12,7 @@ from scipy import stats
 
 from sklearn.metrics import r2_score
 
-from .utils import nearest_factors, save_figure, belongs
+from .utils import nearest_factors, save_figure, belongs, fself, standardize
 from .metaml import MetaML
 
 __all__ = ["plot_scatter_grid", "plot_missing", "plot_hist_grid",
@@ -231,7 +231,7 @@ def plot_actual_vs_predicted(mml):
                 axes.set_title(mml._y_names)
 
 
-def plot_coefficients(mml, normalize=False, use_absolute=False):
+def plot_coefficients(mml, normalize=False, use_absolute=False, drop_intercept=True):
     """
     Plots the coefficients from a fitted machine learning model using MetaML.
 
@@ -244,6 +244,8 @@ def plot_coefficients(mml, normalize=False, use_absolute=False):
         Use standardization on the values if True
     use_absolute : bool
         If True, uses absolute value of coefficients instead.
+    drop_intercept : bool
+        If True, drops the intercept row from mml.coef_mat
 
     Returns
     -------
@@ -251,38 +253,40 @@ def plot_coefficients(mml, normalize=False, use_absolute=False):
     """
     # assumes the coef_mat variable is present
 
-    f_apply = np.abs if use_absolute else lambda x: x
-    norm_apply = lambda x: (x - x.mean()) / x.std() if normalize else lambda x: x
+    f_apply = np.abs if use_absolute else fself
+    norm_apply = standardize if normalize else fself
 
     def _plot_single_box(m, ax, i):
         if isinstance(m, MetaML):
-            if m.is_fit:
+            if m.is_fit and hasattr(m, "coef_mat"):
                 # new order
-                no = m.coef_mat.apply(f_apply).apply(norm_apply).mean(axis=1).sort_values().index
-                buffer = len(m.coef_mat) / 20
+                d_transf = m.coef_mat.apply(f_apply).apply(norm_apply)
+                if drop_intercept and ("intercept" in d_transf.index):
+                    # intercept should be on index
+                    d_transf.drop("intercept", axis=0, inplace=True)
+                no = d_transf.mean(axis=1).sort_values().index
+                buf = len(m.coef_mat) / 20
                 # perform transformations and get data
-                data = m.coef_mat.apply(f_apply).apply(norm_apply).reindex(no)
-
+                data = d_transf.reindex(no)
                 if i == 0:
                     ax.boxplot(data, vert=False, labels=no)
                 else:
                     ax.boxplot(data, vert=False)
                     ax.set_yticks([])
                     ax.set_yticklabels([])
-                ax.set_ylim(-buffer, len(m.coef_mat) + buffer)
+                ax.set_ylim(-buf, len(m.coef_mat) + buf)
                 ax.vlines([0], ymin=0, ymax=len(m.coef_mat), linestyle="--", color="red")
                 ax.set_xlabel("Coefficients")
                 ax.set_title("Model: {}".format(m.model_str))
+                ax.margins(y=0)
 
     if isinstance(mml, MetaML):
-        if not hasattr(mml, "coef_mat"):
-            return
-        fig, ax = plt.subplots(figsize=(5, _data_polynomial_length(mml.coef_mat.shape[0])))
-        _plot_single_box(mml, ax, 0)
+        fig, axes = plt.subplots(figsize=(5, _data_polynomial_length(mml.coef_mat.shape[0])))
+        _plot_single_box(mml, axes, 0)
     elif isinstance(mml, (list, tuple)):
-        fig, ax = plt.subplots(ncols=len(mml),
+        fig, axes = plt.subplots(ncols=len(mml),
                                figsize=(4 * len(mml), _data_polynomial_length(mml[0].coef_mat.shape[0])))
-        for i, (m, a) in enumerate(zip(mml, ax)):
+        for i, (m, a) in enumerate(zip(mml, axes)):
             _plot_single_box(m, a, i)
     else:
         raise TypeError("mml type '{}' not recognised".format(type(mml)))

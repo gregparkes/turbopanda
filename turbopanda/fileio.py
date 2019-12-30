@@ -10,13 +10,20 @@ import os
 
 __all__ = ["read", "read_mp"]
 
+import glob
 from .metapanda import MetaPanda
 from .utils import instance_check
 
 
-def read(filename, name=None, metafile=None, key=None, *args, **kwargs):
+def read(filename, name=None, *args, **kwargs):
     """
     Reads in a datafile and creates a MetaPanda object from it.
+
+        NEW IN 0.1.7 - Glob support
+            filename now supports the glob library,
+            which uses unix-like pathname pattern expression.
+            This allows you to read in multiple files simultaenously.
+                e.g "*.json" reads in every JSON file in the local directory.
 
     Parameters
     -------
@@ -24,13 +31,9 @@ def read(filename, name=None, metafile=None, key=None, *args, **kwargs):
         A relative/absolute link to the file, with extension provided.
         Accepted extensions: [csv, CSV, xls, xlsx, XLSX, json, hdf]
         .json is a special use case and will use the MetaPanda format, NOT the pd.read_json function.
+        filename now accepts glob-compliant input to read in multiple files if selected.
     name : str, optional
         A custom name to use for the MetaPanda, else the filename is used
-    metafile : str, optional
-        An associated meta file to join into the MetaPanda, else if None,
-        attempts to find the file, otherwise just creates the raw default.
-    key : None, str, optional
-        Sets one of the columns as the 'primary key' in the Dataset
     args : list
         Additional args to pass to pd.read_[ext]
     kwargs : dict
@@ -38,22 +41,34 @@ def read(filename, name=None, metafile=None, key=None, *args, **kwargs):
 
     Returns
     ------
-    mdf : MetaPanda
-        A MetaPanda object.
+    mdf : list, MetaPanda
+        A MetaPanda object. Returns a list of objects if filename is glob-like and
+        selects multiple files.
     """
     instance_check(filename, str)
-    if not os.path.isfile(filename):
-        raise IOError("file at '{}' does not exist".format(filename))
-    # maps the filetype to a potential pandas function.
-    pandas_types = [".csv", ".CSV", ".xls", ".xlsx", ".XLSX", ".hdf"]
-    # iterate and return if present
-    for ft in pandas_types:
-        if filename.endswith(ft):
-            return MetaPanda.from_pandas(filename, name, metafile, key, *args, **kwargs)
-    if filename.endswith(".json"):
-        return MetaPanda.from_json(filename)
+    # use the glob package to allow for unix-like searching.
+    glob_name = glob.glob(filename)
+    if len(glob_name) == 0:
+        raise IOError("No files selected with filename {}".format(filename))
     else:
-        raise IOError("file ending '{}' not recognized, must end with [csv, json]".format(filename))
+        # maps the filetype to a potential pandas function.
+        pandas_types = ["csv", "CSV", "xls", "xlsx", "XLSX", "hdf"]
+
+        def ext(s):
+            return s.rsplit(".", 1)[-1]
+
+        def fetch_db(fl):
+            if ext(fl) in pandas_types:
+                return MetaPanda.from_pandas(fl, name, *args, **kwargs)
+            elif ext(fl) == 'json':
+                return MetaPanda.from_json(fl)
+            else:
+                raise IOError("file ending '{}' not recognized, must end with {}".format(fl, pandas_types + ['json']))
+
+        # iterate and return if present
+        ds = [fetch_db(f) for f in glob_name]
+        # if we have more than one element, return the list, else just return ds
+        return ds if len(ds) > 1 else ds[0]
 
 
 def read_mp(filename):

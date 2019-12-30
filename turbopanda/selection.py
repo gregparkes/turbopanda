@@ -9,14 +9,13 @@ Handles selection of handles.
 """
 
 import numpy as np
-import pandas as pd
 import re
 from pandas import CategoricalDtype, concat, Index, Series
 
 from .utils import boolean_series_check, chain_intersection, chain_union
 
 
-__all__ = ["get_selector"]
+__all__ = ["get_selector", "_type_encoder_map"]
 
 
 def _numpy_types():

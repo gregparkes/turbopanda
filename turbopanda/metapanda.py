@@ -26,7 +26,7 @@ from .pipes import clean_pipe
 
 # hidden .py attributes
 
-__nondelay_functions__ = [
+__non_delay_functions__ = [
     "head", "cache", "cache_pipe", "multi_cache", "view", "view_not",
     "analyze", "compute", "multi_compute", "write", "write_json"
 ]
@@ -38,7 +38,7 @@ __delay_functions__ = [
     "split_categories", "melt", "filter_rows"
 ]
 
-__functions__ = __nondelay_functions__ + __delay_functions__
+__functions__ = __non_delay_functions__ + __delay_functions__
 
 
 class MetaPanda(object):
@@ -127,7 +127,7 @@ class MetaPanda(object):
         """
         file_ext_map = {
             "csv": pd.read_csv, "xls": pd.read_excel, "xlsx": pd.read_excel,
-            "html": pd.read_html, "json": pd.read_json, "hdf": pd.read_hdf,
+            "json": pd.read_json, "hdf": pd.read_hdf,
             "sql": pd.read_sql, "XLSX": pd.read_excel
         }
 
@@ -332,7 +332,7 @@ class MetaPanda(object):
             with open(filename, "w") as f:
                 json.dump(saving_dict, f, separators=(",", ":"))
 
-    """ ############################## OVERIDDEN OPERATIONS ###################################### """
+    """ ############################## OVERRIDDEN OPERATIONS ###################################### """
 
     def __getitem__(self, selector):
         # we take the columns that are NOT this selection, then drop to keep order.

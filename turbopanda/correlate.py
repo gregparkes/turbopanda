@@ -197,7 +197,7 @@ def correlate(X,
               Y=None,
               data=None,
               method="spearman",
-              style="matrix",
+              style="rows",
               debug=None):
     """
     Correlates X and Y together to generate a correlation matrix.

@@ -33,17 +33,18 @@ def cache(filename="example1.json"):
     Parameters
     --------
     filename : str
-        The name of the file to cache to, or read from. This is fixed.
+        The name of the file to cache to, or read from. This is fixed. Accepts only .csv and
+        .json files currently.
 
     Returns
     -------
     mp : turb.MetaPanda
-        The metapanda object
+        The MetaPanda object
     """
     # check it is string
     instance_check(filename, str)
     # check that file ends with json or csv
-    belongs(filename.split(".")[-1], ["json", "csv"])
+    belongs(filename.rsplit(".")[-1], ["json", "csv"])
 
     # define decorator
     def decorator(func):
@@ -58,14 +59,13 @@ def cache(filename="example1.json"):
                 if isinstance(mpf, MetaPanda):
                     # save file
                     mpf.write(filename)
-                    return mpf
                 elif isinstance(mpf, DataFrame):
                     # save
                     mpf.to_csv(filename)
                 else:
                     warnings.warn("returned object from cache not of type [pd.DataFrame, turb.MetaPanda], not cached",
                                   FutureWarning)
-                    return mpf
+                return mpf
 
         return caching_function
 

@@ -5,7 +5,7 @@ Created on Tue Nov 26 13:17:26 2019
 
 @author: gparkes
 """
-import numpy as np
+
 from pandas import to_numeric
 from sklearn import preprocessing
 

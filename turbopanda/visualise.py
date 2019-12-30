@@ -21,17 +21,14 @@ __all__ = ["plot_scatter_grid", "plot_missing", "plot_hist_grid",
 
 def _iqr(a):
     """Calculate the IQR for an array of numbers."""
-    a = np.asarray(a)
-    q1 = stats.scoreatpercentile(a, 25)
-    q3 = stats.scoreatpercentile(a, 75)
-    return q3 - q1
+    return stats.scoreatpercentile(np.asarray(a), 75) - stats.scoreatpercentile(np.asarray(a), 25)
 
 
 def _data_polynomial_length(length):
     # calculate length based on size of DF
     # dimensions follow this polynomial
     x = np.linspace(0, 250, 100)
-    y = np.linspace(0, 1, 100) ** (1 / 2) * 22 + 3
+    y = np.sqrt(np.linspace(0, 1, 100)) * 22 + 3
     p = np.poly1d(np.polyfit(x, y, deg=2))
     return int(p(length).round())
 
@@ -53,10 +50,9 @@ def _generate_diag_like_grid(n, direction, ax_size=2):
     f1, f2 = nearest_factors(n, ftype="diag")
     fmax, fmin = max(f1, f2), min(f1, f2)
     # get longest one
-    if direction == "row":
-        fig, axes = plt.subplots(ncols=fmin, nrows=fmax, figsize=(ax_size * fmin, ax_size * fmax))
-    elif direction == "column":
-        fig, axes = plt.subplots(ncols=fmax, nrows=fmin, figsize=(ax_size * fmax, ax_size * fmin))
+    tup, nc, nr = ((ax_size*fmin, ax_size*fmax), fmin, fmax) \
+        if direction == 'row' else ((ax_size * fmax, ax_size * fmin), fmax, fmin)
+    fig, axes = plt.subplots(ncols=nc, nrows=nr, figsize=tup)
     if axes.ndim > 1:
         axes = list(it.chain.from_iterable(axes))
     return fig, axes
@@ -131,15 +127,13 @@ def plot_hist_grid(mdf, selector, arrange="square", savepath=None):
     -------
     None
     """
-    belongs(arrange, ["square","row","column"])
+    belongs(arrange, ["square", "row", "column"])
     # get selector
     selection = mdf.view(selector)
     if selection.size > 0:
         # gets grid-like coordinates for our selector length.
-        if arrange == "square":
-            fig, axes = _generate_square_like_grid(len(selection))
-        elif arrange in ["row", "column"]:
-            fig, axes = _generate_diag_like_grid(len(selection), arrange)
+        fig, axes = _generate_square_like_grid(len(selection)) \
+            if arrange == 'square' else _generate_diag_like_grid(len(selection), arrange)
 
         for i, x in enumerate(selection):
             # calculate the bins
@@ -181,10 +175,8 @@ def plot_scatter_grid(mdf, selector, target, arrange="square", savepath=None):
     # get selector
     selection = mdf.view(selector)
     if selection.size > 0:
-        if arrange == "square":
-            fig, axes = _generate_square_like_grid(len(selection))
-        elif arrange in ["row", "column"]:
-            fig, axes = _generate_diag_like_grid(len(selection), arrange)
+        fig, axes = _generate_square_like_grid(len(selection)) \
+            if arrange == 'square' else _generate_diag_like_grid(len(selection), arrange)
 
         for i, x in enumerate(selection):
             axes[i].scatter(mdf.df_[x], mdf.df_[target], alpha=.5)
@@ -217,7 +209,7 @@ def plot_actual_vs_predicted(mml):
         if mml.is_fit:
             if mml.multioutput:
                 fig, axes = plt.subplots(ncols=mml.y.shape[1], figsize=(3 * mml.y.shape[1], 4))
-                for a, col in zip(axes, mml._y_names):
+                for a, col in zip(axes, mml.y_names):
                     min_y, max_y = mml.y[col].min(), mml.y[col].max()
                     a.scatter(mml.y[col], mml.yp[col], alpha=.3, marker="x",
                               label=r"$r={:0.3f}$".format(r2_score(mml.y[col], mml.yp[col])))
@@ -228,7 +220,7 @@ def plot_actual_vs_predicted(mml):
                 min_y, max_y = mml.y.min(), mml.y.max()
                 axes.scatter(mml.y, mml.yp, alpha=.3, marker="x", label=r"$r={:0.3f}$".format(mml.score_r2))
                 axes.plot([min_y, max_y], [min_y, max_y], 'k-')
-                axes.set_title(mml._y_names)
+                axes.set_title(mml.y_names)
 
 
 def plot_coefficients(mml, normalize=False, use_absolute=False, drop_intercept=True):
@@ -285,7 +277,7 @@ def plot_coefficients(mml, normalize=False, use_absolute=False, drop_intercept=T
         _plot_single_box(mml, axes, 0)
     elif isinstance(mml, (list, tuple)):
         fig, axes = plt.subplots(ncols=len(mml),
-                               figsize=(4 * len(mml), _data_polynomial_length(mml[0].coef_mat.shape[0])))
+                                 figsize=(4 * len(mml), _data_polynomial_length(mml[0].coef_mat.shape[0])))
         for i, (m, a) in enumerate(zip(mml, axes)):
             _plot_single_box(m, a, i)
     else:

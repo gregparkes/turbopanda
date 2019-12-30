@@ -245,14 +245,12 @@ class MetaPanda(object):
 
     def _apply_function(self, fn, *fargs, **fkwargs):
         if hasattr(self.df_, fn):
-            f = getattr(self.df_, fn)
-            self._df = f(*fargs, **fkwargs)
+            self._df = getattr(self.df_, fn)(*fargs, **fkwargs)
             return self
         # if we start with groupby, then we are coupling groupby with an aggregation.
         elif fn.startswith("groupby__"):
             _, fn2 = fn.split("__", 1)
-            groupby_f = getattr(self.df_, "groupby")
-            _grouped = groupby_f(*fargs, **fkwargs)
+            _grouped = getattr(self.df_, "groupby")(*fargs, **fkwargs)
             if hasattr(_grouped, fn2):
                 self._df = _grouped.agg(fn2)
                 return self
@@ -263,26 +261,20 @@ class MetaPanda(object):
 
     def _apply_index_function(self, fn, *fargs, **fkwargs):
         if hasattr(self.df_.index, fn):
-            f = getattr(self.df_.index, fn)
-            self.df_.index = f(*fargs, **fkwargs)
+            self.df_.index = getattr(self.df_.index, fn)(*fargs, **fkwargs)
             return self
         elif hasattr(self.df_.index.str, fn):
-            f = getattr(self.df_.index.str, fn)
-            self.df_.index = f(*fargs, **fkwargs)
+            self.df_.index = getattr(self.df_.index.str, fn)(*fargs, **fkwargs)
             return self
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.index.[str.]* API".format(fn))
 
     def _apply_column_function(self, fn, *fargs, **fkwargs):
         if hasattr(self.df_.columns, fn):
-            f = getattr(self.df_.columns, fn)
-            self.df_.columns = f(*fargs, **fkwargs)
-            self.meta_.index = f(*fargs, **fkwargs)
+            self.df_.columns = self.meta_.index = getattr(self.df_.columns, fn)(*fargs, **fkwargs)
             return self
         elif hasattr(self.df_.columns.str, fn):
-            f = getattr(self.df_.columns.str, fn)
-            self.df_.columns = f(*fargs, **fkwargs)
-            self.meta_.index = f(*fargs, **fkwargs)
+            self.df_.columns = self.meta_.index = getattr(self.df_.columns.str, fn)(*fargs, **fkwargs)
             return self
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.columns.[str.]* API".format(fn))

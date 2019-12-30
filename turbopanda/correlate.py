@@ -13,7 +13,7 @@ from scipy.stats import pearsonr, spearmanr, pointbiserialr
 from .metapanda import MetaPanda
 from .utils import _cfloat, _intcat, instance_check
 
-__all__ = ["correlate"]
+__all__ = ["correlate", "corr_long_to_short"]
 
 
 def _wrap_corr_metapanda(df_corr, pdm):
@@ -288,3 +288,7 @@ def correlate(X,
             return _corr_two_matrix_diff(NX, NY, method, style=style, debug=debug)
     else:
         raise TypeError("X of type [{}], Y of type [{}], cannot compare".format(type(NX), type(NY)))
+
+
+def corr_long_to_short(df):
+    return _row_to_matrix(df)

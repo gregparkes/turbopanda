@@ -226,7 +226,7 @@ class MetaML(object):
         self._model_str = ms
 
     @property
-    def _x_names(self):
+    def x_names(self):
         return self.X.columns if self.X.ndim > 1 else [self.X.name]
 
     @property
@@ -234,7 +234,7 @@ class MetaML(object):
         return self.X.values.reshape(-1, 1) if self.X.ndim == 1 else self.X.values
 
     @property
-    def _y_names(self):
+    def y_names(self):
         return self.y.columns if self.multioutput else self.y.name
 
     @property

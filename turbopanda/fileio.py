@@ -6,9 +6,10 @@ Created on Tue Nov  5 14:48:53 2019
 @author: gparkes
 """
 
-__all__ = ["read", "read_mp"]
+__all__ = ["read", "read_mp", 'read_raw_json']
 
 import glob
+import json
 from .metapanda import MetaPanda
 from .utils import instance_check
 
@@ -87,3 +88,25 @@ def read_mp(filename):
         A MetaPanda object.
     """
     return MetaPanda.from_json(filename)
+
+
+def read_raw_json(filename):
+    """
+    Reads in a raw JSON file.
+
+    Parameters
+    ----------
+    filename : str
+        A relative/absolute link to the file, with .json optionally provided.
+
+    Returns
+    -------
+    d : dict
+        The JSON object found in the file.
+    """
+    instance_check(filename, str)
+
+    with open(filename, "r") as f:
+        mp = json.load(f)
+        f.close()
+    return mp

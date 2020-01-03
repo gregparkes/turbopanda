@@ -18,7 +18,7 @@ import pandas as pd
 from pandas import DataFrame
 from pandas.core.groupby.generic import DataFrameGroupBy
 
-from .analyze import agglomerate, intersection_grid, dist
+from .analyze import intersection_grid
 from .metadata import *
 from .pipe import Pipe
 from .selection import get_selector, _type_encoder_map
@@ -28,7 +28,7 @@ from .utils import *
 
 __non_delay_functions__ = [
     "head", "cache", "cache_pipe", "multi_cache", "view", "view_not",
-    "analyze", "compute", "multi_compute", "write", "write_json"
+    "compute", "multi_compute", "write"
 ]
 
 __delay_functions__ = [
@@ -79,8 +79,12 @@ class MetaPanda(object):
         self._with_warnings = False
 
         self.mode_ = mode
+        # selectors saved
         self._select = {}
+        # pipeline arguments
         self._pipe = {"current": []}
+        # columns added to meta_map
+        self._mapper = {}
         # set using property
         self.df_ = dataset
         self.name_ = name
@@ -178,36 +182,31 @@ class MetaPanda(object):
 
         Returns
         ------
-        mdf : MetaPanda
+        mpf : MetaPanda
             A MetaPanda object.
         """
         # read in JSON
         with open(filename, "r") as f:
             mp = json.load(f)
-            f.close()
         # go over attributes and assign where available
-        if "data" in mp:
-            ndf = pd.DataFrame.from_dict(mp["data"])
-            ndf.index.name = "counter"
-            ndf.columns.name = "colnames"
+        if "data" in mp.keys():
+            df = pd.DataFrame.from_dict(mp["data"])
+            df.index.name = "counter"
+            df.columns.name = "colnames"
             # assign to self
-            mp = cls(ndf)
+            mpf = cls(df)
         else:
             raise ValueError("column 'data' not found in MetaPandaJSON")
-        if "meta" in mp:
-            met = pd.DataFrame.from_dict(mp["meta"])
-            # set to MP
-            mp.meta_ = met
-            # include metadata
-            add_metadata(mp._df, mp._meta)
-        if "name" in mp:
-            mp.name_ = mp["name"]
-        if "cache" in mp:
-            mp._select = mp["cache"]
-        if "pipe" in mp:
-            mp._pipe = mp["pipe"]
 
-        return mp
+        if "cache" in mp.keys():
+            mpf._select = mp["cache"]
+        if "mapper" in mp.keys():
+            mpf._mapper = mp["mapper"]
+        if "name" in mp.keys():
+            mpf.name_ = mp["name"]
+        if "pipe" in mp.keys():
+            mpf._pipe = mp["pipe"]
+        return mpf
 
     """ ############################ HIDDEN OPERATIONS ####################################### """
 
@@ -270,13 +269,20 @@ class MetaPanda(object):
 
     def _apply_column_function(self, fn, *fargs, **fkwargs):
         if hasattr(self.df_.columns, fn):
-            self.df_.columns = self.meta_.index = getattr(self.df_.columns, fn)(*fargs, **fkwargs)
+            self.df_.columns = getattr(self.df_.columns, fn)(*fargs, **fkwargs)
+            self.meta_.index = getattr(self.meta_.index, fn)(*fargs, **fkwargs)
             return self
         elif hasattr(self.df_.columns.str, fn):
-            self.df_.columns = self.meta_.index = getattr(self.df_.columns.str, fn)(*fargs, **fkwargs)
+            self.df_.columns = getattr(self.df_.columns.str, fn)(*fargs, **fkwargs)
+            self.meta_.index = getattr(self.meta_.index.str, fn)(*fargs, **fkwargs)
             return self
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.columns.[str.]* API".format(fn))
+
+    def _define_metamaps(self):
+        if len(self.mapper_) > 0:
+            for k, v in self.mapper_.items():
+                self.meta_map(k, v)
 
     def _apply_pipe(self, pipe):
         # checks
@@ -286,6 +292,8 @@ class MetaPanda(object):
                 pipe = self.pipe_[pipe]
             else:
                 raise ValueError("pipe name '{}' not found in .pipe attribute".format(pipe))
+        elif isinstance(pipe, Pipe):
+            pipe = pipe.p
         if isinstance(pipe, (list, tuple)):
             if len(pipe) == 0:
                 warnings.warn("pipe_ element empty, nothing to compute.", UserWarning)
@@ -310,14 +318,17 @@ class MetaPanda(object):
                 self.meta_.to_csv(directory + "/" + name.split(".")[0] + "__meta.csv", sep=",")
 
     def _write_json(self, filename):
-        json_args = dict(double_precision=14)
+        # columns founded by meta_map are dropped
+        redundant_meta = meta_columns_default() + list(self.mapper_.keys())
         # saving_dict
-        sd = {"data": self.df_.to_json(**json_args),
-              "meta": self.meta_.drop(meta_columns_default(), axis=1).to_json(**json_args),
+        sd = {"data": self.df_.to_dict(),
+              "meta": self.meta_.drop(redundant_meta, axis=1).to_dict(),
               "cache": self._select,
               "pipe": self.pipe_,
-              "name": self.name_
+              "name": self.name_,
+              "mapper": self.mapper_
               }
+
         if filename is None:
             with open(self.name_ + ".json", "w") as f:
                 json.dump(sd, f, separators=(",", ":"))
@@ -340,12 +351,22 @@ class MetaPanda(object):
 
     def __repr__(self):
         p = self.df_.shape[1] if self.df_.ndim > 1 else 1
-        return "MetaPanda({}(n={}, p={}, mem={}), mode='{}')".format(
+        """
+        OPTIONS are:
+        - S: contains selectors
+        - P: contains pipe attributes
+        - M: contains mapper(s)
+        """
+        opt_s = "S" if len(self.selectors_) > 0 else ''
+        opt_p = "P" if len(self.pipe_) > 1 else ''
+        opt_m = "M" if len(self.mapper_) > 0 else ''
+        opts = "[" + opt_s + opt_p + opt_m + ']'
+        return "MetaPanda({}(n={}, p={}, mem={}, options={}))".format(
             self.name_,
             self.df_.shape[0],
             p,
             self.memory_,
-            self.mode_
+            opts
         )
 
     """ ############################### PROPERTIES ############################################## """
@@ -367,6 +388,9 @@ class MetaPanda(object):
             self.compute(Pipe.clean(), inplace=True)
             # add metadata columns
             add_metadata(self._df, self._meta)
+            # calculate meta_maps if present
+            if len(self._mapper) > 0:
+                self._define_metamaps()
             if "colnames" not in self._df.columns:
                 self._df.columns.name = "colnames"
             if "counter" not in self._df.columns:
@@ -445,6 +469,10 @@ class MetaPanda(object):
     @property
     def pipe_(self):
         return self._pipe
+
+    @property
+    def mapper_(self):
+        return self._mapper
 
     """ ############################### BOOLEAN PROPERTIES ##################################################"""
 
@@ -743,7 +771,7 @@ class MetaPanda(object):
         ----------
         name : str
             A name to reference the pipeline with.
-        pipeline : list, tuple
+        pipeline : Pipe, list, tuple
             list of 3-tuple, (function name, *args, **kwargs), multiple pipes, optional
             A set of instructions expecting function names in MetaPanda and parameters.
             If empty, computes the stored pipe_ attribute.
@@ -754,6 +782,8 @@ class MetaPanda(object):
         """
         if name in self.pipe_.keys():
             warnings.warn("pipe name '{}' already exists in .pipe, overriding".format(name), UserWarning)
+        if isinstance(pipeline, Pipe):
+            pipeline = pipeline.p
         self.pipe_[name] = pipeline
         return self
 
@@ -859,32 +889,6 @@ class MetaPanda(object):
         self._rename_axis(sel_cols, sel_cols + suf, 0)
         return self
 
-    def analyze(self, functions=["agglomerate"]):
-        """
-        Performs a series of analyses on the column names and how they might
-        associate with each other.
-
-        Parameters
-        -------
-        functions : list
-            Choose any combination of:
-                'agglomerate' - uses Levenshtein edit distance to determine how
-                    similar features are and uses FeatureAgglomeration to label each
-                    subgroup.
-                'approx_dist' - estimates which statistical distribution each feature
-                    belongs to.
-
-        Returns
-        ------
-        self
-        """
-        options = ["agglomerate", "approx_dist"]
-        if "agglomerate" in functions:
-            self.meta_["agglomerate"] = agglomerate(self.df_.columns)
-        if "approx_dist" in functions:
-            self.meta_["approx_dist"] = dist(self.df_)
-        return self
-
     @_actionable
     def transform(self, function, selector=None, whole=False, *args, **kwargs):
         """
@@ -957,21 +961,18 @@ class MetaPanda(object):
         --------
         name : str
             The name of this overall grouping
-        selectors : list, tuple or dict
+        selectors : list, tuple
             At least 2 or more selectors identifying subgroups. If you use
             cached names, the ID of the cache name is used as an identifier, and
             likewise with a dict, else list/tuple uses default group1...groupk.
-            Assumes the selectors ARE IN THE ORDER presented.
+            Selectors MUST be mentioned in the order you intend them to go.
 
         Returns
         -------
         self
         """
         # for each selector, get the group view.
-        if isinstance(selectors, dict):
-            cnames = [self.view(sel) for n, sel in selectors.items()]
-            names = selectors.keys()
-        elif isinstance(selectors, (list, tuple)):
+        if isinstance(selectors, (list, tuple)):
             cnames = [self.view(sel) for sel in selectors]
             names = [sel if sel in self._select else "group%d" % (i + 1) for i, sel in enumerate(selectors)]
         else:
@@ -985,6 +986,8 @@ class MetaPanda(object):
             raise ValueError("shared terms: {} discovered for meta_map.".format(igrid))
         # merge into meta
         self.meta_[name] = object_to_categorical(new_grid, selectors)
+        # store meta_map for future reference.
+        self.mapper_[name] = selectors
         return self
 
     @_actionable
@@ -1152,10 +1155,11 @@ class MetaPanda(object):
 
         Parameters
         -------
-        pipe : str, list of 3-tuple, (function name, *args, **kwargs), multiple pipes, optional
+        pipe : str, Pipe, list of 3-tuple, (function name, *args, **kwargs), optional
             A set of instructions expecting function names in MetaPanda and parameters.
             If None, computes the stored pipe_.current pipeline.
             If str, computes the stored pipe_.<name> pipeline.
+            If Pipe object, computes the elements in that class.
         inplace : bool, optional
             If True, applies the pipe inplace, else returns a copy. Default has now changed
             to return a copy.

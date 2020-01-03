@@ -127,10 +127,10 @@ class Pipe(object):
     """ ############ OVERLOADED FUNCTIONS ############## """
 
     def __repr__(self):
-        return self.p
+        return "Pipe(n_elements={})".format(len(self.p))
 
     def __str__(self):
-        return self.p
+        return str(self.p)
 
     """ ############ PUBLIC ACCESSIBLE PIPELINES TO PLUG-AND-PLAY .... ############### """
 

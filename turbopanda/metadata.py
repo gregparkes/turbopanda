@@ -16,13 +16,14 @@ from .utils import is_missing_values, is_unique_id, is_potential_id, \
 __all__ = ["meta_columns_default", "basic_construct", "categorize_meta", "add_metadata"]
 
 
-def _reduce_numeric_series(ser):
+def _reduce_data_type(ser):
     """
     Given a pandas.Series, determine it's true datatype if it has missing values.
     """
     # return 'reduced' Series if we're missing data and dtype is not an object, else just return the default dtype
 
-    return pd.to_numeric(ser.dropna(), errors="ignore", downcast="unsigned").dtype if ((ser.dtype != object) and (ser.dropna().shape[0] > 0)) else ser.dtype
+    return pd.to_numeric(ser.dropna(), errors="ignore", downcast="unsigned").dtype \
+        if ((ser.dtype != object) and (ser.dropna().shape[0] > 0)) else ser.dtype
 
 
 def meta_columns_default():
@@ -50,22 +51,14 @@ def categorize_meta(meta):
 def add_metadata(df, curr_meta):
     """ Constructs a pd.DataFrame from the raw data. Returns meta"""
     # step 1. construct a DataFrame based on the column names as an index.
-
-    expected_types = [_reduce_numeric_series(df[c]) for c in df]
-    is_uniq = [is_unique_id(df[c]) for c in df]
-    is_id = [is_potential_id(df[c]) for c in df]
-    is_stacked = [is_potential_stacker(df[c]) for c in df]
-    is_missing = [is_missing_values(df[c]) for c in df]
-    nun = [nunique(df[c]) for c in df]
-
     loc_mapping = {
-        "e_types": expected_types,
-        "is_unique": is_uniq,
-        "is_potential_id": is_id,
-        "is_potential_stacker":is_stacked,
-        "is_missing": is_missing,
-        "n_uniques": nun,
+        "e_types": [_reduce_data_type(df[c]) for c in df],
+        "is_unique": [is_unique_id(df[c]) for c in df],
+        "is_potential_id": [is_potential_id(df[c]) for c in df],
+        "is_potential_stacker": [is_potential_stacker(df[c]) for c in df],
+        "is_missing": [is_missing_values(df[c]) for c in df],
+        "n_uniques": [nunique(df[c]) for c in df],
     }
-
+    # add to the metadata.
     for key, values in loc_mapping.items():
         curr_meta[key] = values

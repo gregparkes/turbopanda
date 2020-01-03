@@ -6,8 +6,6 @@ Created on Tue Nov  5 14:48:53 2019
 @author: gparkes
 """
 
-import os
-
 __all__ = ["read", "read_mp"]
 
 import glob

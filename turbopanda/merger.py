@@ -11,7 +11,7 @@ from pandas import DataFrame
 import itertools as it
 
 from .metapanda import MetaPanda
-from .utils import check_list_type
+from .utils import check_list_type, belongs
 
 __all__ = ["merge"]
 
@@ -35,7 +35,7 @@ def _intersecting_pairs(sdf1, sdf2):
     # calculate pairings
     pairings = list(it.product(sdf1_cols, sdf2_cols))
     # empty array
-    arr = np.zeros((len(pairings),2))
+    arr = np.zeros((len(pairings), 2))
     for i, (p1, p2) in enumerate(pairings):
         r1 = sdf1[p1].dropna().drop_duplicates()
         r2 = sdf2[p2].dropna().drop_duplicates()
@@ -57,43 +57,63 @@ def _maximum_likelihood_pairs(pairings, ret_largest=True):
         return pm[pm.gt(0)]
 
 
-def _single_merge(sdf1, sdf2):
+def _single_merge(sdf1, sdf2, how):
     # find the best union pair
     pair, value = _maximum_likelihood_pairs(_intersecting_pairs(sdf1, sdf2))
     # find out if we have a shared parameter
     shared_param = pair[0] if pair[0] == pair[1] else None
-    if shared_param is not None:
-        # attempt to merge together.
-        pdm = MetaPanda(pmerge(sdf1.df_, sdf2.df_, how="inner", on=shared_param), key=shared_param)
-    else:
-        pdm = MetaPanda(
-                pmerge(sdf1.df_, sdf2.df_, how="inner", left_on=pair[0], right_on=pair[1]).drop(pair[1], axis=1),
-        )
-    return pdm
+    new_name = sdf1.name_ + '__' + sdf2.name_
+
+    # handling whether we have a shared param or not.
+    merge_extra = dict(how=how, suffixes=('_x', '_y'))
+    merge_shared = dict(on=shared_param) if shared_param is not None else dict(left_on=pair[0], right_on=pair[1])
+
+    # merge pandas.DataFrames together
+    df_m = pmerge(
+        sdf1.df_,
+        sdf2.df_,
+        **merge_extra,
+        **merge_shared
+    )
+
+    if shared_param is None:
+        df_m.drop(pair[1], axis=1, inplace=True)
+
+    # rename
+    df_m.rename(columns=dict(zip(df_m.columns.tolist(), sdf1.df_.columns.tolist())), inplace=True)
+
+    return MetaPanda(df_m, name=new_name)
 
 
-def merge(sdfs, clean_pipe=None):
+def merge(mdfs, how='inner', clean_pipe=None):
     """
-    Merges together a series of MetaPanda objects.
+    Merges together a series of MetaPanda objects. This is primarily different
+    to pd.merge as turb.merge will AUTOMATICALLY select for each pairing of DataFrame
+    which column names have the largest crossover of labels, using maximum-likelihood.
 
     Parameters
     ---------
-    sdfs : list of turb.MetaPanda
+    mdfs : list of MetaPanda
         An ordered set of MetaPandas to merge together. We use 'inner' by default.
+    how : str
+        'inner': drops rows that aren't found in all Datasets
+        'outer': keeps all rows
+        'left': drops rows that aren't found in first Dataset
     clean_pipe : pipeline
-        A set of instructions to pass to the fully-merged dataframe once we're done
+        A set of instructions to pass to the fully-merged DataFrame once we're done
 
     Returns
     -------
-    nsdf : turb.MetaPanda
-        The fully merged dataset
+    nmdf : MetaPanda
+        The fully merged Dataset
     """
-    check_list_type(sdfs, MetaPanda)
+    check_list_type(mdfs, MetaPanda)
+    belongs(how, ['left', 'inner', 'outer'])
 
-    nsdf = sdfs[0]
-    for ds in sdfs[1:]:
-        nsdf = _single_merge(nsdf, ds)
+    nmdf = mdfs[0]
+    for ds in mdfs[1:]:
+        nmdf = _single_merge(nmdf, ds, how)
     if clean_pipe is not None:
-        return nsdf.compute(clean_pipe, inplace=False)
+        return nmdf.compute(clean_pipe, inplace=False)
     else:
-        return nsdf
+        return nmdf

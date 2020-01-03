@@ -17,7 +17,7 @@ from sklearn.multioutput import MultiOutputRegressor, MultiOutputClassifier
 from sklearn.model_selection import cross_val_predict, GridSearchCV, cross_validate
 from sklearn.metrics import r2_score
 
-from .pipes import ml_regression_pipe
+from .pipe import Pipe
 from .models import *
 
 __sklearn_model_packages__ = [tree, linear_model, ensemble, svm, gaussian_process, neighbors]
@@ -154,7 +154,7 @@ class MetaML(object):
         # make mp ML-ready
         self.model_str = model
         # compute ML pipeline to dataset
-        self.mdf_ = mp.compute(ml_regression_pipe(mp, x_select, y_select), inplace=False)
+        self.mdf_ = mp.compute(Pipe.ml_regression(mp, x_select, y_select), inplace=False)
         # call cache x and y selectors
         self.mdf_.cache("input", x_select)
         self.mdf_.cache("output", y_select)

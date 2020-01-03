@@ -6,23 +6,23 @@ Created on Fri Nov  1 15:55:38 2019
 @author: gparkes
 """
 
+import functools
+import json
 import os
 import sys
-import numpy as np
 import warnings
-import functools
-import pandas as pd
 from copy import deepcopy
-import json
 
+import numpy as np
+import pandas as pd
 from pandas import DataFrame
 from pandas.core.groupby.generic import DataFrameGroupBy
 
-from .utils import *
-from .metadata import *
-from .selection import get_selector, _type_encoder_map
 from .analyze import agglomerate, intersection_grid, dist
-from .pipes import clean_pipe
+from .metadata import *
+from .pipe import Pipe
+from .selection import get_selector, _type_encoder_map
+from .utils import *
 
 # hidden .py attributes
 
@@ -50,7 +50,6 @@ class MetaPanda(object):
     def __init__(self,
                  dataset,
                  name="DataSet",
-                 key=None,
                  mode="instant",
                  cat_thresh=20,
                  default_remove_single_col=True):
@@ -64,8 +63,6 @@ class MetaPanda(object):
             The raw data set to create as a MetaDataFrame.
         name : str
             Gives the MetaDataFrame a name, which comes into play with merging, for instance
-        key : None, str
-            Defines the primary key (unique identifier), if None does nothing.
         mode : str
             Choose from ['instant', 'delay']
             If instant, executes all functions immediately inplace
@@ -80,6 +77,7 @@ class MetaPanda(object):
         self._cat_thresh = cat_thresh
         self._def_remove_single_col = default_remove_single_col
         self._with_warnings = False
+
         self.mode_ = mode
         self._select = {}
         self._pipe = {"current": []}
@@ -96,10 +94,11 @@ class MetaPanda(object):
                 self._pipe["current"].append((function.__name__, args, kwargs))
             else:
                 return function(self, *args, **kwargs)
+
         return new_function
 
     @classmethod
-    def from_pandas(cls, filename, name=None, metafile=None, key=None, *args, **kwargs):
+    def from_pandas(cls, filename, name=None, metafile=None, *args, **kwargs):
         """
         Reads in a datafile from CSV and creates a MetaPanda object from it.
 
@@ -113,8 +112,6 @@ class MetaPanda(object):
         metafile : str, optional
             An associated meta file to join into the MetaPanda, else if None,
             attempts to find the file, otherwise just creates the raw default.
-        key : None, str, optional
-            Sets one of the columns as the 'primary key' in the Dataset
         args : list
             Additional args to pass to pd.read_csv
         kwargs : dict
@@ -145,9 +142,9 @@ class MetaPanda(object):
         df = file_ext_map[ext](filename, *args, **kwargs)
         # map to MetaPanda
         if name is not None:
-            mp = cls(df, name=name, key=key)
+            mp = cls(df, name=name)
         else:
-            mp = cls(df, name=jname, key=key)
+            mp = cls(df, name=jname)
             name = "_"
 
         if metafile is not None:
@@ -186,28 +183,30 @@ class MetaPanda(object):
         """
         # read in JSON
         with open(filename, "r") as f:
-            recvr = json.load(f)
+            mp = json.load(f)
+            f.close()
         # go over attributes and assign where available
-        if "data" in recvr:
-            ndf = pd.DataFrame.from_dict(recvr["data"])
+        if "data" in mp:
+            ndf = pd.DataFrame.from_dict(mp["data"])
             ndf.index.name = "counter"
             ndf.columns.name = "colnames"
             # assign to self
             mp = cls(ndf)
         else:
             raise ValueError("column 'data' not found in MetaPandaJSON")
-        if "meta" in recvr:
-            met = pd.DataFrame.from_dict(recvr["meta"])
+        if "meta" in mp:
+            met = pd.DataFrame.from_dict(mp["meta"])
             # set to MP
             mp.meta_ = met
             # include metadata
             add_metadata(mp._df, mp._meta)
-        if "name" in recvr:
-            mp.name_ = recvr["name"]
-        if "cache" in recvr:
-            mp._select = recvr["cache"]
-        if "pipe" in recvr:
-            mp._pipe = recvr["pipe"]
+        if "name" in mp:
+            mp.name_ = mp["name"]
+        if "cache" in mp:
+            mp._select = mp["cache"]
+        if "pipe" in mp:
+            mp._pipe = mp["pipe"]
+
         return mp
 
     """ ############################ HIDDEN OPERATIONS ####################################### """
@@ -255,9 +254,9 @@ class MetaPanda(object):
                 self._df = _grouped.agg(fn2)
                 return self
             else:
-                raise ValueError("function '{}' not recognized in pandas.DataFrame.* API".format(fn2))
+                raise ValueError("function '{}' not recognized in pandas.DataFrame.* API: {}".format(fn2, dir(_grouped)))
         else:
-            raise ValueError("function '{}' not recognized in pandas.DataFrame.* API".format(fn))
+            raise ValueError("function '{}' not recognized in pandas.DataFrame.* API: {}".format(fn, dir(self.df_)))
 
     def _apply_index_function(self, fn, *fargs, **fkwargs):
         if hasattr(self.df_.index, fn):
@@ -311,18 +310,20 @@ class MetaPanda(object):
                 self.meta_.to_csv(directory + "/" + name.split(".")[0] + "__meta.csv", sep=",")
 
     def _write_json(self, filename):
-        saving_dict = {"data": self.df_.to_dict(),
-                       "meta": self.meta_.drop(meta_columns_default(), axis=1).to_dict(),
-                       "cache": self._select,
-                       "pipe": self.pipe_,
-                       "name": self.name_
-                       }
+        json_args = dict(double_precision=14)
+        # saving_dict
+        sd = {"data": self.df_.to_json(**json_args),
+              "meta": self.meta_.drop(meta_columns_default(), axis=1).to_json(**json_args),
+              "cache": self._select,
+              "pipe": self.pipe_,
+              "name": self.name_
+              }
         if filename is None:
             with open(self.name_ + ".json", "w") as f:
-                json.dump(saving_dict, f, separators=(",", ":"))
+                json.dump(sd, f, separators=(",", ":"))
         else:
             with open(filename, "w") as f:
-                json.dump(saving_dict, f, separators=(",", ":"))
+                json.dump(sd, f, separators=(",", ":"))
 
     """ ############################## OVERRIDDEN OPERATIONS ###################################### """
 
@@ -337,13 +338,6 @@ class MetaPanda(object):
         # drops columns inplace
         self._drop_columns(self.view(selector))
 
-    def __enter__(self):
-        self.mode_ = "delay"
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.mode_ = "instant"
-        self.compute(inplace=True)
-
     def __repr__(self):
         p = self.df_.shape[1] if self.df_.ndim > 1 else 1
         return "MetaPanda({}(n={}, p={}, mem={}), mode='{}')".format(
@@ -357,6 +351,7 @@ class MetaPanda(object):
     """ ############################### PROPERTIES ############################################## """
 
     """ DataFrame attributes """
+
     @property
     def df_(self):
         return self._df
@@ -369,7 +364,7 @@ class MetaPanda(object):
             # allocate meta data
             self._meta = basic_construct(self._df)
             # compute cleaning.
-            self.compute(clean_pipe(), inplace=True)
+            self.compute(Pipe.clean(), inplace=True)
             # add metadata columns
             add_metadata(self._df, self._meta)
             if "colnames" not in self._df.columns:

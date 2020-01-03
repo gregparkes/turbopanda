@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Nov  5 11:31:39 2019
+Created on Tue Nov 5 11:31:39 2019
 
 @author: gparkes
 """
@@ -13,7 +13,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="turbopanda",
-    version="0.1.7",
+    version="0.1.7.5",
     description="Turbo-charging the Pandas library in an integrative, meta-orientated style",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -34,6 +34,7 @@ setup(
     classifiers=[
         "Natural Language :: English",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Framework :: IPython",
         "Framework :: Jupyter",

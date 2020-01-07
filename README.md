@@ -6,37 +6,7 @@ The aim of this library is to re-haul the `pandas` library package, which is ext
 
 This library creates two `pandas.DataFrames`, the raw data and a *metadata* frame.
 
-**Current version: 0.1.7**
-
-## Installation
-
-`turbopanda` requires the following [dependencies](environment.yml):
-
-* python (>=3.6)
-* numpy (>=1.11.0)
-* scipy (>=1.3)
-* pandas (>=0.25.1)
-* sklearn
-
-The following packages are not required but significantly improve the usage of this package. If you are unfamiliar with the Jupyter project see [here](https://jupyter.org/):
-
-* jupyter (1.0.0)
-
-### From Cloning the GitHub Repository
-
-Alternatively if you are cloning this [GitHub repository](https://github.com/gregparkes/turbopanda), use:
-
-```bash
-git clone https://github.com/gregparkes/turbopanda.git
-conda env create -f environment.yml
-conda activate turbopanda
-```
-
-Now within the `turbopanda` environment run your Jupyter notebook:
-
-```bash
-jupyter notebook
-```
+**Current version: 0.1.8**
 
 ## How to use: The Basics
 
@@ -148,6 +118,37 @@ Often in `pandas`, operations are applied across the entire dataframe, which can
 This takes every column of type `float` and applies a square-function to it. `lambda` in this case accepts a `pandas.Series` object representing a given column, and expects the return type to be the same size as before.
 
 Further details can be found by exploring the [examples](https://github.com/gregparkes/turbopanda/blob/master/examples/) section of this repository.
+
+## Installation
+
+`turbopanda` requires the following [dependencies](environment.yml):
+
+* python>=3.6
+* numpy>=1.11.0
+* scipy>=1.3
+* pandas>=0.25
+* matplotlib>=3.1.1
+* scikit-learn>=0.21
+
+The following packages are not required but significantly improve the usage of this package. If you are unfamiliar with the Jupyter project see [here](https://jupyter.org/):
+
+* jupyter (1.0.0)
+
+### From Cloning the GitHub Repository
+
+Alternatively if you are cloning this [GitHub repository](https://github.com/gregparkes/turbopanda), use:
+
+```bash
+git clone https://github.com/gregparkes/turbopanda.git
+conda env create -f environment.yml
+conda activate turbopanda
+```
+
+Now within the `turbopanda` environment run your Jupyter notebook:
+
+```bash
+jupyter notebook
+```
 
 ***
 

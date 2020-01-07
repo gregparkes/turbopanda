@@ -26,6 +26,10 @@ def _reduce_data_type(ser):
         if ((ser.dtype != object) and (ser.dropna().shape[0] > 0)) else ser.dtype
 
 
+def _is_mixed_type(ser):
+    return ser.apply(lambda x: type(x)).unique().shape[0] > 1
+
+
 def meta_columns_default():
     return ["e_types", "is_unique", "is_potential_id", "is_potential_stacker",
             "is_missing", "n_uniques"]
@@ -53,6 +57,7 @@ def add_metadata(df, curr_meta):
     # step 1. construct a DataFrame based on the column names as an index.
     loc_mapping = {
         "e_types": [_reduce_data_type(df[c]) for c in df],
+        "is_mixed_type": [_is_mixed_type(df[c]) for c in df],
         "is_unique": [is_unique_id(df[c]) for c in df],
         "is_potential_id": [is_potential_id(df[c]) for c in df],
         "is_potential_stacker": [is_potential_stacker(df[c]) for c in df],

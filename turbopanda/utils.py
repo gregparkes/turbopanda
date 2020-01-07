@@ -20,6 +20,7 @@ __all__ = ["fself", "is_twotuple", "instance_check", "chain_intersection", "chai
            "boolean_series_check", "check_list_type", "not_column_float",
            "is_column_float", "is_column_object", "is_column_int",
            "calc_mem", "remove_string_spaces", "nearest_factors", "is_missing_values",
+           "split_file_directory",
            "is_unique_id", "is_potential_id", "string_replace",
            "is_potential_stacker", "nunique", "object_to_categorical",
            "is_n_value_column", "boolean_to_integer", "integer_to_boolean",
@@ -90,6 +91,37 @@ def is_potential_id(ser, thresh=0.5):
 
 def is_potential_stacker(ser, regex=";|\t|,|", thresh=0.1):
     return ser.dropna().str.contains(regex).sum() > thresh if (ser.dtype == object) else False
+
+
+def split_file_directory(filename):
+    """
+    Breaks down the filename pathway into constitute parts.
+
+    Parameters
+    --------
+    filename : str
+        The filename full string
+
+    Returns
+    -------
+    directory : str
+        The directory linking to the file
+    jname : str
+        The name of the file (without extension)
+    ext : str
+        Extension type
+    """
+    fs = filename.rsplit("/", 1)
+    if len(fs) == 0:
+        raise ValueError("filename '{}' not recognized".format(filename))
+    elif len(fs) == 1:
+        directory = "."
+        fname = fs[0]
+    else:
+        directory, fname = fs
+    # just the name without the extension
+    jname, ext = fname.split(".", 1)
+    return directory, jname, ext
 
 
 def is_metapanda_pipe(p):

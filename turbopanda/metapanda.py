@@ -27,15 +27,15 @@ from .utils import *
 # hidden .py attributes
 
 __non_delay_functions__ = [
-    "head", "cache", "cache_pipe", "multi_cache", "view", "view_not",
-    "compute", "multi_compute", "write"
+    "head", "dtypes", "cache", "cache_pipe", "cache_k", "view", "view_not",
+    "compute", "compute_k", "write"
 ]
 
 __delay_functions__ = [
     "drop", "keep", "apply", "apply_index", "apply_columns",
-    "transform", "multi_transform", "rename", "add_prefix",
+    "transform", "transform_k", "rename", "add_prefix",
     "add_suffix", "meta_map", "expand", "shrink", "sort_columns",
-    "split_categories", "melt", "filter_rows"
+    "split_categories", "filter_rows"
 ]
 
 __functions__ = __non_delay_functions__ + __delay_functions__
@@ -49,10 +49,10 @@ class MetaPanda(object):
 
     def __init__(self,
                  dataset,
-                 name="DataSet",
+                 name=None,
                  mode="instant",
-                 cat_thresh=20,
-                 default_remove_single_col=True):
+                 with_clean=True,
+                 with_warnings=False):
         """
         Creates a Meta DataFrame with the raw data and parametrization of
         the DataFrame by its grouped columns.
@@ -68,15 +68,10 @@ class MetaPanda(object):
             If instant, executes all functions immediately inplace
             If delay, builds a task graph in 'pipe_'
                 and then executes inplace when 'compute()' is called
-        cat_thresh : int
-            The threshold until which 'category' variables are not created
-        default_remove_single_col : bool
-            Decides whether to drop columns with a single unique value in (default True)
         """
 
-        self._cat_thresh = cat_thresh
-        self._def_remove_single_col = default_remove_single_col
-        self._with_warnings = False
+        self._with_warnings = with_warnings
+        self._with_clean = with_clean
 
         self.mode_ = mode
         # selectors saved
@@ -87,7 +82,7 @@ class MetaPanda(object):
         self._mapper = {}
         # set using property
         self.df_ = dataset
-        self.name_ = name
+        self.name_ = name if name is not None else 'DataSet'
 
     """ ############################ STATIC FUNCTIONS ######################################## """
 
@@ -132,16 +127,8 @@ class MetaPanda(object):
             "sql": pd.read_sql, "XLSX": pd.read_excel
         }
 
-        fs = filename.rsplit("/", 1)
-        if len(fs) == 0:
-            raise ValueError("filename '{}' not recognized".format(filename))
-        elif len(fs) == 1:
-            directory = "."
-            fname = fs[0]
-        else:
-            directory, fname = fs
-        # just the name without the extension
-        jname, ext = fname.split(".", 1)
+        # split filename into parts and check
+        directory, jname, ext = split_file_directory(filename)
 
         df = file_ext_map[ext](filename, *args, **kwargs)
         # map to MetaPanda
@@ -169,7 +156,7 @@ class MetaPanda(object):
         return mp
 
     @classmethod
-    def from_json(cls, filename):
+    def from_json(cls, filename, **kwargs):
         """
         Reads in a datafile from JSON and creates a MetaPanda object from it.
         Pipe attributes are not saved currently due to the problem of storing
@@ -179,6 +166,8 @@ class MetaPanda(object):
         -------
         filename : str
             A relative/absolute link to the JSON file, with extension optional.
+        **kwargs : dict
+            Other keyword arguments to pass to MetaPanda constructor
 
         Returns
         ------
@@ -194,7 +183,7 @@ class MetaPanda(object):
             df.index.name = "counter"
             df.columns.name = "colnames"
             # assign to self
-            mpf = cls(df)
+            mpf = cls(df, **kwargs)
         else:
             raise ValueError("column 'data' not found in MetaPandaJSON")
 
@@ -202,10 +191,14 @@ class MetaPanda(object):
             mpf._select = mp["cache"]
         if "mapper" in mp.keys():
             mpf._mapper = mp["mapper"]
-        if "name" in mp.keys():
+        if "name" in mp.keys() and "name" not in kwargs.keys():
             mpf.name_ = mp["name"]
         if "pipe" in mp.keys():
             mpf._pipe = mp["pipe"]
+
+        # define metamaps if they exist
+        mpf._define_metamaps()
+
         return mpf
 
     """ ############################ HIDDEN OPERATIONS ####################################### """
@@ -279,6 +272,17 @@ class MetaPanda(object):
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.columns.[str.]* API".format(fn))
 
+    def _reset_meta(self):
+        """
+        Assumes df is set.
+        """
+        self._meta = basic_construct(self._df)
+        # add in metadata rows.
+        add_metadata(self._df, self._meta)
+        # if we have mapper elements, add these in
+        if len(self._mapper) > 0:
+            self._define_metamaps()
+
     def _define_metamaps(self):
         if len(self.mapper_) > 0:
             for k, v in self.mapper_.items():
@@ -295,7 +299,7 @@ class MetaPanda(object):
         elif isinstance(pipe, Pipe):
             pipe = pipe.p
         if isinstance(pipe, (list, tuple)):
-            if len(pipe) == 0:
+            if len(pipe) == 0 and self._with_warnings:
                 warnings.warn("pipe_ element empty, nothing to compute.", UserWarning)
                 return
             # basic check of pipe
@@ -309,32 +313,31 @@ class MetaPanda(object):
     def _write_csv(self, filename, with_meta=False, *args, **kwargs):
         self.df_.to_csv(filename, sep=",", *args, **kwargs)
         if with_meta:
-            # uses the name stored in mp
-            dsplit = filename.rsplit("/", 1)
-            if len(dsplit) == 1:
-                self.meta_.to_csv(dsplit[0].split(".")[0] + "__meta.csv", sep=",")
-            else:
-                directory, name = dsplit
-                self.meta_.to_csv(directory + "/" + name.split(".")[0] + "__meta.csv", sep=",")
+            directory, jname, ext = split_file_directory(filename)
+            self.meta_.to_csv(directory + "/" + jname + "__meta.csv", sep=",")
 
     def _write_json(self, filename):
         # columns founded by meta_map are dropped
         redundant_meta = meta_columns_default() + list(self.mapper_.keys())
         # saving_dict
-        sd = {"data": self.df_.to_dict(),
-              "meta": self.meta_.drop(redundant_meta, axis=1).to_dict(),
-              "cache": self._select,
-              "pipe": self.pipe_,
-              "name": self.name_,
-              "mapper": self.mapper_
-              }
+        sd = {
+            "data": self.df_.to_dict(),
+            "name": self.name_
+        }
+        # only write these if we have data to write - this saves space.
+        reduced_meta = self.meta_.drop(redundant_meta, axis=1).to_dict()
+        if len(reduced_meta) > 0:
+            sd['meta'] = reduced_meta
+        if len(self.selectors_) > 0:
+            sd['cache'] = self._select
+        if len(self.pipe_) > 0:
+            sd['pipe'] = self.pipe_
+        if len(self.mapper_) > 0:
+            sd['mapper'] = self.mapper_
 
-        if filename is None:
-            with open(self.name_ + ".json", "w") as f:
-                json.dump(sd, f, separators=(",", ":"))
-        else:
-            with open(filename, "w") as f:
-                json.dump(sd, f, separators=(",", ":"))
+        fn = filename if filename is not None else self.name_ + '.json'
+        with open(fn, "w") as f:
+            json.dump(sd, f, separators=(",", ":"))
 
     """ ############################## OVERRIDDEN OPERATIONS ###################################### """
 
@@ -382,15 +385,12 @@ class MetaPanda(object):
         if isinstance(df, DataFrame):
             # apply the 'cleaning pipeline' to this.
             self._df = df
-            # allocate meta data
-            self._meta = basic_construct(self._df)
+            # define meta
+            self._reset_meta()
             # compute cleaning.
-            self.compute(Pipe.clean(), inplace=True)
-            # add metadata columns
-            add_metadata(self._df, self._meta)
-            # calculate meta_maps if present
-            if len(self._mapper) > 0:
-                self._define_metamaps()
+            if self._with_clean:
+                self.compute(Pipe.clean(), inplace=True)
+
             if "colnames" not in self._df.columns:
                 self._df.columns.name = "colnames"
             if "counter" not in self._df.columns:
@@ -515,6 +515,25 @@ class MetaPanda(object):
             First k rows of df_
         """
         return self.df_.head(k)
+
+    def dtypes(self, grouped=True):
+        """
+        Provides a breakdown of the correct datatypes available to the user.
+
+        Parameters
+        --------
+        grouped : bool
+            If True, returns the value_counts of each data type, else returns the direct types.
+
+        Returns
+        -------
+        true_types : pd.Series
+            A series of index (group/name) and value (count/type)
+        """
+        if not grouped:
+            return self.meta_['e_types']
+        else:
+            return self.meta_['e_types'].value_counts()
 
     def view(self, *selector):
         """
@@ -748,7 +767,7 @@ class MetaPanda(object):
         -------
         self
         """
-        if name in self._select:
+        if name in self._select and self._with_warnings:
             warnings.warn("cache name '{}' already exists in .cache, overriding".format(name), UserWarning)
         # convert selector over to list to make it mutable
         selector = list(selector)
@@ -780,14 +799,14 @@ class MetaPanda(object):
         -------
         self
         """
-        if name in self.pipe_.keys():
+        if name in self.pipe_.keys() and self._with_warnings:
             warnings.warn("pipe name '{}' already exists in .pipe, overriding".format(name), UserWarning)
         if isinstance(pipeline, Pipe):
             pipeline = pipeline.p
         self.pipe_[name] = pipeline
         return self
 
-    def multi_cache(self, **caches):
+    def cache_k(self, **caches):
         """
         Saves a group of 'selectors' to use at a later date. This can be useful
         if you wish to keep track of changes, or if you want to quickly reference a selector
@@ -890,7 +909,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def transform(self, function, selector=None, whole=False, *args, **kwargs):
+    def transform(self, function, selector=None,  method='transform', whole=False, *args, **kwargs):
         """
         Performs an inplace transformation to a group of columns within the df_
         attribute.
@@ -903,6 +922,11 @@ class MetaPanda(object):
             Contains either types, meta column names, column names or regex-compliant strings
             Allows user to specify subset to rename
             If None, applies the function to all columns.
+        method : str, optional
+            Allows the user to specify which pandas.DataFrame.<> function to call.
+                - 'transform': applies along an axis and maintains same axis/provides guarantees
+                - 'apply': more generic function applied along an axis
+                - 'applymap': applies to every ELEMENT (not axis)
         whole : bool
             If True, uses function(self.df_, *args) and relies on the same output.
             If False, uses self.df_.transform(lambda x: function(x, *args, **kwargs))
@@ -915,6 +939,7 @@ class MetaPanda(object):
         -------
         self
         """
+        belongs(method, ['apply','transform','applymap'])
         # perform inplace
         selection = self._selector_group(selector)
         # modify
@@ -922,12 +947,11 @@ class MetaPanda(object):
             if whole:
                 self.df_.loc[:, selection] = function(self.df_.loc[:, selection], *args, **kwargs)
             else:
-                self.df_.loc[:, selection] = self.df_.loc[:, selection].transform(
-                    lambda x: function(x, *args, **kwargs))
+                self.df_.loc[:, selection] = getattr(self.df_.loc[:, selection], method)(function, *args, **kwargs)
         return self
 
     @_actionable
-    def multi_transform(self, ops):
+    def transform_k(self, ops):
         """
         Performs multiple inplace transformations to a group of columns within the df_
         attribute.
@@ -1124,31 +1148,7 @@ class MetaPanda(object):
         self._df.columns.name = "colnames"
         return self
 
-    @_actionable
-    def melt(self, id_vars=["counter"], *args, **kwargs):
-        """
-        Performs a 'melt' operation on the DataFrame, with some minor adjustments to
-        maintain the integrity of the MetaPandaframe.
-
-        Parameters
-        --------
-        id_vars : list, optional
-            Column(s) to use as identifier variables.
-        args, kwargs : list/dict
-            arguments to pass to pandas.DataFrame.melt
-
-        Returns
-        -------
-        self
-        """
-        if isinstance(id_vars, list) or id_vars is None:
-            if "counter" not in id_vars:
-                id_vars.insert(0, "counter")
-            # modify df by resetting and melting
-            self.df_ = self.df_.reset_index().melt(id_vars=id_vars, *args, **kwargs)
-        return self
-
-    def compute(self, pipe=None, inplace=False):
+    def compute(self, pipe=None, inplace=False, update_meta=False):
         """
         Computes a pipeline to the MetaPanda object. If there are no parameters, it computes
         what is stored in the pipe_ attribute, if any.
@@ -1163,6 +1163,8 @@ class MetaPanda(object):
         inplace : bool, optional
             If True, applies the pipe inplace, else returns a copy. Default has now changed
             to return a copy.
+        update_meta : bool, optional
+            If True, resets the meta after the pipeline completes.
 
         Returns
         -------
@@ -1176,15 +1178,18 @@ class MetaPanda(object):
             # computes inplace
             self.mode_ = "instant"
             self._apply_pipe(pipe)
+            # reset meta here
+            if update_meta:
+                self._reset_meta()
             return self
         else:
             # full deepcopy, including dicts, lists, hidden etc.
             cpy = self.copy()
             # compute on cop
-            cpy.compute(pipe, inplace=True)
+            cpy.compute(pipe, inplace=True, update_meta=update_meta)
             return cpy
 
-    def multi_compute(self, pipes, inplace=False):
+    def compute_k(self, pipes, inplace=False):
         """
         Computes multiple pipelines to the MetaPanda object, including cached types such as .current
 

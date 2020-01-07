@@ -10,6 +10,8 @@ __all__ = ["read", "read_mp", 'read_raw_json']
 
 import glob
 import json
+import itertools as it
+
 from .metapanda import MetaPanda
 from .utils import instance_check
 
@@ -24,6 +26,10 @@ def read(filename, name=None, *args, **kwargs):
             This allows you to read in multiple files simultaenously.
                 e.g "*.json" reads in every JSON file in the local directory.
 
+    Note that if multiple files are selected, they are returned in ALPHABETICAL ORDER, not
+    necessarily the order in the file directory. If a list of names is passed, this is
+    sorted so as to match the filename ordering returned.
+
     Parameters
     -------
     filename : str
@@ -31,12 +37,13 @@ def read(filename, name=None, *args, **kwargs):
         Accepted extensions: [csv, CSV, xls, xlsx, XLSX, json, hdf]
         .json is a special use case and will use the MetaPanda format, NOT the pd.read_json function.
         filename now accepts glob-compliant input to read in multiple files if selected.
-    name : str, optional
-        A custom name to use for the MetaPanda, else the filename is used
+    name : str, list, optional
+        A custom name to use for the MetaPanda, else the filename is used. Where this is a list, this
+        is sorted to alphabetically match the filename.
     args : list
-        Additional args to pass to pd.read_[ext]
+        Additional args to pass to pd.read_[ext]/MetaPanda()
     kwargs : dict
-        Additional args to pass to pd.read_[ext]
+        Additional args to pass to pd.read_[ext]MetaPanda()
 
     Returns
     ------
@@ -45,8 +52,9 @@ def read(filename, name=None, *args, **kwargs):
         selects multiple files.
     """
     instance_check(filename, str)
-    # use the glob package to allow for unix-like searching.
-    glob_name = glob.glob(filename)
+
+    # use the glob package to allow for unix-like searching. Sorted alphabetically
+    glob_name = sorted(glob.glob(filename))
     if len(glob_name) == 0:
         raise IOError("No files selected with filename {}".format(filename))
     else:
@@ -56,16 +64,20 @@ def read(filename, name=None, *args, **kwargs):
         def ext(s):
             return s.rsplit(".", 1)[-1]
 
-        def fetch_db(fl):
+        def fetch_db(fl, n=None):
             if ext(fl) in pandas_types:
-                return MetaPanda.from_pandas(fl, name, *args, **kwargs)
+                return MetaPanda.from_pandas(fl, n, *args, **kwargs)
             elif ext(fl) == 'json':
-                return MetaPanda.from_json(fl)
+                return MetaPanda.from_json(fl, name=n, **kwargs)
             else:
                 raise IOError("file ending '{}' not recognized, must end with {}".format(fl, pandas_types + ['json']))
 
-        # iterate and return if present
-        ds = [fetch_db(f) for f in glob_name]
+        if isinstance(name, (list, tuple)):
+            ds = [fetch_db(f, n) for f, n in it.zip_longest(glob_name, sorted(name))]
+        elif isinstance(name, str):
+            ds = [fetch_db(f, name) for f in glob_name]
+        else:
+            ds = [fetch_db(f) for f in glob_name]
         # if we have more than one element, return the list, else just return ds
         return ds if len(ds) > 1 else ds[0]
 

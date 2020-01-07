@@ -23,10 +23,9 @@ from .pipe import Pipe
 from .visualise import *
 from .fileio import *
 from .correlate import *
+from .cache import *
 from .merger import merge
 from .concat import concat
-from .cache import cache
 
-
-__version__ = "0.1.7.5"
+__version__ = "0.1.8"
 __name__ = "turbopanda"

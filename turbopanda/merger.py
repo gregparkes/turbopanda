@@ -11,7 +11,7 @@ from pandas import DataFrame
 import itertools as it
 
 from .metapanda import MetaPanda
-from .utils import check_list_type, belongs
+from .utils import check_list_type, belongs, union
 
 __all__ = ["merge"]
 
@@ -78,11 +78,20 @@ def _single_merge(sdf1, sdf2, how):
 
     if shared_param is None:
         df_m.drop(pair[1], axis=1, inplace=True)
-
+    # drop any columns with 'counter' in
+    if 'counter' in df_m.columns:
+        df_m.drop('counter', axis=1, inplace=True)
     # rename
     df_m.rename(columns=dict(zip(df_m.columns.tolist(), sdf1.df_.columns.tolist())), inplace=True)
-
-    return MetaPanda(df_m, name=new_name)
+    # join together meta information
+    mpf = MetaPanda(df_m, name=new_name)
+    # tack on extras
+    mpf._select = {**sdf1.selectors_, **sdf2.selectors_}
+    mpf._mapper = {**sdf1.mapper_, **sdf2.mapper_}
+    # generate meta columns
+    mpf._define_metamaps()
+    # pipes are not transferred over
+    return mpf
 
 
 def merge(mdfs, how='inner', clean_pipe=None):

@@ -15,7 +15,7 @@ from pandas import CategoricalDtype, concat, Index, Series
 from .utils import boolean_series_check, chain_intersection, chain_union
 
 
-__all__ = ["get_selector", "_type_encoder_map"]
+__all__ = ["regex_column", "get_selector", "_type_encoder_map"]
 
 
 def _numpy_types():
@@ -51,6 +51,17 @@ def _type_decoder_map():
 
 def _accepted_dtypes():
     return _numpy_types() + _numpy_string_types() + _extra_types() + _extra_string_types()
+
+
+def regex_column(selector, df, raise_error=False):
+    c_fetch = [c for c in df.columns if re.search(selector, c)]
+    if len(c_fetch) > 0:
+        return Index(c_fetch, dtype=object,
+                     name=df.columns.name, tupleize_cols=False)
+    elif raise_error:
+        raise ValueError("selector '{}' yielded no matches.".format(selector))
+    else:
+        return Index([], name=df.columns.name)
 
 
 def _get_selector_item(df, meta, cached, selector, raise_error=False):
@@ -97,14 +108,7 @@ def _get_selector_item(df, meta, cached, selector, raise_error=False):
         # check if key does not exists in df.columns
         elif selector not in df:
             # try regex
-            col_fetch = [c for c in df.columns if re.search(selector, c)]
-            if len(col_fetch) > 0:
-                return Index(col_fetch, dtype=object,
-                                name=df.columns.name, tupleize_cols=False)
-            elif raise_error:
-                raise ValueError("selector '{}' yielded no matches.".format(selector))
-            else:
-                return Index([], name=df.columns.name)
+            return regex_column(selector, df, raise_error)
         else:
             # we assume it's in the index, and we return it, else allow pandas to raise the error.
             return Index([selector], name=df.columns.name)

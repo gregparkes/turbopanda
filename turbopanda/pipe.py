@@ -10,7 +10,7 @@ An object for handling pipelines in conjunction with MetaPanda
 from sklearn import preprocessing
 from pandas import to_numeric
 
-from .utils import integer_to_boolean, object_to_categorical, is_n_value_column
+from .utils import boolean_to_integer, object_to_categorical, is_n_value_column
 
 
 def _attempt_float_cast(s):
@@ -60,8 +60,13 @@ def _single_pipe(argument):
             else:
                 # otherwise tupleize it as an *arg
                 pipe_t.append(arg)
+        elif isinstance(arg, dict):
+            # set the keywords within the solo dictionary
+            pipe_d = arg
         else:
             pipe_t.append(arg)
+
+    # assemble and return
     pipe_command.append(tuple(pipe_t))
     pipe_command.append(pipe_d)
     return tuple(pipe_command)
@@ -198,14 +203,12 @@ class Pipe(object):
             ("drop", (lambda x: x.dropna().unique().shape[0] == 1,), {}),
             # shrink down data types where possible.
             ("apply", ("transform", to_numeric,), {"errors": "ignore", "downcast": "unsigned"}),
-            # convert 2-ints into boolean columns
-            ("transform", (lambda x: integer_to_boolean(x),), {"selector": int}),
             # convert int to categories
             ("transform", (lambda x: object_to_categorical(x),), {"selector": object}),
+            # convert booleans to uint8
+            ("apply", ('transform', boolean_to_integer), {}),
             # strip column names
             ("apply_columns", ("strip",), {}),
-            # strip string object columns
-            ("transform", (lambda x: x.str.strip(),), {"selector": object}),
             # do some string stripping
             ("rename", ([(" ", "_"), ("\t", "_"), ("-", "")],), {}),
         ])

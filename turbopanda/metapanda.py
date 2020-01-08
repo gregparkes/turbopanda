@@ -65,6 +65,8 @@ class MetaPanda(object):
         Determines the data type of each column in `df_`
     view(selector)
         Views a selection of columns in `df_`
+    search(selector)
+        View the intersection of search terms, for columns in `df_`.
     view_not(selector)
         Views the non-selected columns in `df_`
     copy(None)
@@ -394,7 +396,7 @@ class MetaPanda(object):
     def __getitem__(self, selector):
         """Fetch a subset determined by the selector."""
         # we take the columns that are NOT this selection, then drop to keep order.
-        sel = self.view(selector)
+        sel = self._selector_group(selector, axis=1)
         if sel.size > 0:
             # drop anti-selection to maintain order/sorting
             return self.df_[sel].squeeze()
@@ -629,10 +631,55 @@ class MetaPanda(object):
 
         See Also
         --------
-        view_not : Views the non-selected columns in `df_`.
+        view_not : View the non-selected columns in `df_`.
+        search : View the intersection of search terms, for columns in `df_`.
         """
         # we do this 'double-drop' to maintain the order of the DataFrame, because of set operations.
         return self.df_.columns.drop(self.view_not(*selector))
+
+    def search(self, *selector):
+        """View the intersection of search terms, for columns in `df_`.
+
+        Select merely returns the columns of interest selected using this selector.
+        Selections of columns can be done by:
+            type [object, int, float, numpy.dtype*, pandas.CategoricalDtype]
+            callable (function) that returns [bool list] of length p
+            pd.Index
+            str [regex, df.column name, cached name, meta.column name (that references a boolean column)]
+            list/tuple of the above
+
+        .. warning:: Not affected by `mode_` attribute.
+
+        .. note:: `view` *preserves* the order in which columns appear within the DataFrame.
+
+        .. note:: any numpy data type, like np.float64, np.uint8
+
+        Parameters
+        -------
+        selector : str or tuple args
+            See above for what constitutes an *appropriate selector*.
+
+        Warnings
+        --------
+        UserWarning
+            If the selection returned is empty.
+
+        Returns
+        ------
+        sel : list
+            The list of column names selected, or empty
+
+        See Also
+        --------
+        view_not : Views the non-selected columns in `df_`.
+        view : View a selection of columns in `df_`.
+        """
+        # we do this 'double-drop' to maintain the order of the DataFrame, because of set operations.
+        sel = get_selector(self.df_, self.meta_, self._select, selector, raise_error=False, select_join="AND")
+        if (sel.shape[0] == 0) and self._with_warnings:
+            warnings.warn("in select: '{}' was empty, no columns selected.".format(selector), UserWarning)
+        # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
+        return sel
 
     def view_not(self, *selector):
         """View the non-selected columns in `df_`.
@@ -668,11 +715,12 @@ class MetaPanda(object):
 
         See Also
         --------
-        view : Views a selection of columns in `df_`.
+        view : View a selection of columns in `df_`.
+        search : View the intersection of search terms, for columns in `df_`.
         """
         sel = get_selector(self.df_, self.meta_, self._select, selector, raise_error=False, select_join="OR")
         if (sel.shape[0] == 0) and self._with_warnings:
-            warnings.warn("selection: '{}' was empty, no columns selected.".format(selector), UserWarning)
+            warnings.warn("in view: '{}' was empty, no columns selected.".format(selector), UserWarning)
         # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
         return self.df_.columns.drop(sel)
 
@@ -1173,13 +1221,12 @@ class MetaPanda(object):
         # for each selector, get the group view.
         if isinstance(selectors, (list, tuple)):
             cnames = [self.view(sel) for sel in selectors]
-            names = [sel if sel in self._select else "group%d" % (i + 1) for i, sel in enumerate(selectors)]
         else:
             raise TypeError("'selectors' must be of type {list, tuple}")
 
         igrid = intersection_grid(cnames)
         if igrid.shape[0] == 0:
-            new_grid = pd.concat([pd.Series(n, index=val) for n, val in zip(names, cnames)], sort=False, axis=0)
+            new_grid = pd.concat([pd.Series(n, index=val) for n, val in zip(selectors, cnames)], sort=False, axis=0)
             new_grid.name = name
         else:
             raise ValueError("shared terms: {} discovered for meta_map.".format(igrid))

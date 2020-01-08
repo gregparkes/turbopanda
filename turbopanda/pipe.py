@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Jan 2 2020
-
-@author: gparkes
-
-An object for handling pipelines in conjunction with MetaPanda
-"""
 
 # future imports
 from __future__ import absolute_import

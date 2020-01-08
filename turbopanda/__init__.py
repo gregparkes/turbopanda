@@ -1,4 +1,4 @@
-# import
+# check imports
 
 """ This block handles the import needs of the package """
 hard_dependencies = ("numpy", "scipy", "pandas", "matplotlib", "sklearn")
@@ -16,7 +16,6 @@ del hard_dependencies, dependency, missing_dependencies
 """ Block ends """
 
 # import local objects
-
 from .metapanda import MetaPanda
 from .metaml import MetaML
 from .pipe import Pipe
@@ -24,10 +23,11 @@ from .visualise import *
 from .fileio import *
 from .correlate import *
 from .cache import *
+from .pub_fig import *
 from .merger import merge
 from .concat import concat
 
-__version__ = "0.1.8"
+__version__ = "0.1.9"
 __name__ = "turbopanda"
 __doc__ = """turbopanda: Turbo-charging the Pandas library in an integrative, meta-orientated style.
 

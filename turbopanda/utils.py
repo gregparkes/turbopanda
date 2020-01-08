@@ -227,7 +227,7 @@ def set_like(x):
     """
     if isinstance(x, (list, tuple)):
         return pd.Index(set(x))
-    elif isinstance(x, pd.Series):
+    elif isinstance(x, (pd.Series, pd.Index)):
         return pd.Index(x.dropna().unique())
     elif isinstance(x, set):
         return pd.Index(x)
@@ -235,42 +235,57 @@ def set_like(x):
         raise TypeError("x must be in {}, not of type {}".format(['list', 'tuple', 'pd.Series', 'pd.Index', 'set'], type(x)))
 
 
-def union(a, b):
-    """
-    Performs set union on a and b, whatever type they are.
+def union(*args):
+    """Performs set union all passed arguments, whatever type they are.
 
     Parameters
     ----------
-    a : list, tuple, pd.Series, set, pd.Index
-        List-like a
-    b : list, tuple, pd.Series, set, pd.Index
-        List-like b
+    args : list, tuple, pd.Series, set, pd.Index
+        k List-like arguments
+
+    Raises
+    ------
+    ValueError
+        There must be at least two arguments
 
     Returns
     -------
-    c : pd.Index
-        Union between a | b
+    U : pd.Index
+        Union between a | b | ... | k
     """
-    return set_like(a) | set_like(b)
+    if len(args) == 0:
+        raise ValueError('no arguments passed')
+    elif len(args) == 1:
+        return set_like(args[0])
+    else:
+        a = set_like(args[0])
+        for b in args[1:]:
+            a |= set_like(b)
+        return a
 
 
-def intersect(a, b):
-    """
-    Performs set intersect on a and b, whatever type they are.
+def intersect(*args):
+    """Performs set intersect all passed arguments, whatever type they are.
 
     Parameters
     ----------
-    a : list, tuple, pd.Series, set, pd.Index
-        List-like a
-    b : list, tuple, pd.Series, set, pd.Index
-        List-like b
+    args : list, tuple, pd.Series, set, pd.Index
+        k List-like arguments
 
     Returns
     -------
-    c : pd.Index
-        Intersect between a & b
+    I : pd.Index
+        Intersect between a & b & ... & k
     """
-    return set_like(a) & set_like(b)
+    if len(args) == 0:
+        raise ValueError('no arguments passed')
+    elif len(args) == 1:
+        return set_like(args[0])
+    else:
+        a = set_like(args[0])
+        for b in args[1:]:
+            a &= set_like(b)
+        return a
 
 
 def difference(a, b):
@@ -432,80 +447,3 @@ def standardize(x):
         return (x - np.nanmean(x, axis=0)) / np.nanstd(x, axis=0)
     else:
         raise TypeError("x must be of type [pd.Series, pd.DataFrame, np.ndarray]")
-
-
-def save_figure(fig_obj,
-                plot_type,
-                name="example1",
-                save_types=["png", "pdf"],
-                fp="./",
-                dpi=360,
-                savemode="first"):
-    """
-    Given a matplotlib.Figure object, save appropriate numbers of Figures to the respective
-    folders.
-
-    Parameters
-    -------
-    fig : matplotlib.Figure
-        The figure object to save.
-    plot_type : str
-        The type of plot this is, accepted inputs are:
-        ["scatter", "kde", "heatmap", "cluster", "bar", "hist", "kde", "quiver",
-        "box", "line", "venn", "multi", "pie"]
-    name : str (optional)
-        The name of the file, this may be added to based on the other parameters
-    save_types : list (optional)
-        Contains every unique save type to use e.g ["png", "pdf", "svg"]..
-    fp : str (optional)
-        The file path to the root directory of saving images
-    dpi : int
-        The resolution in dots per inch; set to high if you want a good image
-    savemode : str
-        ['first', 'update']: if first, only saves if file isn't present, if update,
-        overrides saved figure
-
-    Returns
-    -------
-    success : bool
-        Whether it was successful or not
-    """
-    instance_check(fig_obj, plt.Figure)
-    accepted_types = [
-        "scatter", "kde", "heatmap", "cluster", "bar", "hist", "kde", "quiver",
-        "box", "line", "venn", "multi", "pie"
-    ]
-    file_types_supported = ["png", "pdf", "svg", "eps", "ps"]
-    accepted_savemodes = ['first', 'update']
-
-    if plot_type not in accepted_types:
-        raise TypeError("plot_type: [%s] not found in accepted types!" % plot_type)
-
-    for st in save_types:
-        if st not in file_types_supported:
-            TypeError("save_type: [%s] not supported" % st)
-    if savemode not in accepted_savemodes:
-        raise ValueError("savemode: '{}' not found in {}".format(savemode, accepted_savemodes))
-
-    # correct to ensure filepath has / at end
-    if not fp.endswith("/"):
-        fp += "/"
-
-    # check whether the filepath exists
-    if os.path.exists(fp):
-        for t in save_types:
-            # if the directory does not exist, create it!
-            if not os.path.isdir(fp + "_" + t):
-                os.mkdir(fp + "_" + t)
-            # check if the figures themselves already exist.
-            filename = "{}_{}/{}_{}.{}".format(fp, t, plot_type, name, t)
-            if os.path.isfile(filename):
-                warnings.warn("Figure: '{}' already exists: Using savemode: {}".format(filename, savemode), UserWarning)
-                if savemode == 'update':
-                    fig_obj.savefig(filename, format=t, bbox_inches='tight', dpi=dpi)
-            else:
-                # make the file
-                fig_obj.savefig(filename, format=t, bbox_inches="tight", dpi=dpi)
-    else:
-        raise IOError("filepath: [%s] does not exist." % fp)
-    return True

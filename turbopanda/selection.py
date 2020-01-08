@@ -25,8 +25,8 @@ __all__ = ("regex_column", "get_selector", "_type_encoder_map")
 
 
 def _numpy_types():
-    return (np.int, np.bool, np.float, np.float64, np.float32, np.float16, np.int64,
-            np.int32, np.int16, np.int8, np.uint8, np.uint16, np.uint32, np.uint64)
+    return [np.int, np.bool, np.float, np.float64, np.float32, np.float16, np.int64,
+            np.int32, np.int16, np.int8, np.uint8, np.uint16, np.uint32, np.uint64]
 
 
 def _numpy_string_types():
@@ -34,11 +34,11 @@ def _numpy_string_types():
 
 
 def _extra_types():
-    return float, int, bool, object, CategoricalDtype
+    return [float, int, bool, object, CategoricalDtype]
 
 
 def _extra_string_types():
-    return "object", "category"
+    return ["object", "category"]
 
 
 def _type_encoder_map():

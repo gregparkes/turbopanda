@@ -7,13 +7,19 @@ Created on Tue Nov  5 17:29:46 2019
 
 Some analysis functions to apply to meta columns.
 """
+# future imports
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
+# further imports
 import numpy as np
 import pandas as pd
 from sklearn.cluster import FeatureAgglomeration
 
-from .utils import chain_union
+# local imports
 from .distribution import Distribution
+from .utils import union
 
 
 def _levenshtein_ratio_and_distance(s, t, ratio_calc=False):
@@ -82,7 +88,7 @@ def dist(df):
     d = Distribution()
     # fit each numerical column
     numcols = df.columns[df.dtypes.eq(float)]
-    models = [d.Fit(df[col].dropna()) for col in numcols]
+    models = [d.fit(df[col].dropna()) for col in numcols]
     model_names = [name if val >= 0.05 else np.nan for name, val in models]
     not_numcols = df.columns.symmetric_difference(numcols)
     return pd.concat([
@@ -100,4 +106,4 @@ def intersection_grid(indexes):
         for j in range(i + 1, len(indexes)):
             ints = indexes[i].intersection(indexes[j])
             union_l.append(ints)
-    return chain_union(*union_l)
+    return union(*union_l)

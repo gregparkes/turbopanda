@@ -7,11 +7,21 @@ Created on Tue Jan 2 2020
 
 An object for handling pipelines in conjunction with MetaPanda
 """
+
+# future imports
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+# imports
 from sklearn import preprocessing
 from pandas import to_numeric
 
+# locals
 from .utils import boolean_to_integer, object_to_categorical, is_n_value_column
 
+
+__all__ = ("Pipe")
 
 def _attempt_float_cast(s):
     try:
@@ -73,25 +83,37 @@ def _single_pipe(argument):
 
 
 class Pipe(object):
-    """
+    """An object for handling pipelines of data.
+
     A basic list-like object that allows users to create, manipulate
     and execute functions to a given object/class.
+
+    Attributes
+    ----------
+    p_ : list
+        The steps of each argument in the pipeline
+
+    Methods
+    -------
+    None
     """
 
     def __init__(self, *args):
         """
-        Creates a 'pipeline' for you using relative shorthand. Each argument
-        is a step in the Pipeline.
+        Creates a pipeline for you using relative shorthand. Each argument
+        is a step in the `Pipe`.
 
-        e.g Pipe(["apply_columns", "lower"]) returns simply:
-            ('apply_columns', ('lower',), {})
+        Pipe can accept a bunch of arguments corresponding to pipe steps:
+        >>> import turbopanda as turb
+        >>> turb.Pipe(['apply_columns', 'lower'])
+        ('apply_columns', ('lower',), {})
 
         Pipe also accepts keyword arguments in the form of strings. 'axis=0'
 
         Parameters
         -------
-        args : list of arguments
-            A series of arguments which can be converted into a suitable and cheap pipeline
+        args : str, Pipe, list of 3-tuple, (function name, *args, **kwargs)
+            A set of instructions expecting function names in MetaPanda and parameters.
 
         Returns
         -------
@@ -153,7 +175,7 @@ class Pipe(object):
             A list of x-features
         y_s : str/list of str, pd.Index
             A list of y-feature(s)
-        preprocessor : str
+        preprocessor : str, optional
             Name of preprocessing: default 'scale', choose from
                 [power_transform, minmax_scale, maxabs_scale, robust_scale,
                  quantile_transform, scale, normalize]
@@ -192,6 +214,7 @@ class Pipe(object):
 
         Parameters
         --------
+        None
 
         Returns
         -------
@@ -221,6 +244,7 @@ class Pipe(object):
 
         Parameters
         --------
+        None
 
         Returns
         -------

@@ -5,15 +5,24 @@ Created on Thu Dec 10 16:37:45 2019
 
 @author: gparkes
 """
+
+# future imports
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+# imports
 import numpy as np
 from pandas import merge as pmerge
 from pandas import DataFrame
 import itertools as it
 
+# locals
 from .metapanda import MetaPanda
-from .utils import check_list_type, belongs, union
+from .utils import check_list_type, belongs
 
-__all__ = ["merge"]
+
+__all__ = ("merge")
 
 
 def _intersecting_pairs(sdf1, sdf2):
@@ -33,7 +42,7 @@ def _intersecting_pairs(sdf1, sdf2):
         sdf2_cols = sdf2.columns[sdf2.dtypes.eq(object)]
 
     # calculate pairings
-    pairings = list(it.product(sdf1_cols, sdf2_cols))
+    pairings = tuple(it.product(sdf1_cols, sdf2_cols))
     # empty array
     arr = np.zeros((len(pairings), 2))
     for i, (p1, p2) in enumerate(pairings):
@@ -103,13 +112,24 @@ def merge(mdfs, how='inner', clean_pipe=None):
     Parameters
     ---------
     mdfs : list of MetaPanda
-        An ordered set of MetaPandas to merge together. We use 'inner' by default.
-    how : str
+        An ordered set of MetaPandas to merge together.
+    how : str, optional
+        Choose from {'inner', 'outer', 'left'}, see pandas.merge for more details.
         'inner': drops rows that aren't found in all Datasets
         'outer': keeps all rows
         'left': drops rows that aren't found in first Dataset
-    clean_pipe : pipeline
-        A set of instructions to pass to the fully-merged DataFrame once we're done
+    clean_pipe : Pipe/None, optional
+        A set of instructions to pass to the fully-merged DataFrame once we're done.
+        See turb.Pipe() for details.
+
+    Raises
+    ------
+    IndexException
+        If there is no intersection between the indexes of both datasets
+    TypeException
+        If one or more elements in `mdfs` is not of type {MetaPanda}
+    ValueException
+        If `how` is not one of the choice options
 
     Returns
     -------

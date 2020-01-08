@@ -7,20 +7,25 @@ Created on Tue Nov 26 18:01:53 2019
 
 Creates Meta Scikit-learn models.
 """
+# future imports
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
+# imports
 import numpy as np
 import pandas as pd
-
 from sklearn import tree, linear_model, ensemble, svm, gaussian_process, neighbors
 from sklearn.base import is_classifier, is_regressor, BaseEstimator
 from sklearn.multioutput import MultiOutputRegressor, MultiOutputClassifier
 from sklearn.model_selection import cross_val_predict, GridSearchCV, cross_validate
 from sklearn.metrics import r2_score
 
+# locals
 from .pipe import Pipe
 from .models import *
 
-__sklearn_model_packages__ = [tree, linear_model, ensemble, svm, gaussian_process, neighbors]
+__sklearn_model_packages__ = (tree, linear_model, ensemble, svm, gaussian_process, neighbors)
 
 
 def _get_hidden_coefficients(directory):
@@ -131,9 +136,38 @@ def _get_coefficient_matrix_multioutput(fitted_multi, X, y, cv):
 
 
 class MetaML(object):
-    """
-    An object that handles complex operations on a MetaPanda object to run
+    """Performs complex machine-learning operations on a MetaPanda object to run
     scikit-learn models.
+
+    Attributes
+    ----------
+    cv : int
+        Number of cross-validations
+    X : pd.DataFrame
+        The input columns
+    y : pd.DataFrame
+        The output column(s)
+    model_str : str
+        The name of the scikit-learn model to use
+    mdf : MetaPanda
+        The entire dataset to call upon
+    lm : sklearn model
+        The actual model to perform analyses on
+    is_fit : bool
+        Determines whether the model has been fitted or not
+    x_names : list
+        The column names in X
+    y_names : str/list
+        The column name(s) in y
+    score_r2 : float
+        The score of the fitted model
+    coef_mat : pd.DataFrame
+        The result of model coefficients from the fitted model
+
+    Methods
+    -------
+    fit()
+        Performs a single run/fit and returns predictions and scores based on defaults.
     """
 
     def __init__(self, mp, x_select, y_select, model="LinearRegression"):
@@ -148,7 +182,7 @@ class MetaML(object):
             A selector of x-inputs
         y_select : selector
             A selector of y-inputs
-        model : str, sklearn model
+        model : str, sklearn model, optional
             The model selected to perform a run as
         """
         # make mp ML-ready

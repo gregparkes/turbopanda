@@ -7,33 +7,41 @@ Created on Mon Nov 11 13:55:47 2019
 
 Taken from blog: http://www.insightsbot.com/blog/WEjdW/fitting-probability-distributions-with-python-part-1
 """
+# future imports
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
+# imports
 from scipy import stats
 import matplotlib.pyplot as plt
 
 
 class Distribution(object):
     """
-    Fits a distribution to data.
+    Distributions make use of the scipy.stats module to assess the continuous distribution of a given
+    Series of data, and fits the best distribution to it where possible.
+
+    Distributions currently checked include:
+        {'norm', 'lognorm', 'expon', 'pareto', 'logistic', 't', 'laplace', 'uniform', 'halfnorm'}
+
+    Includes generating random numbers and plotting methods.
     """
-
-    def __init__(self, dist_names=[]):
-        if len(dist_names) == 0:
-            self.dist_names = [
-                "norm", "lognorm", "expon", "pareto",
-                "logistic", "t", "laplace", "uniform",
-                "halfnorm"
-            ]
-        self.dist_results = []
-        self.params = {}
-
+    def __init__(self, dist_names=()):
+        """
+        Initialises a Distribution object, specifying the distribution space to be searched.
+        """
+        self.dist_names = dist_names if len(dist_names) > 0 else (
+            "norm", "lognorm", "expon", "pareto",
+            "logistic", "t", "laplace", "uniform",
+            "halfnorm"
+        )
         self.dist_name = ""
         self.PValue = 0
         self.Param = None
-
         self.isFitted = False
 
-    def Fit(self, y):
+    def fit(self, y):
         self.dist_results = []
         self.params = {}
 
@@ -55,7 +63,7 @@ class Distribution(object):
         self.isFitted = True
         return self.dist_name, self.PValue
 
-    def Random(self, n=1):
+    def random(self, n=1):
         if self.isFitted:
             dist = getattr(stats, self.dist_name)
             param = self.params[self.dist_name]
@@ -64,7 +72,7 @@ class Distribution(object):
             raise ValueError("Distribution is not fitted.")
 
     def Plot(self, y):
-        x = self.Random(n=len(y))
+        x = self.random(n=len(y))
         plt.hist(x, alpha=.5, label="Fitted")
         plt.hist(y, alpha=.5, label="Actual")
         plt.legend(loc="upper right")

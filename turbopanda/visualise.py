@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Nov 21 16:37:45 2019
 
-@author: gparkes
-"""
+# future imports
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+# imports
 import numpy as np
 import matplotlib.pyplot as plt
 import itertools as it
 from scipy import stats
-
 from sklearn.metrics import r2_score
 
+# locals
 from .utils import nearest_factors, save_figure, belongs, fself, standardize
 from .metaml import MetaML
 
-__all__ = ["plot_scatter_grid", "plot_missing", "plot_hist_grid",
-           "plot_coefficients", "plot_actual_vs_predicted"]
+
+__all__ = ("plot_scatter_grid", "plot_missing", "plot_hist_grid",
+           "plot_coefficients", "plot_actual_vs_predicted")
 
 
 def _iqr(a):

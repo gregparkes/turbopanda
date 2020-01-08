@@ -7,20 +7,26 @@ Created on Wed Nov  6 13:48:57 2019
 
 Handles selection of handles.
 """
+# future imports
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
+# imports
 import numpy as np
 import re
 from pandas import CategoricalDtype, concat, Index, Series
 
-from .utils import boolean_series_check, chain_intersection, chain_union
+# locals
+from .utils import boolean_series_check, intersect, union
 
 
-__all__ = ["regex_column", "get_selector", "_type_encoder_map"]
+__all__ = ("regex_column", "get_selector", "_type_encoder_map")
 
 
 def _numpy_types():
-    return [np.int, np.bool, np.float, np.float64, np.float32, np.float16, np.int64,
-            np.int32, np.int16, np.int8, np.uint8, np.uint16, np.uint32, np.uint64]
+    return (np.int, np.bool, np.float, np.float64, np.float32, np.float16, np.int64,
+            np.int32, np.int16, np.int8, np.uint8, np.uint16, np.uint32, np.uint64)
 
 
 def _numpy_string_types():
@@ -28,11 +34,11 @@ def _numpy_string_types():
 
 
 def _extra_types():
-    return [float, int, bool, object, CategoricalDtype]
+    return float, int, bool, object, CategoricalDtype
 
 
 def _extra_string_types():
-    return ["object", "category"]
+    return "object", "category"
 
 
 def _type_encoder_map():
@@ -44,7 +50,7 @@ def _type_encoder_map():
 
 def _type_decoder_map():
     return {
-        **{"object":object, "category":CategoricalDtype},
+        **{"object": object, "category": CategoricalDtype},
         **dict(zip(_numpy_string_types(), _numpy_types()))
     }
 
@@ -132,9 +138,9 @@ def get_selector(df, meta, cached, selector, raise_error=False, select_join="OR"
         s_groups = [_get_selector_item(df, meta, cached, s, raise_error) for s in selector]
         # print(s_groups)
         if select_join == "AND":
-            return chain_intersection(*s_groups)
+            return intersect(*s_groups)
         elif select_join == "OR":
-            return chain_union(*s_groups)
+            return union(*s_groups)
         # by default, use intersection for AND, union for OR
     else:
         # just one item, return asis

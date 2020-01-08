@@ -6,49 +6,60 @@ Created on Tue Nov  5 14:48:53 2019
 @author: gparkes
 """
 
-__all__ = ["read", "read_mp", 'read_raw_json']
+# future imports
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
+# imports
+import warnings
 import glob
 import json
 import itertools as it
 
+# locals
 from .metapanda import MetaPanda
 from .utils import instance_check
+from .deprecator import deprecated
+
+
+__all__ = ("read", "read_mp", 'read_raw_json')
 
 
 def read(filename, name=None, *args, **kwargs):
     """
-    Reads in a datafile and creates a MetaPanda object from it.
-
-        NEW IN 0.1.7 - Glob support
-            filename now supports the glob library,
-            which uses unix-like pathname pattern expression.
-            This allows you to read in multiple files simultaenously.
-                e.g "*.json" reads in every JSON file in the local directory.
+    Reads in a data source from file and creates a MetaPanda object from it.
 
     Note that if multiple files are selected, they are returned in ALPHABETICAL ORDER, not
-    necessarily the order in the file directory. If a list of names is passed, this is
+    necessarily the order in the file directory. If a list of `name` is passed, this is
     sorted so as to match the filename ordering returned.
 
     Parameters
-    -------
+    ----------
     filename : str
         A relative/absolute link to the file, with extension provided.
-        Accepted extensions: [csv, CSV, xls, xlsx, XLSX, json, hdf]
+        Accepted extensions: {'csv', 'CSV', 'xls', 'xlsx', 'XLSX', 'json', 'hdf'}
         .json is a special use case and will use the MetaPanda format, NOT the pd.read_json function.
-        filename now accepts glob-compliant input to read in multiple files if selected.
-    name : str, list, optional
-        A custom name to use for the MetaPanda, else the filename is used. Where this is a list, this
+        `filename` now accepts glob-compliant input to read in multiple files if selected.
+    name : str/list of str, optional
+        A custom name to use for the MetaPanda, else `filename` is used. Where this is a list, this
         is sorted to alphabetically match the filename.
-    args : list
+    args : list, optional
         Additional args to pass to pd.read_[ext]/MetaPanda()
-    kwargs : dict
+    kwargs : dict, optional
         Additional args to pass to pd.read_[ext]MetaPanda()
 
-    Returns
+    Raises
     ------
-    mdf : list, MetaPanda
-        A MetaPanda object. Returns a list of objects if filename is glob-like and
+    IOException
+        If the no `filename` are selected, or `filename` does not exist
+    ValueException
+        If `filename` has incorrect file type ending
+
+    Returns
+    -------
+    mdf : (list of) MetaPanda
+        A MetaPanda object. Returns a list of MetaPanda if `filename` is glob-like and
         selects multiple files.
     """
     instance_check(filename, str)
@@ -70,7 +81,7 @@ def read(filename, name=None, *args, **kwargs):
             elif ext(fl) == 'json':
                 return MetaPanda.from_json(fl, name=n, **kwargs)
             else:
-                raise IOError("file ending '{}' not recognized, must end with {}".format(fl, pandas_types + ['json']))
+                raise ValueError("file ending '{}' not recognized, must end with {}".format(fl, pandas_types + ['json']))
 
         if isinstance(name, (list, tuple)):
             ds = [fetch_db(f, n) for f, n in it.zip_longest(glob_name, sorted(name))]
@@ -82,12 +93,16 @@ def read(filename, name=None, *args, **kwargs):
         return ds if len(ds) > 1 else ds[0]
 
 
+@deprecated('0.1.8', '0.2.0', 'read')
 def read_mp(filename):
     """
     Reads in a MetaPanda object from it. Note that
     this method only works if you read in a JSON file with
     the format generated from a matching
     write_mp() method.
+
+    .. TODO deprecated:: 0.1.8
+        `read_mp` will be removed in 0.2.0, use `read` instead.
 
     Parameters
     -------
@@ -98,6 +113,10 @@ def read_mp(filename):
     ------
     mdf : MetaPanda
         A MetaPanda object.
+
+    See Also
+    --------
+    turb.read : Reads in a data source from file and creates a MetaPanda object from it.
     """
     return MetaPanda.from_json(filename)
 

@@ -1,75 +1,147 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Fri Nov  1 15:55:38 2019
 
-@author: gparkes
-"""
+# future imports
+"""This file handles the use of MetaPanda objects."""
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-import functools
+# imports
 import json
-import os
 import sys
 import warnings
 from copy import deepcopy
+from functools import wraps
 
 import numpy as np
 import pandas as pd
-from pandas import DataFrame
 from pandas.core.groupby.generic import DataFrameGroupBy
 
+# locals
 from .analyze import intersection_grid
 from .metadata import *
 from .pipe import Pipe
 from .selection import get_selector, _type_encoder_map
 from .utils import *
 
-# hidden .py attributes
-
-__non_delay_functions__ = [
-    "head", "dtypes", "cache", "cache_pipe", "cache_k", "view", "view_not",
-    "compute", "compute_k", "write"
-]
-
-__delay_functions__ = [
-    "drop", "keep", "apply", "apply_index", "apply_columns",
-    "transform", "transform_k", "rename", "add_prefix",
-    "add_suffix", "meta_map", "expand", "shrink", "sort_columns",
-    "split_categories", "filter_rows"
-]
-
-__functions__ = __non_delay_functions__ + __delay_functions__
+__all__ = ("MetaPanda")
 
 
 class MetaPanda(object):
-    """
-    A pandas.DataFrame, but with a few extra goodies. Contains meta-functionality
-    for the pandas.DataFrame, including complex handling of grouped-columns.
+    """A meta-object for a pandas.DataFrame with extra information.
+
+    The aim of this object is to extend the functionality of the `pandas` library package,
+    which is extensively used for data munging, manipulation and visualization of large datasets.
+
+    Attributes
+    ----------
+    df_ : pd.DataFrame
+        The underlying (n, p)-shaped dataset
+    meta_ : pd.DataFrame
+        Meta information (p, k)-shaped describing column data
+    name_ : str
+        The name of the dataset
+    n_ : int
+        The number of rows in `df_`
+    p_ : int
+        The number of columns in `df_`
+    memory_ : str
+        String-formatted representation of memory consumption in megabytes
+    mode_ : str
+        Determines how 'delay' methods are executed
+    selectors_ : dict
+        Maps unique name (key) to cached selected groups of columns (value)
+    mapper_ : dict
+        Maps unique name (key) to key of cached selected column groups (value)
+    pipe_ : dict
+        Maps unique name (key) to cached Pipe objects
+
+    Methods
+    -------
+    head(k=5)
+         A wrapper for pandas.DataFrame.head()
+    dtypes(grouped=True)
+        Determines the data type of each column in `df_`
+    view(selector)
+        Views a selection of columns in `df_`
+    view_not(selector)
+        Views the non-selected columns in `df_`
+    copy(None)
+        Creates a copy of this instance
+    apply(f_name, f_args, f_kwargs)
+        Applies a pandas.DataFrame function to `df_`
+    apply_index(f_name, f_args, f_kwargs)
+        Applies a pandas.Index function to `df_.index`
+    apply_columns(f_name, f_args, f_kwargs)
+        Applies a pandas.Index function to `df_.columns`
+    drop(selector)
+        Drops the selected columns from `df_`
+    keep(selector)
+        Keeps the selected columns from `df_` only
+    filter_rows(func, selector=None, args)
+        Filters j rows using boolean-index returned from `function`
+    cache(name, selector)
+        Adds a cache element to `selectors_`
+    cache_k(selectors)
+        Adds k cache elements to `selectors_`
+    cache_pipe(name, pipe)
+        Adds a pipe element to `pipe_`
+    rename(ops, selector=None, axis=1)
+        Performs a chain of .str.replace operations on `df_.columns`
+    add_prefix(pref, selector=None)
+        Adds a string prefix to selected columns
+    add_suffix(suf, selector=None)
+        Adds a string suffix to selected columns
+    transform(func, selector=None,  method='transform', whole=False, args, kwargs)
+        Performs an inplace transformation to a group of columns within `df_`.
+    transform_k(ops)
+        Performs multiple inplace transformations to a group of columns within `df_`
+    meta_map(name, selectors)
+        Maps a group of selectors with an identifier, in `mapper_`
+    sort_columns(by="alphabet", ascending=True)
+        Sorts `df_` using vast selection criteria
+    expand(column, sep=",")
+        Expands out a 'stacked' id column to a longer-form DataFrame
+    shrink(column, sep=",")
+        Expands out a 'unstacked' id column to a shorter-form DataFrame
+    split_categories(column, sep=",", renames=None)
+        Splits a column into j categorical variables to be associated with `df_`
+    compute(pipe=None, inplace=False, update_meta=False)
+        Executes a pipeline on `df_`
+    compute_k(pipes=None, inplace=False)
+        Executes `k` pipelines on `df_`, in order
+    write(filename=None)
+        Saves a MetaPanda to disk
     """
 
     def __init__(self,
                  dataset,
-                 name=None,
-                 mode="instant",
-                 with_clean=True,
-                 with_warnings=False):
-        """
+                 name: str = None,
+                 mode: str = "instant",
+                 with_clean: bool = True,
+                 with_warnings: bool = False):
+        """Define a MetaPanda frame.
+
         Creates a Meta DataFrame with the raw data and parametrization of
         the DataFrame by its grouped columns.
 
         Parameters
-        -------
+        ----------
         dataset : pd.DataFrame
             The raw data set to create as a MetaDataFrame.
-        name : str
+        name : str, optional
             Gives the MetaDataFrame a name, which comes into play with merging, for instance
-        mode : str
-            Choose from ['instant', 'delay']
-            If instant, executes all functions immediately inplace
-            If delay, builds a task graph in 'pipe_'
-                and then executes inplace when 'compute()' is called
+        mode : str, optional
+            Choose from {'instant', 'delay'}
+            If 'instant', executes all functions immediately inplace
+            If 'delay', builds a task graph in 'pipe_'
+                and then executes inplace when 'compute' is called
+        with_clean : bool, optional
+            If True, uses Pipe.clean() to perform minor preprocessing on `dataset`
+        with_warnings : bool, optional
+            If True, prints warnings when strange things happen, for instance during selection
         """
-
         self._with_warnings = with_warnings
         self._with_clean = with_clean
 
@@ -80,6 +152,8 @@ class MetaPanda(object):
         self._pipe = {"current": []}
         # columns added to meta_map
         self._mapper = {}
+        # set empty meta
+        self._meta = None
         # set using property
         self.df_ = dataset
         self.name_ = name if name is not None else 'DataSet'
@@ -87,7 +161,7 @@ class MetaPanda(object):
     """ ############################ STATIC FUNCTIONS ######################################## """
 
     def _actionable(function):
-        @functools.wraps(function)
+        @wraps(function)
         def new_function(self, *args, **kwargs):
             if self.mode_ == "delay":
                 self._pipe["current"].append((function.__name__, args, kwargs))
@@ -97,23 +171,20 @@ class MetaPanda(object):
         return new_function
 
     @classmethod
-    def from_pandas(cls, filename, name=None, metafile=None, *args, **kwargs):
-        """
-        Reads in a datafile from CSV and creates a MetaPanda object from it.
+    def from_pandas(cls, filename, name=None, *args, **kwargs):
+        """Read in a MetaPanda from a comma-separated version (csv) file.
 
         Parameters
         -------
         filename : str
             A relative/absolute link to the file, with extension provided.
-            Accepted extensions: [csv, CSV]
+            Accepted extensions: {'csv', 'xls', 'xlsx', 'XLSX', 'hdf', 'sql'}
         name : str, optional
-            A custom name to use for the MetaPanda, else the filename is used
-        metafile : str, optional
-            An associated meta file to join into the MetaPanda, else if None,
-            attempts to find the file, otherwise just creates the raw default.
-        args : list
+            A custom name to use for the MetaPanda.
+            If None, `filename` is used.
+        args : list, optional
             Additional args to pass to pd.read_csv
-        kwargs : dict
+        kwargs : dict, optional
             Additional args to pass to pd.read_csv
 
         Returns
@@ -123,41 +194,22 @@ class MetaPanda(object):
         """
         file_ext_map = {
             "csv": pd.read_csv, "xls": pd.read_excel, "xlsx": pd.read_excel,
-            "json": pd.read_json, "hdf": pd.read_hdf,
-            "sql": pd.read_sql, "XLSX": pd.read_excel
+            "hdf": pd.read_hdf, "sql": pd.read_sql, "XLSX": pd.read_excel
         }
 
         # split filename into parts and check
         directory, jname, ext = split_file_directory(filename)
 
         df = file_ext_map[ext](filename, *args, **kwargs)
-        # map to MetaPanda
-        if name is not None:
-            mp = cls(df, name=name)
-        else:
-            mp = cls(df, name=jname)
-            name = "_"
-
-        if metafile is not None:
-            met = pd.read_csv(metafile, index_col=0, header=0, sep=",")
-            mp.meta_ = met
-        else:
-            # try to find a metafile in the same directory.
-            dir_files = os.listdir(directory)
-            # potential combination of acceptable names to find
-            combs = [jname + "__meta.csv", name + "__meta.csv"]
-
-            for potential_name in combs:
-                if potential_name in dir_files:
-                    met = pd.read_csv(directory + "/" + potential_name, index_col=0, header=0, sep=",")
-                    # add to mp
-                    mp.meta_ = met
-                    return mp
+        # create MetaPanda
+        mp = cls(df, name=name) if name is not None else cls(df, name=jname)
+        # return
         return mp
 
     @classmethod
     def from_json(cls, filename, **kwargs):
-        """
+        """Read in a MetaPanda from a custom JSON file.
+
         Reads in a datafile from JSON and creates a MetaPanda object from it.
         Pipe attributes are not saved currently due to the problem of storing
         potential lambda functions.
@@ -165,8 +217,8 @@ class MetaPanda(object):
         Parameters
         -------
         filename : str
-            A relative/absolute link to the JSON file, with extension optional.
-        **kwargs : dict
+            A relative/absolute link to the JSON file.
+        **kwargs : dict, optional
             Other keyword arguments to pass to MetaPanda constructor
 
         Returns
@@ -246,7 +298,8 @@ class MetaPanda(object):
                 self._df = _grouped.agg(fn2)
                 return self
             else:
-                raise ValueError("function '{}' not recognized in pandas.DataFrame.* API: {}".format(fn2, dir(_grouped)))
+                raise ValueError(
+                    "function '{}' not recognized in pandas.DataFrame.* API: {}".format(fn2, dir(_grouped)))
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.* API: {}".format(fn, dir(self.df_)))
 
@@ -273,9 +326,6 @@ class MetaPanda(object):
             raise ValueError("function '{}' not recognized in pandas.DataFrame.columns.[str.]* API".format(fn))
 
     def _reset_meta(self):
-        """
-        Assumes df is set.
-        """
         self._meta = basic_construct(self._df)
         # add in metadata rows.
         add_metadata(self._df, self._meta)
@@ -342,6 +392,7 @@ class MetaPanda(object):
     """ ############################## OVERRIDDEN OPERATIONS ###################################### """
 
     def __getitem__(self, selector):
+        """Fetch a subset determined by the selector."""
         # we take the columns that are NOT this selection, then drop to keep order.
         sel = self.view(selector)
         if sel.size > 0:
@@ -349,10 +400,12 @@ class MetaPanda(object):
             return self.df_[sel].squeeze()
 
     def __delitem__(self, selector):
+        """Delete columns determined by the selector."""
         # drops columns inplace
         self._drop_columns(self.view(selector))
 
     def __repr__(self):
+        """Represent the object in a stringed format."""
         p = self.df_.shape[1] if self.df_.ndim > 1 else 1
         """
         OPTIONS are:
@@ -378,11 +431,12 @@ class MetaPanda(object):
 
     @property
     def df_(self):
+        """Fetch the raw dataset."""
         return self._df
 
     @df_.setter
     def df_(self, df):
-        if isinstance(df, DataFrame):
+        if isinstance(df, pd.DataFrame):
             # apply the 'cleaning pipeline' to this.
             self._df = df
             # define meta
@@ -403,11 +457,12 @@ class MetaPanda(object):
 
     @property
     def meta_(self):
+        """Fetch the dataframe with meta information."""
         return self._meta
 
     @meta_.setter
     def meta_(self, meta):
-        if isinstance(meta, DataFrame):
+        if isinstance(meta, pd.DataFrame):
             self._meta = meta
             # categorize
             categorize_meta(self._meta)
@@ -418,31 +473,29 @@ class MetaPanda(object):
 
     @property
     def n_(self):
-        """
-        Returns the number of rows within the df_ attribute.
-        """
+        """Fetch the number of rows/samples within the df_ attribute."""
         return self.df_.shape[0]
 
     @property
     def p_(self):
-        """
-        Returns the number of columns/dimensions within the df_ attribute.
-        """
+        """Fetch the number of dimensions within the df_ attribute."""
         return self.df_.shape[1]
 
     """ Additional meta information """
 
     @property
     def selectors_(self):
-        """ Returns the cached selectors available. """
+        """Fetch the cached selectors available."""
         return self._select
 
     @property
     def memory_(self):
+        """Fetch the memory consumption of the MetaPanda."""
         return "{:0.3f}MB".format(calc_mem(self.df_) + calc_mem(self.meta_))
 
     @property
     def name_(self):
+        """Fetch the name of the MetaPanda."""
         return self._name
 
     @name_.setter
@@ -457,56 +510,65 @@ class MetaPanda(object):
 
     @property
     def mode_(self):
+        """Choose from {'instant', 'delay'}."""
         return self._mode
 
     @mode_.setter
     def mode_(self, mode):
-        if mode in ["instant", "delay"]:
+        if mode in ("instant", "delay"):
             self._mode = mode
         else:
             raise ValueError("'mode' must be ['instant', 'delay'], not '{}'".format(mode))
 
     @property
     def pipe_(self):
+        """Fetch the cached pipelines."""
         return self._pipe
 
     @property
     def mapper_(self):
+        """Fetch the mapping between unique name and selector groups."""
         return self._mapper
 
     """ ############################### BOOLEAN PROPERTIES ##################################################"""
 
     @property
     def is_square(self):
+        """Determine whether the matrix is square-shaped."""
         return self.n_ == self.p_
 
     @property
     def is_symmetric(self):
-        """ Defines whether a matrix is symmetric """
+        """Determine whether the matrix is symmetric."""
         return self.is_square and (np.allclose(self.df_, self.df_.T))
 
     @property
     def is_positive_definite(self):
+        """Determine whether the matrix is positive-definite."""
         return self.is_square and np.all(np.linalg.eigvals(self.df_.values) > 0)
 
     @property
     def is_singular(self):
+        """Determine whether the matrix is singular."""
         return np.linalg.cond(self.df_.values) >= (1. / sys.float_info.epsilon)
 
     @property
     def is_orthogonal(self):
-        """ An orthogonal matrix is square matrix whose columns are orthogonal unit vectors """
+        """Determine whether the matrix is orthogonal."""
         return self.is_square and np.allclose(np.dot(self.df_.values, self.df_.values.T), np.eye(self.p_))
 
     """ ################################ PUBLIC FUNCTIONS ################################################### """
 
-    def head(self, k=5):
-        """
-        A wrapper for pandas.DataFrame.head(). See pandas documentation for details.
+    def head(self, k: int = 5):
+        """Look at the top k rows of the dataset.
+
+        See `pd.DataFrame.head` documentation for details.
+
+        .. warning:: Not affected by `mode_` attribute.
 
         Parameters
         --------
-        k : int
+        k : int, optional
             Must be 0 < k < n.
 
         Returns
@@ -516,13 +578,14 @@ class MetaPanda(object):
         """
         return self.df_.head(k)
 
-    def dtypes(self, grouped=True):
-        """
-        Provides a breakdown of the correct datatypes available to the user.
+    def dtypes(self, grouped: bool = True):
+        """Determine the grouped data types in the dataset.
+
+        .. warning:: Not affected by `mode_` attribute.
 
         Parameters
         --------
-        grouped : bool
+        grouped : bool, optional
             If True, returns the value_counts of each data type, else returns the direct types.
 
         Returns
@@ -530,17 +593,12 @@ class MetaPanda(object):
         true_types : pd.Series
             A series of index (group/name) and value (count/type)
         """
-        if not grouped:
-            return self.meta_['e_types']
-        else:
-            return self.meta_['e_types'].value_counts()
+        return self.meta_['e_types'].value_counts() if grouped else self.meta_['e_types']
 
     def view(self, *selector):
-        """
-        Select merely returns the columns of interest selected using this selector. This function
-        is not affected by the 'mode' parameter. Note that view() *preserves* the order in which columns
-        appear within the DataFrame.
+        """View a selection of columns in `df_`.
 
+        Select merely returns the columns of interest selected using this selector.
         Selections of columns can be done by:
             type [object, int, float, numpy.dtype*, pandas.CategoricalDtype]
             callable (function) that returns [bool list] of length p
@@ -548,27 +606,38 @@ class MetaPanda(object):
             str [regex, df.column name, cached name, meta.column name (that references a boolean column)]
             list/tuple of the above
 
-        *: any numpy data type, like np.float64, np.uint8
+        .. warning:: Not affected by `mode_` attribute.
+
+        .. note:: `view` *preserves* the order in which columns appear within the DataFrame.
+
+        .. note:: any numpy data type, like np.float64, np.uint8
 
         Parameters
         -------
         selector : str or tuple args
             See above for what constitutes an *appropriate selector*.
+
+        Warnings
+        --------
+        UserWarning
+            If the selection returned is empty.
 
         Returns
         ------
         sel : list
             The list of column names selected, or empty
+
+        See Also
+        --------
+        view_not : Views the non-selected columns in `df_`.
         """
-        # we do this 'double-drop' to maintain the order of the dataframe, because of set operations.
+        # we do this 'double-drop' to maintain the order of the DataFrame, because of set operations.
         return self.df_.columns.drop(self.view_not(*selector))
 
     def view_not(self, *selector):
-        """
-        Select merely returns the columns of interest NOT selected using this selector. This function
-        is not affected by the 'mode' parameter. Note that view_not() *preserves* the order in which columns
-        appear within the DataFrame.
+        """View the non-selected columns in `df_`.
 
+        Select merely returns the columns of interest NOT selected using this selector.
         Selections of columns can be done by:
             type [object, int, float, numpy.dtype*, pandas.CategoricalDtype]
             callable (function) that returns [bool list] of length p
@@ -576,17 +645,30 @@ class MetaPanda(object):
             str [regex, df.column name, cached name, meta.column name (that references a boolean column)]
             list/tuple of the above
 
-        *: any numpy data type, like np.float64, np.uint8
+        .. warning:: Not affected by `mode_` attribute.
+
+        .. note:: `view_not` *preserves* the order in which columns appear within the DataFrame.
+
+        .. note::  any numpy data type, like np.float64, np.uint8.
 
         Parameters
         -------
         selector : str or tuple args
             See above for what constitutes an *appropriate selector*.
 
+        Warnings
+        --------
+        UserWarning
+            If the selection returned is empty.
+
         Returns
         ------
         sel : list
             The list of column names NOT selected, or empty
+
+        See Also
+        --------
+        view : Views a selection of columns in `df_`.
         """
         sel = get_selector(self.df_, self.meta_, self._select, selector, raise_error=False, select_join="OR")
         if (sel.shape[0] == 0) and self._with_warnings:
@@ -595,16 +677,29 @@ class MetaPanda(object):
         return self.df_.columns.drop(sel)
 
     def copy(self):
-        """
-        Uses 'deepcopy' to create a copy of this object which is returned. This function
-        is not affected by the 'mode' parameter.
+        """Create a copy of this instance.
+
+        .. warning:: Not affected by `mode_` attribute.
+
+        Raises
+        ------
+        CopyException
+            Module specific errors with copy.deepcopy
+
+        Returns
+        -------
+        mdf2 : MetaPanda
+            A copy of this object
+
+        See Also
+        --------
+        copy.deepcopy(x) : Return a deep copy of x.
         """
         return deepcopy(self)
 
     @_actionable
-    def apply(self, f_name, *f_args, **f_kwargs):
-        """
-        Applies a pandas.DataFrame.* function to the MetaPanda dataset.
+    def apply(self, f_name: str, *f_args, **f_kwargs):
+        """Apply a `pd.DataFrame` function to `df_`.
 
         e.g mdf.apply("groupby", ["counter","refseq_id"], as_index=False)
             applies self.df_.groupby() to data and return value is stored in df_
@@ -614,9 +709,9 @@ class MetaPanda(object):
         -------
         f_name : str
             The name of the function
-        f_args : list/tuple
+        f_args : list/tuple, optional
             Arguments to pass to the function
-        f_kwargs : dict
+        f_kwargs : dict, optional
             Keyword arguments to pass to the function
 
         Returns
@@ -627,21 +722,22 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def apply_columns(self, f_name, *f_args, **f_kwargs):
-        """
-        Applies a pandas.DataFrame.columns.* function to the MetaPanda columns. The result is then returned
-        to the columns attribute, so it should only accept transform-like operations.
+    def apply_columns(self, f_name: str, *f_args, **f_kwargs):
+        """Apply a `pd.Index` function to `df_.columns`.
 
-        e.g mdf.apply_columns("strip")
-            applies self.df_.columns = self.df_.columns.str.strip() to columns
+        The result is then returned to the columns attribute, so it should only accept transform-like operations.
+
+        Thus to apply `strip` to all column names:
+
+        >>> mdf.apply_columns("strip")
 
         Parameters
         -------
         f_name : str
             The name of the function. This can be in the .str accessor attribute also.
-        f_args : list/tuple
+        f_args : list/tuple, optional
             Arguments to pass to the function
-        f_kwargs : dict
+        f_kwargs : dict, optional
             Keyword arguments to pass to the function
 
         Returns
@@ -652,21 +748,22 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def apply_index(self, f_name, *f_args, **f_kwargs):
-        """
-        Applies a pandas.DataFrame.index.* function to the MetaPanda index. The result is then returned
-        to the index attribute, so it should only accept transform-like operations.
+    def apply_index(self, f_name: str, *f_args, **f_kwargs):
+        """Apply a `pd.Index` function to `df_.index`.
 
-        e.g mdf.apply_index("strip")
-            applies self.df_.index = self.df_.index.str.strip() to columns
+        The result is then returned to the index attribute, so it should only accept transform-like operations.
+
+        Thus to apply `strip` to all index names:
+
+        >>> mdf.apply_columns("strip")
 
         Parameters
         -------
         f_name : str
             The name of the function. This can be in the .str accessor attribute also.
-        f_args : list/tuple
+        f_args : list/tuple, optional
             Arguments to pass to the function
-        f_kwargs : dict
+        f_kwargs : dict, optional
             Keyword arguments to pass to the function
 
         Returns
@@ -678,9 +775,12 @@ class MetaPanda(object):
 
     @_actionable
     def drop(self, *selector):
-        """
+        """Drop the selected columns from `df_`.
+
         Given a selector or group of selectors, drop all of the columns selected within
-        this group, applied to df_.
+        this group, applied to `df_`.
+
+        .. note:: `drop` *preserves* the order in which columns appear within the DataFrame.
 
         Parameters
         -------
@@ -690,6 +790,10 @@ class MetaPanda(object):
         Returns
         -------
         self
+
+        See Also
+        --------
+        keep : Keeps the selected columns from `df_` only.
         """
         # perform inplace
         self._drop_columns(self.view(*selector))
@@ -697,9 +801,12 @@ class MetaPanda(object):
 
     @_actionable
     def keep(self, *selector):
-        """
+        """Keep the selected columns from `df_` only.
+
         Given a selector or group of selectors, keep all of the columns selected within
-        this group, applied to df_, dropping ALL others.
+        this group, applied to `df_`, dropping all others.
+
+        .. note:: `keep` *preserves* the order in which columns appear within the DataFrame.
 
         Parameters
         --------
@@ -709,26 +816,32 @@ class MetaPanda(object):
         Returns
         -------
         self
+
+        See Also
+        --------
+        drop : Drops the selected columns from `df_`.
         """
         self._drop_columns(self.view_not(*selector))
         return self
 
     @_actionable
-    def filter_rows(self, function, selector=None, *args):
-        """
+    def filter_rows(self, func: callable, selector=None, *args):
+        """Filter j rows using boolean-index returned from `function`.
+
         Given a function, filter out rows that do not meet the functions' criteria.
+
+        .. note:: if `selector` is set, the filtering only factors in these columns.
 
         Parameters
         --------
-        function : function
+        func : function
             A function taking the whole dataset or subset, and returning a boolean
-            pd.Series with True rows kept and False rows dropped
-        selector : None or str
-            Contains either types, meta column names, column names or regex-compliant strings
-            Allows user to specify subset to rename
-            If None, applies the function to all columns.
-        args : list
-            Additional arguments to pass to function(x, *args)
+            `pd.Series` with True rows kept and False rows dropped
+        selector : str or tuple args, optional
+            Contains either types, meta column names, column names or regex-compliant strings.
+            If None, applies `func` to all columns.
+        args : list, optional
+            Additional arguments to pass as `func(x, *args)`
 
         Returns
         -------
@@ -737,24 +850,25 @@ class MetaPanda(object):
         # perform inplace
         selection = self._selector_group(selector, axis=1)
         # modify
-        if callable(function) and selection.shape[0] == 1:
-            bs = function(self.df_[selection[0]], *args)
-        elif callable(function) and selection.shape[0] > 1:
-            bs = function(self.df_.loc[:, selection], *args)
+        if callable(func) and selection.shape[0] == 1:
+            bs = func(self.df_[selection[0]], *args)
+        elif callable(func) and selection.shape[0] > 1:
+            bs = func(self.df_.loc[:, selection], *args)
         else:
-            raise ValueError("parameter '{}' not callable".format(function))
+            raise ValueError("parameter '{}' not callable".format(func))
         # check that bs is boolean series
         boolean_series_check(bs)
         self.df_ = self.df_.loc[bs, :]
         return self
 
-    def cache(self, name, *selector):
-        """
+    def cache(self, name: str, *selector):
+        """Add a cache element to `selectors_`.
+
         Saves a 'selector' to use at a later date. This can be useful if you
         wish to keep track of changes, or if you want to quickly reference a selector
         using a name rather than a group of selections.
 
-        This function is not affected by the 'mode' parameter.
+        .. warning:: Not affected by `mode_` attribute.
 
         Parameters
         -------
@@ -763,9 +877,19 @@ class MetaPanda(object):
         selector : str or tuple args
             Contains either types, meta column names, column names or regex-compliant strings
 
+        Warnings
+        --------
+        UserWarning
+            Raised if `name` already exists in `selectors_`, overrides by default.
+
         Returns
         -------
         self
+
+        See Also
+        --------
+        cache_k : Adds k cache elements to `selectors_.
+        cache_pipe : Adds a pipe element to `pipe_`.
         """
         if name in self._select and self._with_warnings:
             warnings.warn("cache name '{}' already exists in .cache, overriding".format(name), UserWarning)
@@ -781,10 +905,50 @@ class MetaPanda(object):
         self._select[name] = selector
         return self
 
-    def cache_pipe(self, name, pipeline):
+    def cache_k(self, **caches):
+        """Add k cache elements to `selectors_`.
+
+        Saves a group of 'selectors' to use at a later date. This can be useful
+        if you wish to keep track of changes, or if you want to quickly reference a selector
+        using a name rather than a group of selections.
+
+        .. warning:: Not affected by `mode_` attribute.
+
+        Parameters
+        --------
+        caches : dict (k, w)
+            keyword: unique reference of the selector
+            value: selector: str, tuple args
+                 Contains either types, meta column names, column names or regex-compliant
+
+        Warnings
+        --------
+        UserWarning
+            Raised if one of keys already exists in `selectors_`, overrides by default.
+
+        Returns
+        -------
+        self
+
+        See Also
+        --------
+        cache : Adds a cache element to `selectors_`.
+        cache_pipe : Adds a pipe element to `pipe_`.
         """
-        Saves a pipeline to use at a later date. Calls to compute() can reference the name
-        of the pipeline. This function is not affected by the 'mode' parameter.
+        for name, selector in caches.items():
+            if isinstance(selector, (tuple, list)) and len(selector) > 1:
+                self.cache(name, *selector)
+            else:
+                self.cache(name, selector)
+        return self
+
+    def cache_pipe(self, name: str, pipeline):
+        """Add a pipe element to `pipe_`.
+
+        Saves a pipeline to use at a later date. Calls to `compute` can reference the name
+        of the pipeline.
+
+        .. warning:: Not affected by `mode_` attribute.
 
         Parameters
         ----------
@@ -793,7 +957,12 @@ class MetaPanda(object):
         pipeline : Pipe, list, tuple
             list of 3-tuple, (function name, *args, **kwargs), multiple pipes, optional
             A set of instructions expecting function names in MetaPanda and parameters.
-            If empty, computes the stored pipe_ attribute.
+            If None, computes the stored `pipe_` attribute.
+
+        Warnings
+        --------
+        UserWarning
+            Raised if `name` already exists in `pipe_`, overrides by default.
 
         Returns
         -------
@@ -806,36 +975,11 @@ class MetaPanda(object):
         self.pipe_[name] = pipeline
         return self
 
-    def cache_k(self, **caches):
-        """
-        Saves a group of 'selectors' to use at a later date. This can be useful
-        if you wish to keep track of changes, or if you want to quickly reference a selector
-        using a name rather than a group of selections.
-
-        This function is not affected by the 'mode' parameter.
-
-        Parameters
-        --------
-        caches : dict (k, w)
-            keyword: unique reference of the selector
-            value: selector: str, tuple args
-                 Contains either types, meta column names, column names or regex-compliant
-
-        Returns
-        -------
-        self
-        """
-        for name, selector in caches.items():
-            if isinstance(selector, (tuple, list)) and len(selector) > 1:
-                self.cache(name, *selector)
-            else:
-                self.cache(name, selector)
-        return self
-
     @_actionable
-    def rename(self, ops, selector=None, axis=1):
-        """
-        Renames the column names within the pandas.DataFrame in a flexible fashion.
+    def rename(self, ops, selector=None, axis: int = 1):
+        """Perform a chain of .str.replace operations on `df_.columns`.
+
+        .. note:: strings that are unchanged remain the same (are not NA'd).
 
         Parameters
         -------
@@ -843,15 +987,15 @@ class MetaPanda(object):
             Where the first value of each tuple is the string to find, with its replacement
             At this stage we only accept *direct* replacements. No regex.
             Operations are performed 'in order'.
-        selector : None, str, or tuple args
+        selector : None, str, or tuple args, optional
             Contains either types, meta column names, column names or regex-compliant strings
-            Allows user to specify subset to rename
+            If None, all column names are subject to potential renaming
         axis : int, optional
-            0 for columns, 1 for index. default is 1 (for columns)
+            Choose from {1, 0} 1 = columns, 0 = index.
 
         Returns
         -------
-        self or pd.Index
+        self
         """
         # check ops is right format
         is_twotuple(ops)
@@ -865,15 +1009,14 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def add_prefix(self, pref, selector=None):
-        """
-        Adds a prefix to all of the columns or selected columns.
+    def add_prefix(self, pref: str, selector=None):
+        """Add a prefix to all of the columns or selected columns.
 
         Parameters
         -------
         pref : str
             The prefix to add
-        selector : None, str, or tuple args
+        selector : None, str, or tuple args, optional
             Contains either types, meta column names, column names or regex-compliant strings
             Allows user to specify subset to rename
 
@@ -883,19 +1026,18 @@ class MetaPanda(object):
         """
         sel_cols = self._selector_group(selector)
         # set to df_ and meta_
-        self._rename_axis(sel_cols, sel_cols + pref, 0)
+        self._rename_axis(sel_cols, sel_cols + pref, axis=1)
         return self
 
     @_actionable
-    def add_suffix(self, suf, selector=None):
-        """
-        Adds a suffix to all of the columns or selected columns.
+    def add_suffix(self, suf: str, selector=None):
+        """Add a suffix to all of the columns or selected columns.
 
         Parameters
         -------
         suf : str
             The prefix to add
-        selector : None, str, or tuple args
+        selector : None, str, or tuple args, optional
             Contains either types, meta column names, column names or regex-compliant strings
             Allows user to specify subset to rename
 
@@ -905,67 +1047,91 @@ class MetaPanda(object):
         """
         sel_cols = self._selector_group(selector)
         # set to df_ and meta_
-        self._rename_axis(sel_cols, sel_cols + suf, 0)
+        self._rename_axis(sel_cols, sel_cols + suf, axis=1)
         return self
 
     @_actionable
-    def transform(self, function, selector=None,  method='transform', whole=False, *args, **kwargs):
-        """
-        Performs an inplace transformation to a group of columns within the df_
-        attribute.
+    def transform(self,
+                  func: callable,
+                  selector=None,
+                  method: str = 'transform',
+                  whole: bool = False,
+                  *args,
+                  **kwargs):
+        """Perform an inplace transformation to a group of columns within the `df_` attribute.
+
+        This flexible function provides capacity for a wide-range of transformations, including custom transformations.
+
+        .. note:: `func` must be a transforming function, i.e one that does not change the shape of `df_`.
 
         Parameters
         -------
-        function : function
-            A function taking the pd.Series x_i as input and returning pd.Series y_i as output
-        selector : None or str
+        func : function
+            A function taking the `pd.Series` x as input and returning `pd.Series` y as output
+            If `whole`, accepts `pd.DataFrame` X, returning `pd.DataFrame` Y
+        selector : None, str, or tuple args, optional
             Contains either types, meta column names, column names or regex-compliant strings
-            Allows user to specify subset to rename
             If None, applies the function to all columns.
         method : str, optional
-            Allows the user to specify which pandas.DataFrame.<> function to call.
-                - 'transform': applies along an axis and maintains same axis/provides guarantees
-                - 'apply': more generic function applied along an axis
-                - 'applymap': applies to every ELEMENT (not axis)
-        whole : bool
-            If True, uses function(self.df_, *args) and relies on the same output.
-            If False, uses self.df_.transform(lambda x: function(x, *args, **kwargs))
-        args : list
+            Allows the user to specify which underlying DataFrame function to call.
+                Choose from {'transform', 'apply', 'applymap'}
+                - 'transform': Provides shape guarantees and computationally cheapest.
+                - 'apply': more generic function. Can be expensive.
+                - 'applymap': applies to every ELEMENT (not axis).
+                See `pd.DataFrame` for more details.
+        whole : bool, optional
+            If True, applies whole function. Often computationally cheaper.
+            If False, makes use of `pd.DataFrame.<method>`, see `method` parameter. More flexible.
+        args : list, optional
             Additional arguments to pass to function(x, *args)
-        kwargs : dict
+        kwargs : dict, optional
             Additional arguments to pass to function(x, *args, **kwargs)
 
         Returns
         -------
         self
+
+        See Also
+        --------
+        transform_k : Performs multiple inplace transformations to a group of columns within `df_`.
         """
-        belongs(method, ['apply','transform','applymap'])
+        belongs(method, ['apply', 'transform', 'applymap'])
         # perform inplace
         selection = self._selector_group(selector)
         # modify
-        if callable(function) and selection.shape[0] > 0:
+        if callable(func) and selection.shape[0] > 0:
             if whole:
-                self.df_.loc[:, selection] = function(self.df_.loc[:, selection], *args, **kwargs)
+                self.df_.loc[:, selection] = func(self.df_.loc[:, selection], *args, **kwargs)
             else:
-                self.df_.loc[:, selection] = getattr(self.df_.loc[:, selection], method)(function, *args, **kwargs)
+                self.df_.loc[:, selection] = getattr(self.df_.loc[:, selection], method)(func, *args, **kwargs)
         return self
 
     @_actionable
     def transform_k(self, ops):
-        """
-        Performs multiple inplace transformations to a group of columns within the df_
-        attribute.
+        """Perform multiple inplace transformations to a group of columns within `df_`.
+
+        Allows a chain of k transformations to be applied, in order.
 
         Parameters
         -------
         ops : list of 2-tuple
             Containing:
-                1. function - A function taking the pd.Series x_i as input and returning pd.Series y_i as output
-                2. selector - Contains either types, meta column names, column names or regex-compliant strings
+                1. func : A function taking the pd.Series x_i as input and returning pd.Series y_i as output
+                2. selector : Contains either types, meta column names, column names or regex-compliant strings
                     Allows user to specify subset to rename
+
+        Raises
+        ------
+        ValueException
+            ops must be a 2-tuple shape
+
         Returns
         -------
         self
+
+        See Also
+        --------
+        transform : Performs an inplace transformation to a group of columns within the `df_` attribute.
         """
         is_twotuple(ops)
         for op in ops:
@@ -973,34 +1139,43 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def meta_map(self, name, selectors):
-        """
-        Maps a group of selectors into a column in the meta-information
-        describing some groupings/associations between features.
+    def meta_map(self, name: str, selectors):
+        """Map a group of selectors with an identifier, in `mapper_`.
 
-        For example, your data may come from multiple sources and you wish to
+        Maps a group of selectors into a column in the meta-information
+        describing some groupings/associations between features. For example,
+        your data may come from multiple sources and you wish to
         identify this within your data.
 
         Parameters
         --------
         name : str
             The name of this overall grouping
-        selectors : list, tuple
-            At least 2 or more selectors identifying subgroups. If you use
-            cached names, the ID of the cache name is used as an identifier, and
-            likewise with a dict, else list/tuple uses default group1...groupk.
-            Selectors MUST be mentioned in the order you intend them to go.
+        selectors : list/tuple of (str, or tuple args)
+            Each contains either types, meta column names, column names or regex-compliant strings
+
+        Raises
+        ------
+        TypeException
+            selectors must be of type {list, tuple}
+        ValueException
+            If terms overlap within selector groups
 
         Returns
         -------
         self
+
+        See Also
+        --------
+        cache : Adds a cache element to `selectors_`.
+        cache_k : Adds k cache elements to `selectors_`.
         """
         # for each selector, get the group view.
         if isinstance(selectors, (list, tuple)):
             cnames = [self.view(sel) for sel in selectors]
             names = [sel if sel in self._select else "group%d" % (i + 1) for i, sel in enumerate(selectors)]
         else:
-            raise TypeError("'selectors' must be of type [list, tuple, dict]")
+            raise TypeError("'selectors' must be of type {list, tuple}")
 
         igrid = intersection_grid(cnames)
         if igrid.shape[0] == 0:
@@ -1016,17 +1191,23 @@ class MetaPanda(object):
 
     @_actionable
     def sort_columns(self, by="alphabet", ascending=True):
-        """
-        Sort by any categorical meta_ column or "alphabet".
+        """Sorts `df_` using vast selection criteria.
 
         Parameters
         -------
-        by : str or list/tuple of str
-            Sorts the columns by order of what terms are given. "alphabet" refers
-            to the column name alphabetical sorting. Choose a meta_ column categorical
-            to sort by.
-        ascending : bool or list/tuple of bool
-            Sort ascending vs descending. Specify list for multiple sort orders.
+        by : str or list/tuple of str, optional
+            Sorts columns based on information in `meta_`, or by alphabet, or by index.
+            Accepts {'alphabet', 'colnames'} as additional options. 'colnames' is `index`
+        ascending : bool or list/tuple of bool, optional
+            Sort ascending vs descending.
+            If list/tuple, specify multiple ascending/descending combinations.
+
+        Raises
+        ------
+        ValueException
+            If the length of `by` does not equal the length of `ascending`, in list instance.
+        TypeException
+            If `by` is not of type {str, list, tuple}
 
         Returns
         -------
@@ -1058,21 +1239,31 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def expand(self, column, sep=","):
-        """
+    def expand(self, column: str, sep: str = ","):
+        """Expand out a 'stacked' id column to a longer-form DataFrame.
+
         Expands out a 'stacked' id column to a longer-form DataFrame, and re-merging
         the data back in.
 
         Parameters
-        -------
+        ----------
         column : str
             The name of the column to expand, must be of datatype [object]
-        sep : str
+        sep : str, optional
             The separating string to use.
+
+        Raises
+        ------
+        ValueError
+            If `column` not found in `df_` or `meta_`, or `column` is not stackable
 
         Returns
         -------
         self
+
+        See Also
+        --------
+        shrink : Expands out a 'unstacked' id column to a shorter-form DataFrame.
         """
         if column not in self.df_.columns:
             raise ValueError("column '{}' not found in df".format(column))
@@ -1089,21 +1280,32 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def shrink(self, column, sep=","):
-        """
-        Shrinks  down a 'duplicated' id column to a shorter-form dataframe, and re-merging
+    def shrink(self, column: str, sep: str = ","):
+        """Expand out a 'unstacked' id column to a shorter-form DataFrame.
+
+        Shrinks down a 'duplicated' id column to a shorter-form dataframe, and re-merging
         the data back in.
 
         Parameters
         -------
         column : str
             The name of the duplicated column to shrink, must be of datatype [object]
-        sep : str
+        sep : str, optional
             The separating string to add.
+
+        Raises
+        ------
+        ValueError
+            If `column` not found in `df_` or `meta_`, or `column` is not shrinkable
 
         Returns
         -------
         self
+
+        See Also
+        --------
+        expand : Expands out a 'stacked' id column to a longer-form DataFrame.
+        the data back in.
         """
         if (column not in self.df_.columns) and (column != self.df_.index.name):
             raise ValueError("column '{}' not found in df".format(column))
@@ -1119,18 +1321,26 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def split_categories(self, column, sep=",", renames=None):
-        """
-        Splits a column into N categorical variables to be associated with df_.
+    def split_categories(self, column: str, sep: str = ",", renames=None):
+        """Split a column into N categorical variables to be associated with df_.
 
         Parameters
-        -------
+        ----------
         column : str
             The name of the column to split, must be of datatype [object], and contain values sep inside
-        sep : str
+        sep : str, optional
             The separating string to add.
-        renames : None or list of str
+        renames : None or list of str, optional
             If list of str, must be the same dimension as expanded columns
+
+        Raises
+        ------
+        ValueError
+            `column` not found in `df_` column names
+
+        Returns
+        -------
+        self
         """
         if column not in self.df_.columns:
             raise ValueError("column '{}' not found in df".format(column))
@@ -1148,10 +1358,15 @@ class MetaPanda(object):
         self._df.columns.name = "colnames"
         return self
 
-    def compute(self, pipe=None, inplace=False, update_meta=False):
-        """
+    def compute(self, pipe=None, inplace: bool = False, update_meta: bool = False):
+        """Execute a pipeline on `df_`.
+
         Computes a pipeline to the MetaPanda object. If there are no parameters, it computes
         what is stored in the pipe_ attribute, if any.
+
+        .. note:: the `meta_` attribute is **refreshed** after a call to `compute`, if `update_meta`
+
+        .. warning:: Not affected by `mode_` attribute.
 
         Parameters
         -------
@@ -1169,6 +1384,10 @@ class MetaPanda(object):
         Returns
         -------
         self/copy
+
+        See Also
+        --------
+        compute_k : Executes `k` pipelines on `df_`, in order.
         """
         if pipe is None:
             # use self.pipe_
@@ -1189,9 +1408,14 @@ class MetaPanda(object):
             cpy.compute(pipe, inplace=True, update_meta=update_meta)
             return cpy
 
-    def compute_k(self, pipes, inplace=False):
-        """
-        Computes multiple pipelines to the MetaPanda object, including cached types such as .current
+    def compute_k(self, pipes, inplace: bool = False):
+        """Execute `k` pipelines on `df_`, in order.
+
+        Computes multiple pipelines to the MetaPanda object, including cached types such as `.current`
+
+        .. note:: the `meta_` attribute is **refreshed** after a call to `compute_k`.
+
+        .. warning:: Not affected by `mode_` attribute.
 
         Parameters
         --------
@@ -1199,34 +1423,41 @@ class MetaPanda(object):
             A set of instructions expecting function names in MetaPanda and parameters.
             If empty, computes nothing.
         inplace : bool, optional
-            If True, applies the pipes inplace, else returns a copy. Default has now changed
-            to return a copy.
+            If True, applies the pipes inplace, else returns a copy.
 
         Returns
         -------
         self/copy
-        """
 
+        See Also
+        --------
+        compute : Executes a pipeline on `df_`.
+        """
         # join and execute
         return self.compute(join(*pipes), inplace=inplace)
 
-    def write(self, filename=None, with_meta=False, *args, **kwargs):
-        """
-        Saves a MetaPanda to disk.
+    def write(self, filename: str = None, with_meta: bool = False, *args, **kwargs):
+        """Save a MetaPanda to disk.
 
-        This function is not affected by the 'mode' parameter.
+        .. warning:: Not affected by `mode_` attribute.
 
         Parameters
         -------
         filename : str, optional
             The name of the file to save, or None it will create a JSON file with Data.
             Accepts filename that end in [.csv, .json]
+            If None, writes a JSON file using `name_` attribute.
         with_meta : bool, optional
             If true, saves metafile also, else doesn't
-        *args : list
+        *args : list, optional
             Arguments to pass to pandas.to_csv, not used with JSON file
-        **kwargs : dict
+        **kwargs : dict, optional
             Keywords to pass to pandas.to_csv, not used with JSON file
+
+        Raises
+        ------
+        IOException
+            File doesn't end in {'json', 'csv'}
 
         Returns
         -------

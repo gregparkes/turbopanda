@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Nov  4 13:13:38 2019
+# future imports
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-@author: gparkes
-"""
-
+# imports
 import os
 import numpy as np
 import pandas as pd
@@ -16,27 +16,27 @@ import warnings
 from pandas.api.types import CategoricalDtype
 from scipy.stats import norm
 
-__all__ = ["fself", "is_twotuple", "instance_check", "chain_intersection", "chain_union",
+__all__ = ("fself", "is_twotuple", "instance_check",
            "boolean_series_check", "check_list_type", "not_column_float",
            "is_column_float", "is_column_object", "is_column_int",
            "calc_mem", "remove_string_spaces", "nearest_factors", "is_missing_values",
-           "split_file_directory",
+           "split_file_directory", "c_float", "c_int", "intcat",
            "is_unique_id", "is_potential_id", "string_replace",
            "is_potential_stacker", "nunique", "object_to_categorical",
            "is_n_value_column", "boolean_to_integer", "integer_to_boolean",
            "is_metapanda_pipe", "join", "belongs", "is_possible_category",
-           "standardize", "dict_to_tuple", "set_like", "union", "difference", "intersect"]
+           "standardize", "dict_to_tuple", "set_like", "union", "difference", "intersect")
 
 
-def _cfloat():
+def c_float():
     return [np.float64, np.float32, np.float16, np.float, float]
 
 
-def _cint():
+def c_int():
     return [np.int64, np.int32, np.int16, np.int8, np.int, np.uint, np.uint8, np.uint16, np.uint16, np.uint32, int]
 
 
-def _intcat():
+def intcat():
     return [np.uint8, np.uint16]
 
 
@@ -53,19 +53,19 @@ def list_dir(obj):
 
 
 def is_possible_category(ser):
-    return ser.dtype in ([object] + _intcat())
+    return ser.dtype in ([object] + intcat())
 
 
 def not_column_float(ser):
-    return ser.dtype not in _cfloat()
+    return ser.dtype not in c_float()
 
 
 def is_column_float(ser):
-    return ser.dtype in _cfloat()
+    return ser.dtype in c_float()
 
 
 def is_column_int(ser):
-    return ser.dtype in _cint()
+    return ser.dtype in c_int()
 
 
 def is_column_object(ser):
@@ -290,28 +290,6 @@ def difference(a, b):
         Symmetric difference between a & b
     """
     return set_like(a).symmetric_difference(set_like(b))
-
-
-def chain_intersection(*cgroup):
-    """
-    Given a group of pandas.Index, perform intersection on A & B & C & .. & K
-    """
-    mchain = iter(cgroup)
-    res = mchain.__next__()
-    for m in mchain:
-        res = res.intersection(m)
-    return res
-
-
-def chain_union(*cgroup):
-    """
-    Given a group of pandas.Index, perform union on A | B | C | .. | K
-    """
-    mchain = iter(cgroup)
-    res = mchain.__next__()
-    for m in mchain:
-        res = res.union(m)
-    return res
 
 
 def remove_string_spaces(df):

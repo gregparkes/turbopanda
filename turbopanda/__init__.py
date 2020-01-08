@@ -29,3 +29,11 @@ from .concat import concat
 
 __version__ = "0.1.8"
 __name__ = "turbopanda"
+__doc__ = """turbopanda: Turbo-charging the Pandas library in an integrative, meta-orientated style.
+
+The aim of this library is extend the functionality of the `pandas` library package,
+which is extensively used for data munging,
+manipulation and visualization of large datasets. There are a number of areas that the `pandas` library is
+lacklustre from a user standpoint - we'll cover a few of these in more detail and then
+explain `turbopanda` response to these particular issues.
+"""

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Oct 31 16:39:37 2019
 
-@author: gparkes
-"""
+# future imports
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+# imports
 from pandas import DataFrame
 from numpy import nan
 

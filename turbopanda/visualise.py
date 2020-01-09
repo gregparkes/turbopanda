@@ -41,7 +41,7 @@ def _generate_square_like_grid(n, ax_size=2):
     """
     Given n, returns a fig, ax pairing of square-like grid objects
     """
-    f1, f2 = nearest_factors(n, ftype="square")
+    f1, f2 = nearest_factors(n, shape="square")
     fig, axes = plt.subplots(ncols=f1, nrows=f2, figsize=(ax_size * f1, ax_size * f2))
     if axes.ndim > 1:
         axes = list(it.chain.from_iterable(axes))
@@ -51,7 +51,7 @@ def _generate_square_like_grid(n, ax_size=2):
 def _generate_diag_like_grid(n, direction, ax_size=2):
     """ Direction is in [row, column]"""
     belongs(direction, ["row", "column"])
-    f1, f2 = nearest_factors(n, ftype="diag")
+    f1, f2 = nearest_factors(n, shape="diag")
     fmax, fmin = max(f1, f2), min(f1, f2)
     # get longest one
     tup, nc, nr = ((ax_size*fmin, ax_size*fmax), fmin, fmax) \

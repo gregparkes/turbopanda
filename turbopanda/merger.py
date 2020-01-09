@@ -19,9 +19,9 @@ import itertools as it
 
 # locals
 from .metapanda import MetaPanda
-from .utils import check_list_type, belongs
+from .utils import belongs
 
-__all__ = ("merge")
+__all__ = "merge"
 
 
 def _intersecting_pairs(sdf1, sdf2):

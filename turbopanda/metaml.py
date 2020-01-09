@@ -24,6 +24,7 @@ from sklearn.metrics import r2_score
 # locals
 from .pipe import Pipe
 from .models import *
+from .metapanda import MetaPanda
 
 __sklearn_model_packages__ = (tree, linear_model, ensemble, svm, gaussian_process, neighbors)
 
@@ -170,7 +171,7 @@ class MetaML(object):
         Performs a single run/fit and returns predictions and scores based on defaults.
     """
 
-    def __init__(self, mp, x_select, y_select, model="LinearRegression"):
+    def __init__(self, mp: MetaPanda, x_select, y_select, model: str = "LinearRegression"):
         """
         Receives a MetaPanda object with all of the features ready to go(ish).
 
@@ -219,7 +220,7 @@ class MetaML(object):
     """ ################################ PROPERTIES #############################################"""
 
     @property
-    def cv(self):
+    def cv(self) -> int:
         return self._cv
 
     @cv.setter
@@ -230,7 +231,7 @@ class MetaML(object):
             raise TypeError("cv is not of type [int]")
 
     @property
-    def X(self):
+    def X(self) -> pd.DataFrame:
         return self._X
 
     @X.setter
@@ -252,7 +253,7 @@ class MetaML(object):
             raise TypeError("y output is not of type [pd.DataFrame, pd.Series]")
 
     @property
-    def model_str(self):
+    def model_str(self) -> str:
         return self._model_str
 
     @model_str.setter
@@ -272,17 +273,17 @@ class MetaML(object):
         return self.y.columns if self.multioutput else self.y.name
 
     @property
-    def multioutput(self):
+    def multioutput(self) -> bool:
         return self.y.ndim > 1
 
     @property
-    def score_r2(self):
+    def score_r2(self) -> float:
         if not self.is_fit:
             raise ValueError("model not fitted! no r2")
         return r2_score(self.y, self.yp)
 
     @property
-    def coef_mat(self):
+    def coef_mat(self) -> pd.DataFrame:
         if not self.is_fit:
             raise ValueError("model not fitted! no coef_mat")
         if self.multioutput:

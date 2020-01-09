@@ -17,12 +17,12 @@ from __future__ import print_function
 import os
 import warnings
 from pandas import DataFrame
+from typing import Callable
 
 # locals
 from .metapanda import MetaPanda
 from .fileio import read
 from .utils import instance_check, belongs
-
 
 __all__ = ("cached", "cache")
 
@@ -33,7 +33,7 @@ def _set_index_def(df, values=('Unnamed:_0', 'Unnamed: 0')):
             df.set_index(v, inplace=True)
 
 
-def cached(func, filename='example1.json', *args, **kwargs):
+def cached(func: Callable, filename: str = 'example1.json', *args, **kwargs):
     """Provides automatic {.json, .csv} caching for `turb.MetaPanda` or `pd.DataFrame`.
 
     .. note:: this is a direct-call cache function. Not cached.
@@ -84,7 +84,7 @@ def cached(func, filename='example1.json', *args, **kwargs):
     if not callable(func):
         raise ValueError('function is not callable')
     # check that file ends with json or csv
-    belongs(filename.rsplit(".",1)[-1], ("json", "csv"))
+    belongs(filename.rsplit(".", 1)[-1], ("json", "csv"))
 
     if os.path.isfile(filename):
         # read it in
@@ -97,6 +97,7 @@ def cached(func, filename='example1.json', *args, **kwargs):
         if isinstance(mpf, MetaPanda):
             # save file
             mpf.write(filename)
+            return mpf
         elif isinstance(mpf, DataFrame):
             # save
             mpf.to_csv(filename)
@@ -104,10 +105,11 @@ def cached(func, filename='example1.json', *args, **kwargs):
             return MetaPanda(mpf)
         else:
             warnings.warn("returned object from cache not of type [pd.DataFrame, turb.MetaPanda], not cached",
-                          FutureWarning)
+                          ImportWarning)
+            return mpf
 
 
-def cache(filename="example1.json"):
+def cache(filename: str = "example1.json"):
     """Provides automatic {.json, .csv} caching for `turb.MetaPanda` or `pd.DataFrame`.
 
     .. note:: this is a decorator function, not to be called directly.
@@ -158,20 +160,25 @@ def cache(filename="example1.json"):
             # if we find the file
             if os.path.isfile(filename):
                 # read it in
-                return read(filename)
+                mdf = read(filename)
+                _set_index_def(mdf.df_)
+                return mdf
             else:
                 # returns MetaPanda or pandas.DataFrame
                 mpf = func(*args, **kwargs)
                 if isinstance(mpf, MetaPanda):
                     # save file
                     mpf.write(filename)
+                    return mpf
                 elif isinstance(mpf, DataFrame):
                     # save
                     mpf.to_csv(filename)
+                    return MetaPanda(mpf)
                 else:
                     warnings.warn("returned object from cache not of type [pd.DataFrame, turb.MetaPanda], not cached",
-                                  FutureWarning)
-                return mpf
+                                  ImportWarning)
+                    return mpf
 
         return _caching_function
+
     return decorator

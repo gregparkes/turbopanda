@@ -17,6 +17,7 @@ from functools import wraps
 import numpy as np
 import pandas as pd
 from pandas.core.groupby.generic import DataFrameGroupBy
+from typing import Tuple, Dict, Iterable, Callable
 
 # locals
 from .analyze import intersection_grid
@@ -24,8 +25,6 @@ from .metadata import *
 from .pipe import Pipe
 from .selection import get_selector, _type_encoder_map
 from .utils import *
-
-__all__ = ("MetaPanda")
 
 
 class MetaPanda(object):
@@ -118,7 +117,7 @@ class MetaPanda(object):
     """
 
     def __init__(self,
-                 dataset,
+                 dataset: pd.DataFrame,
                  name: str = None,
                  mode: str = "instant",
                  with_clean: bool = True,
@@ -162,7 +161,7 @@ class MetaPanda(object):
 
     """ ############################ STATIC FUNCTIONS ######################################## """
 
-    def _actionable(function):
+    def _actionable(function: Callable) -> Callable:
         @wraps(function)
         def new_function(self, *args, **kwargs):
             if self.mode_ == "delay":
@@ -173,7 +172,7 @@ class MetaPanda(object):
         return new_function
 
     @classmethod
-    def from_pandas(cls, filename, name=None, *args, **kwargs):
+    def from_pandas(cls, filename: str, name: str = None, *args, **kwargs):
         """Read in a MetaPanda from a comma-separated version (csv) file.
 
         Parameters
@@ -209,7 +208,7 @@ class MetaPanda(object):
         return mp
 
     @classmethod
-    def from_json(cls, filename, **kwargs):
+    def from_json(cls, filename: str, **kwargs):
         """Read in a MetaPanda from a custom JSON file.
 
         Reads in a datafile from JSON and creates a MetaPanda object from it.
@@ -257,7 +256,7 @@ class MetaPanda(object):
 
     """ ############################ HIDDEN OPERATIONS ####################################### """
 
-    def _selector_group(self, s, axis=1):
+    def _selector_group(self, s, axis: int = 1):
         if s is None:
             return self.df_.columns if axis == 1 else self.df_.index
         elif axis == 1:
@@ -268,7 +267,7 @@ class MetaPanda(object):
         else:
             raise ValueError("cannot use argument [selector] with axis=0, for rows")
 
-    def _rename_axis(self, old, new, axis=1):
+    def _rename_axis(self, old: Iterable, new: Iterable, axis: int = 1):
         if axis == 1:
             self.df_.rename(columns=dict(zip(old, new)), inplace=True)
             self.meta_.rename(index=dict(zip(old, new)), inplace=True)
@@ -288,7 +287,7 @@ class MetaPanda(object):
             # remove any unused categories that might've been dropped
             self._remove_unused_categories()
 
-    def _apply_function(self, fn, *fargs, **fkwargs):
+    def _apply_function(self, fn: str, *fargs, **fkwargs):
         if hasattr(self.df_, fn):
             self._df = getattr(self.df_, fn)(*fargs, **fkwargs)
             return self
@@ -305,7 +304,7 @@ class MetaPanda(object):
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.* API: {}".format(fn, dir(self.df_)))
 
-    def _apply_index_function(self, fn, *fargs, **fkwargs):
+    def _apply_index_function(self, fn: str, *fargs, **fkwargs):
         if hasattr(self.df_.index, fn):
             self.df_.index = getattr(self.df_.index, fn)(*fargs, **fkwargs)
             return self
@@ -315,7 +314,7 @@ class MetaPanda(object):
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.index.[str.]* API".format(fn))
 
-    def _apply_column_function(self, fn, *fargs, **fkwargs):
+    def _apply_column_function(self, fn: str, *fargs, **fkwargs):
         if hasattr(self.df_.columns, fn):
             self.df_.columns = getattr(self.df_.columns, fn)(*fargs, **fkwargs)
             self.meta_.index = getattr(self.meta_.index, fn)(*fargs, **fkwargs)
@@ -362,13 +361,13 @@ class MetaPanda(object):
                         # execute function with args and kwargs
                         getattr(self, fn)(*args, **kwargs)
 
-    def _write_csv(self, filename, with_meta=False, *args, **kwargs):
+    def _write_csv(self, filename: str, with_meta: bool = False, *args, **kwargs):
         self.df_.to_csv(filename, sep=",", *args, **kwargs)
         if with_meta:
             directory, jname, ext = split_file_directory(filename)
             self.meta_.to_csv(directory + "/" + jname + "__meta.csv", sep=",")
 
-    def _write_json(self, filename):
+    def _write_json(self, filename: str):
         # columns founded by meta_map are dropped
         redundant_meta = meta_columns_default() + list(self.mapper_.keys())
         # saving_dict
@@ -432,12 +431,12 @@ class MetaPanda(object):
     """ DataFrame attributes """
 
     @property
-    def df_(self):
+    def df_(self) -> pd.DataFrame:
         """Fetch the raw dataset."""
         return self._df
 
     @df_.setter
-    def df_(self, df):
+    def df_(self, df: pd.DataFrame):
         if isinstance(df, pd.DataFrame):
             # apply the 'cleaning pipeline' to this.
             self._df = df
@@ -458,12 +457,12 @@ class MetaPanda(object):
             raise TypeError("'df' must be of type [pd.Series, pd.DataFrame, DataFrameGroupBy]")
 
     @property
-    def meta_(self):
+    def meta_(self) -> pd.DataFrame:
         """Fetch the dataframe with meta information."""
         return self._meta
 
     @meta_.setter
-    def meta_(self, meta):
+    def meta_(self, meta: pd.DataFrame):
         if isinstance(meta, pd.DataFrame):
             self._meta = meta
             # categorize
@@ -474,34 +473,34 @@ class MetaPanda(object):
             raise TypeError("'meta' must be of type [pd.DataFrame]")
 
     @property
-    def n_(self):
+    def n_(self) -> int:
         """Fetch the number of rows/samples within the df_ attribute."""
         return self.df_.shape[0]
 
     @property
-    def p_(self):
+    def p_(self) -> int:
         """Fetch the number of dimensions within the df_ attribute."""
         return self.df_.shape[1]
 
     """ Additional meta information """
 
     @property
-    def selectors_(self):
+    def selectors_(self) -> Dict:
         """Fetch the cached selectors available."""
         return self._select
 
     @property
-    def memory_(self):
+    def memory_(self) -> str:
         """Fetch the memory consumption of the MetaPanda."""
         return "{:0.3f}MB".format(calc_mem(self.df_) + calc_mem(self.meta_))
 
     @property
-    def name_(self):
+    def name_(self) -> str:
         """Fetch the name of the MetaPanda."""
         return self._name
 
     @name_.setter
-    def name_(self, n):
+    def name_(self, n: str):
         if isinstance(n, str):
             # if name is found as a column name, block it.
             if n in self.df_.columns:
@@ -511,57 +510,57 @@ class MetaPanda(object):
             raise TypeError("'name_' must be of type str")
 
     @property
-    def mode_(self):
+    def mode_(self) -> str:
         """Choose from {'instant', 'delay'}."""
         return self._mode
 
     @mode_.setter
-    def mode_(self, mode):
+    def mode_(self, mode: str):
         if mode in ("instant", "delay"):
             self._mode = mode
         else:
             raise ValueError("'mode' must be ['instant', 'delay'], not '{}'".format(mode))
 
     @property
-    def pipe_(self):
+    def pipe_(self) -> Dict:
         """Fetch the cached pipelines."""
         return self._pipe
 
     @property
-    def mapper_(self):
+    def mapper_(self) -> Dict:
         """Fetch the mapping between unique name and selector groups."""
         return self._mapper
 
     """ ############################### BOOLEAN PROPERTIES ##################################################"""
 
     @property
-    def is_square(self):
+    def is_square(self) -> bool:
         """Determine whether the matrix is square-shaped."""
         return self.n_ == self.p_
 
     @property
-    def is_symmetric(self):
+    def is_symmetric(self) -> bool:
         """Determine whether the matrix is symmetric."""
         return self.is_square and (np.allclose(self.df_, self.df_.T))
 
     @property
-    def is_positive_definite(self):
+    def is_positive_definite(self) -> bool:
         """Determine whether the matrix is positive-definite."""
         return self.is_square and np.all(np.linalg.eigvals(self.df_.values) > 0)
 
     @property
-    def is_singular(self):
+    def is_singular(self) -> bool:
         """Determine whether the matrix is singular."""
         return np.linalg.cond(self.df_.values) >= (1. / sys.float_info.epsilon)
 
     @property
-    def is_orthogonal(self):
+    def is_orthogonal(self) -> bool:
         """Determine whether the matrix is orthogonal."""
         return self.is_square and np.allclose(np.dot(self.df_.values, self.df_.values.T), np.eye(self.p_))
 
     """ ################################ PUBLIC FUNCTIONS ################################################### """
 
-    def head(self, k: int = 5):
+    def head(self, k: int = 5) -> pd.DataFrame:
         """Look at the top k rows of the dataset.
 
         See `pd.DataFrame.head` documentation for details.
@@ -597,7 +596,7 @@ class MetaPanda(object):
         """
         return self.meta_['e_types'].value_counts() if grouped else self.meta_['e_types']
 
-    def view(self, *selector):
+    def view(self, *selector) -> pd.Index:
         """View a selection of columns in `df_`.
 
         Select merely returns the columns of interest selected using this selector.
@@ -637,7 +636,7 @@ class MetaPanda(object):
         # we do this 'double-drop' to maintain the order of the DataFrame, because of set operations.
         return self.df_.columns.drop(self.view_not(*selector))
 
-    def search(self, *selector):
+    def search(self, *selector) -> pd.Index:
         """View the intersection of search terms, for columns in `df_`.
 
         Select merely returns the columns of interest selected using this selector.
@@ -681,7 +680,7 @@ class MetaPanda(object):
         # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
         return sel
 
-    def view_not(self, *selector):
+    def view_not(self, *selector) -> pd.Index:
         """View the non-selected columns in `df_`.
 
         Select merely returns the columns of interest NOT selected using this selector.
@@ -873,7 +872,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def filter_rows(self, func: callable, selector=None, *args):
+    def filter_rows(self, func: Callable, selector=None, *args):
         """Filter j rows using boolean-index returned from `function`.
 
         Given a function, filter out rows that do not meet the functions' criteria.
@@ -1024,7 +1023,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def rename(self, ops, selector=None, axis: int = 1):
+    def rename(self, ops: Iterable, selector=None, axis: int = 1):
         """Perform a chain of .str.replace operations on `df_.columns`.
 
         .. note:: strings that are unchanged remain the same (are not NA'd).
@@ -1100,7 +1099,7 @@ class MetaPanda(object):
 
     @_actionable
     def transform(self,
-                  func: callable,
+                  func: Callable,
                   selector=None,
                   method: str = 'transform',
                   whole: bool = False,
@@ -1155,7 +1154,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def transform_k(self, ops):
+    def transform_k(self, ops: Iterable):
         """Perform multiple inplace transformations to a group of columns within `df_`.
 
         Allows a chain of k transformations to be applied, in order.
@@ -1237,15 +1236,15 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def sort_columns(self, by="alphabet", ascending=True):
+    def sort_columns(self, by: Tuple[str] = ("colnames"), ascending=True):
         """Sorts `df_` using vast selection criteria.
 
         Parameters
         -------
-        by : str or list/tuple of str, optional
+        by : tuple of str, optional
             Sorts columns based on information in `meta_`, or by alphabet, or by index.
-            Accepts {'alphabet', 'colnames'} as additional options. 'colnames' is `index`
-        ascending : bool or list/tuple of bool, optional
+            Accepts {'colnames'} as additional options. 'colnames' is `index`
+        ascending : bool, tuple of bool, optional
             Sort ascending vs descending.
             If list/tuple, specify multiple ascending/descending combinations.
 
@@ -1254,35 +1253,23 @@ class MetaPanda(object):
         ValueException
             If the length of `by` does not equal the length of `ascending`, in list instance.
         TypeException
-            If `by` is not of type {str, list, tuple}
+            If `by` or `ascending` is not of type {list, tuple}
 
         Returns
         -------
         self
         """
-        if isinstance(by, str):
-            by = "colnames" if by == "alphabet" else by
-            if (by in self.meta_) or (by == "colnames"):
-                # sort the meta
-                self.meta_.sort_values(by=by, axis=0, ascending=ascending, inplace=True)
-                # sort the df
-                self._df = self.df_.reindex(self.meta_.index, axis=1)
-        elif isinstance(by, (list, tuple)):
-            if "alphabet" in by:
-                by[by.index("alphabet")] = "colnames"
-            if isinstance(ascending, bool):
-                # turn into a list with that value
-                ascending = [ascending] * len(by)
+        if isinstance(by, tuple) and isinstance(ascending, (bool, tuple)):
             if len(by) != len(ascending):
                 raise ValueError(
                     "the length of 'by' {} must equal the length of 'ascending' {}".format(len(by), len(ascending)))
+            if isinstance(ascending, bool):
+                ascending = [ascending] * len(by)
             if all([(col in self.meta_) or (col == "colnames") for col in by]):
-                # sort meta
-                self.meta_.sort_values(by=by, axis=0, ascending=ascending, inplace=True)
-                # sort df
-                self._df = self.df_.reindex(self.meta_.index, axis=1)
+                self._meta = self.meta_.sort_values(by=by, axis=0, ascending=ascending)
+                self._df = self._df.reindex(self.meta_.index, axis=1)
         else:
-            raise TypeError("'by' must be of type [str, list, tuple], not {}".format(type(by)))
+            raise TypeError("'by' or 'ascending' is not of type {list, tuple}")
         return self
 
     @_actionable
@@ -1368,7 +1355,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def split_categories(self, column: str, sep: str = ",", renames=None):
+    def split_categories(self, column: str, sep: str = ",", renames: Tuple[str] = None):
         """Split a column into N categorical variables to be associated with df_.
 
         Parameters

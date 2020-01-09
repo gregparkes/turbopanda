@@ -10,7 +10,7 @@ from __future__ import print_function
 import warnings
 
 
-def deprecated(version, remove=None, instead=None, reason=None):
+def deprecated(version: str, remove: str = None, instead: str = None, reason: str = None):
     """A decorator for deprecating functions.
 
     Parameters
@@ -24,9 +24,11 @@ def deprecated(version, remove=None, instead=None, reason=None):
     reason : str, optional
         A verbose string detailing the reasons behind deprecation
     """
+
     def decorator(func):
         """This decorator takes the function.
         """
+
         def _caching_function(*args, **kwargs):
             segments = ["{} is deprecated since version {}".format(func.__name__, version)]
             if remove is not None:
@@ -38,5 +40,7 @@ def deprecated(version, remove=None, instead=None, reason=None):
 
             warnings.warn("".join(segments), DeprecationWarning)
             return func(*args, **kwargs)
+
         return _caching_function
+
     return decorator

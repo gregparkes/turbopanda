@@ -19,9 +19,8 @@ from scipy.stats import pearsonr, spearmanr, pointbiserialr
 
 # locals
 from .metapanda import MetaPanda
-from .utils import c_float, intcat, instance_check
+from .utils import c_float, intcat, instance_check, dictzip
 from .deprecator import deprecated
-
 
 __all__ = ("correlate", "corr_long_to_short")
 
@@ -48,19 +47,6 @@ def _r2(x, y):
     return np.square(r), p
 
 
-def _accepted_corr():
-    return ["spearman", "pearson", "biserial", "r2"]
-
-
-def _corr_functions():
-    return [spearmanr, pearsonr, pointbiserialr, _r2]
-
-
-def _map_correlate(method):
-    mapper = dict(zip(_accepted_corr(), _corr_functions()))
-    return mapper[method]
-
-
 def _row_to_matrix(rows):
     """
     Takes the verbose row output and converts to lighter matrix format.
@@ -75,9 +61,9 @@ def _row_to_matrix(rows):
     return square
 
 
-def _corr_two_variables(x, y, method="spearman", debug=False):
+def _corr_two_variables(x: pd.Series, y: pd.Series, method: str = "spearman", debug: bool = False):
     # returns name 1, name2, r, p-val and method used.
-    df_cols = ["column1", "column2", "r", "p-val", "rtype", "n"]
+    df_cols = ("column1", "column2", "r", "p-val", "rtype", "n")
     # x and y must share the same index
     if not x.index.equals(y.index):
         raise ValueError("in corr_vector_vector, x.index shape {} does not match y.index shape {}".format(
@@ -92,13 +78,15 @@ def _corr_two_variables(x, y, method="spearman", debug=False):
     ny = pd.to_numeric(y[shared], downcast="unsigned", errors="ignore")
     # check to see if x or y are constants (all values are the same)
     if nx.unique().shape[0] == 1 or ny.unique().shape[0] == 1:
-        return dict(zip(
+        return dictzip(
             df_cols,
-            [x.name, y.name, 0., 1., "constant", shared.sum()]
-        ))
+            (x.name, y.name, 0., 1., "constant", shared.sum())
+        )
+
+    fmap = dictzip(("spearman", "pearson", "biserial", "r2"), (spearmanr, pearsonr, pointbiserialr, _r2))
     # nx and ny may have new data types
     if nx.dtype in c_float() and ny.dtype in c_float():
-        r = _map_correlate(method)(nx, ny)
+        r = fmap[method](nx, ny)
         t = method
     elif nx.dtype in c_float() and ny.dtype in intcat():
         r = pointbiserialr(ny, nx)
@@ -116,7 +104,7 @@ def _corr_two_variables(x, y, method="spearman", debug=False):
     # handles debug message
     _handle_debug(debug, x.name, y.name, r, t)
     # dictzip and return
-    return dict(zip(df_cols, [x.name, y.name, r[0], r[1], t, shared.sum()]))
+    return dictzip(df_cols, (x.name, y.name, r[0], r[1], t, shared.sum()))
 
 
 def _corr_two_matrix_same(x, y, method="spearman", debug=False):
@@ -203,12 +191,11 @@ def _corr_matrix_vector(x, y, method="spearman", style="matrix", debug=None):
     return DATA if style == 'rows' else _row_to_matrix(DATA)
 
 
-##################### PUBLIC FUNCTIONS #######################################################
+"""##################### PUBLIC FUNCTIONS ####################################################### """
 
 
-def correlate(x, y=None, data=None, method="spearman", style="rows", debug=None):
-    """
-    Correlates X and Y together to generate a correlation matrix.
+def correlate(x, y=None, data=None, method: str = "spearman", style: str = "rows", debug: bool = False):
+    """Correlates X and Y together to generate a correlation matrix.
 
     If X/Y are MetaPandas, returns a MetaPanda object, else returns pandas.DataFrame
 
@@ -231,9 +218,8 @@ def correlate(x, y=None, data=None, method="spearman", style="rows", debug=None)
         If 'matrix': returns a pandas.DataFrame square matrix
         If 'rows': returns row-wise (x, y) correlation on each row of pandas.DataFrame (contains more information)
             Note this type only works if X and Y are different, and both are not of type {pd.Series}
-    debug : bool, str, optional
+    debug : bool, optional
         If True, includes a number of print statements.
-        If str, assumes it's a file and attempts to create .csv output of statistics.
 
     Returns
     -------
@@ -270,10 +256,11 @@ def correlate(x, y=None, data=None, method="spearman", style="rows", debug=None)
         3. X is DataFrame and Y is seres
         4. X and Y are DataFrame of same size
     """
+    ex_args = dict(method=method, style=style, debug=debug)
 
     # if no Y. do singular matrix.
     if NY is None and isinstance(NX, pd.DataFrame):
-        mat = _corr_matrix_singular(NX, method, style=style, debug=debug)
+        mat = _corr_matrix_singular(NX, **ex_args)
         if isinstance(x, MetaPanda) and style == "matrix":
             return _wrap_corr_metapanda(mat, x)
         else:
@@ -283,17 +270,17 @@ def correlate(x, y=None, data=None, method="spearman", style="rows", debug=None)
         return _corr_two_variables(NX, NY, method, debug=debug)
     # one matrix, one vector
     elif isinstance(NX, pd.DataFrame) and isinstance(NY, pd.Series):
-        return _corr_matrix_vector(NX, NY, method, style=style, debug=debug)
+        return _corr_matrix_vector(NX, NY, **ex_args)
     # one vector, one matrix
     elif isinstance(NX, pd.Series) and isinstance(NY, pd.DataFrame):
         # swap them over
-        return _corr_matrix_vector(NY, NX, method, style=style, debug=debug)
+        return _corr_matrix_vector(NY, NX, **ex_args)
     # two matrices of same shape
     elif isinstance(NX, pd.DataFrame) and isinstance(NY, pd.DataFrame):
         if NX.shape[1] == NY.shape[1]:
             return _corr_two_matrix_same(NX, NY, method, debug=debug)
         else:
-            return _corr_two_matrix_diff(NX, NY, method, style=style, debug=debug)
+            return _corr_two_matrix_diff(NX, NY, **ex_args)
     else:
         raise TypeError("X of type [{}], Y of type [{}], cannot compare".format(type(NX), type(NY)))
 

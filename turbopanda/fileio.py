@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Nov  5 14:48:53 2019
-
-@author: gparkes
-"""
 
 # future imports
 from __future__ import absolute_import
@@ -12,23 +7,20 @@ from __future__ import division
 from __future__ import print_function
 
 # imports
-import warnings
 import glob
-import json
 import itertools as it
+import json
 
 # locals
 from .metapanda import MetaPanda
 from .utils import instance_check
 from .deprecator import deprecated
 
-
 __all__ = ("read", "read_mp", 'read_raw_json')
 
 
-def read(filename, name=None, *args, **kwargs):
-    """
-    Reads in a data source from file and creates a MetaPanda object from it.
+def read(filename: str, name: str = None, *args, **kwargs) -> MetaPanda:
+    """Reads in a data source from file and creates a MetaPanda object from it.
 
     Note that if multiple files are selected, they are returned in ALPHABETICAL ORDER, not
     necessarily the order in the file directory. If a list of `name` is passed, this is
@@ -81,7 +73,8 @@ def read(filename, name=None, *args, **kwargs):
             elif ext(fl) == 'json':
                 return MetaPanda.from_json(fl, name=n, **kwargs)
             else:
-                raise ValueError("file ending '{}' not recognized, must end with {}".format(fl, pandas_types + ['json']))
+                raise ValueError(
+                    "file ending '{}' not recognized, must end with {}".format(fl, pandas_types + ['json']))
 
         if isinstance(name, (list, tuple)):
             ds = [fetch_db(f, n) for f, n in it.zip_longest(glob_name, sorted(name))]
@@ -121,7 +114,7 @@ def read_mp(filename):
     return MetaPanda.from_json(filename)
 
 
-def read_raw_json(filename):
+def read_raw_json(filename: str):
     """
     Reads in a raw JSON file.
 

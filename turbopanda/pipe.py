@@ -9,12 +9,11 @@ from __future__ import print_function
 # imports
 from sklearn import preprocessing
 from pandas import to_numeric
+from typing import List, Tuple, Dict
 
 # locals
 from .utils import boolean_to_integer, object_to_categorical, is_n_value_column
 
-
-__all__ = ("Pipe")
 
 def _attempt_float_cast(s):
     try:
@@ -25,11 +24,11 @@ def _attempt_float_cast(s):
 
 
 def _is_bool_true(s):
-    return s in ["true", "True"]
+    return s in {"true", "True"}
 
 
 def _is_bool_false(s):
-    return s in ["false", "False"]
+    return s in {"false", "False"}
 
 
 def _type_cast_argument(s):
@@ -56,7 +55,7 @@ def _single_pipe(argument):
         if isinstance(arg, str):
             # if it's a string, check whether it's a param with = **kwarg
             if arg.find("=") != -1:
-                key, value = arg.split("=",1)
+                key, value = arg.split("=", 1)
                 value = _type_cast_argument(value)
                 # attempt to convert sp[1] from str to int, float, bool or other basic type.
                 pipe_d[key] = value
@@ -117,7 +116,7 @@ class Pipe(object):
             self._p.append(_single_pipe(arg))
 
     @classmethod
-    def raw(cls, p):
+    def _raw(cls, p):
         """
         Defines a Pipe using straight raw input.
 
@@ -141,7 +140,7 @@ class Pipe(object):
     """ ############ PROPERTIES ################### """
 
     @property
-    def p(self):
+    def p(self) -> List:
         return self._p
 
     """ ############ OVERLOADED FUNCTIONS ############## """
@@ -149,13 +148,10 @@ class Pipe(object):
     def __repr__(self):
         return "Pipe(n_elements={})".format(len(self.p))
 
-    def __str__(self):
-        return str(self.p)
-
     """ ############ PUBLIC ACCESSIBLE PIPELINES TO PLUG-AND-PLAY .... ############### """
 
     @classmethod
-    def ml_regression(cls, mp, x_s, y_s, preprocessor="scale"):
+    def ml_regression(cls, mp, x_s, y_s, preprocessor: str = "scale"):
         """
         Creates a 'delay' pipe that will make your data 'machine-learning-ready'.
         Prepares for a regression-based model.
@@ -186,7 +182,7 @@ class Pipe(object):
             raise ValueError("preprocessor function '{}' not found in sklearn.preprocessing".format(preprocessor))
 
         # out of the x-features, we only preprocess.scale continuous features.
-        return cls.raw([
+        return cls._raw([
             # drop objects, ids columns
             ("drop", (object, ".*id$", ".*ID$", "^ID.*", "^id.*"), {}),
             # drop any columns with single-value-type in
@@ -214,7 +210,7 @@ class Pipe(object):
         pipe : Pipe
             The pipeline object
         """
-        return cls.raw([
+        return cls._raw([
             # drop columns with only one value in
             ("drop", (lambda x: x.dropna().unique().shape[0] == 1,), {}),
             # shrink down data types where possible.
@@ -244,7 +240,7 @@ class Pipe(object):
         pipe : list
             The pipeline object
         """
-        return cls.raw([
+        return cls._raw([
             # drops elements of type object, id selectors
             ("drop", (object, ".*id$", ".*ID$", "^ID.*", "^id.*"), {})
         ])

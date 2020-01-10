@@ -66,7 +66,7 @@ def dict_to_tuple(d: Dict) -> Tuple:
     return tuple((a, b) for a, b in d.items())
 
 
-def dictzip(a: Iterable, b: ListTup) -> Dict:
+def dictzip(a: Iterable, b: Iterable) -> Dict:
     """Map together a, b to make {a: b}.
 
     a and b must be the same length.
@@ -267,7 +267,7 @@ def instance_check(a: object, i: TypeVar):
             raise TypeError("object '{}' is not of type None".format(a))
 
 
-def join(*pipes: Any) -> List:
+def join(*pipes: Iterable[Any]) -> List:
     """Perform it.chain.from_iterable on iterables."""
     return list(it.chain.from_iterable(pipes))
 

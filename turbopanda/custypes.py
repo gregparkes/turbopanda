@@ -24,7 +24,7 @@ SelectorType = Optional[Union[TypeVar, str, pIndex, Callable]]
 PipeTypeRawElem = Tuple[str, Tuple, Dict]
 PipeTypeCleanElem = Tuple[Union[str, Callable, Dict, TypeVar], ...]
 # specific pipe for MetaPanda
-PipeMetaPandaType = Union[Tuple[PipeTypeCleanElem, ...], Tuple[PipeTypeRawElem, ...], str, Pipe]
+PipeMetaPandaType = Union[ListTup[PipeTypeCleanElem, ...], ListTup[PipeTypeRawElem, ...], str, Pipe]
 # matplotlib Figure
 MatPlotFig = Figure
 # Broad DataSet Types

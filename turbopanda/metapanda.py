@@ -13,7 +13,7 @@ import sys
 import warnings
 from copy import deepcopy
 from functools import wraps
-from typing import Tuple, Dict, Callable, Union, Optional
+from typing import Tuple, Dict, Callable, Union, Optional, Any
 
 import numpy as np
 import pandas as pd
@@ -22,14 +22,11 @@ from pandas.core.groupby.generic import DataFrameGroupBy
 
 # locals
 from .analyze import intersection_grid
-from .custypes import SelectorType, ListTup, PipeTypeCleanElem, PipeTypeRawElem, PipeMetaPandaType
+from .custypes import SelectorType, ListTup, PipeMetaPandaType, PandaIndex
 from .metadata import *
 from .pipe import Pipe, is_pipe_structure
 from .selection import get_selector
 from .utils import *
-
-# defines a flexible type for MetaPanda
-
 
 
 class MetaPanda(object):
@@ -262,7 +259,7 @@ class MetaPanda(object):
 
     """ ############################ HIDDEN OPERATIONS ####################################### """
 
-    def _selector_group(self, s, axis: int = 1):
+    def _selector_group(self, s: ListTup[SelectorType, ...], axis: int = 1) -> pd.Index:
         if s is None:
             return self.df_.columns if axis == 1 else self.df_.index
         elif axis == 1:
@@ -273,7 +270,7 @@ class MetaPanda(object):
         else:
             raise ValueError("cannot use argument [selector] with axis=0, for rows")
 
-    def _rename_axis(self, old: ListTup, new: ListTup, axis: int = 1):
+    def _rename_axis(self, old: PandaIndex, new: PandaIndex, axis: int = 1):
         if axis == 1:
             self.df_.rename(columns=dict(zip(old, new)), inplace=True)
             self.meta_.rename(index=dict(zip(old, new)), inplace=True)
@@ -337,7 +334,7 @@ class MetaPanda(object):
         # add in metadata rows.
         add_metadata(self._df, self._meta)
         # if we have mapper elements, add these in
-        if len(self._mapper) > 0:
+        if len(self.mapper_) > 0:
             self._define_metamaps()
 
     def _define_metamaps(self):
@@ -623,7 +620,7 @@ class MetaPanda(object):
 
         Returns
         ------
-        sel : list
+        sel : pd.Index
             The list of column names selected, or empty
 
         See Also
@@ -663,7 +660,7 @@ class MetaPanda(object):
 
         Returns
         ------
-        sel : list
+        sel : pd.Index
             The list of column names selected, or empty
 
         See Also
@@ -707,7 +704,7 @@ class MetaPanda(object):
 
         Returns
         ------
-        sel : list
+        sel : pd.Index
             The list of column names NOT selected, or empty
 
         See Also
@@ -1034,7 +1031,7 @@ class MetaPanda(object):
 
     @_actionable
     def rename(self,
-               ops: Tuple[Tuple[str, str]],
+               ops: Tuple[str, str],
                selector: ListTup[SelectorType] = None,
                axis: int = 1) -> "MetaPanda":
         """Perform a chain of .str.replace operations on `df_.columns`.
@@ -1251,7 +1248,7 @@ class MetaPanda(object):
     @_actionable
     def sort_columns(self,
                      by: Union[str, ListTup[str]] = "colnames",
-                     ascending: Union[bool, ListTup[bool]] = True) -> "MetaPanda":
+                     ascending: Union[bool, ListTup[bool, ...]] = True) -> "MetaPanda":
         """Sorts `df_` using vast selection criteria.
 
         Parameters
@@ -1466,7 +1463,7 @@ class MetaPanda(object):
             cpy.compute(pipe, inplace=True, update_meta=update_meta)
             return cpy
 
-    def compute_k(self, pipes: Tuple[PipeMetaPandaType, ...], inplace: bool = False):
+    def compute_k(self, pipes: ListTup[PipeMetaPandaType, ...], inplace: bool = False):
         """Execute `k` pipelines on `df_`, in order.
 
         Computes multiple pipelines to the MetaPanda object, including cached custypes.py such as `.current`
@@ -1492,7 +1489,7 @@ class MetaPanda(object):
         compute : Executes a pipeline on `df_`.
         """
         # join and execute
-        return self.compute(join(*pipes), inplace=inplace)
+        return self.compute(join(pipes), inplace=inplace)
 
     def write(self,
               filename: str = None,

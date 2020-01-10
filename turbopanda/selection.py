@@ -1,65 +1,34 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Nov  6 13:48:57 2019
+"""The core of the Selector within MetaPanda."""
 
-@author: gparkes
-
-Handles selection of handles.
-"""
 # future imports
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 # imports
-import numpy as np
 import re
-from pandas import CategoricalDtype, concat, Index, Series
+from typing import Dict
+from pandas import CategoricalDtype, concat, Index, Series, DataFrame
 
 # locals
-from .utils import boolean_series_check, intersect, union
+from .utils import boolean_series_check, intersect, union, t_numpy, dictmap, dictzip
+from .custypes import SelectorType, ListTup
 
 
-__all__ = ("regex_column", "get_selector", "_type_encoder_map")
+__all__ = ("regex_column", "get_selector", "selector_types")
 
 
-def _numpy_types():
-    return [np.int, np.bool, np.float, np.float64, np.float32, np.float16, np.int64,
-            np.int32, np.int16, np.int8, np.uint8, np.uint16, np.uint32, np.uint64]
+def selector_types() -> Index:
+    """Returns the acceptable selector data types that are searched for."""
+    return union(
+        dictmap(t_numpy(), lambda n: n.__name__), {float, int, bool, object, CategoricalDtype, "object", "category"}
+    )
 
 
-def _numpy_string_types():
-    return [n.__name__ for n in _numpy_types()]
-
-
-def _extra_types():
-    return [float, int, bool, object, CategoricalDtype]
-
-
-def _extra_string_types():
-    return ["object", "category"]
-
-
-def _type_encoder_map():
-    return {
-        **{object: "object", CategoricalDtype: "category"},
-        **dict(zip(_numpy_types(), _numpy_string_types()))
-    }
-
-
-def _type_decoder_map():
-    return {
-        **{"object": object, "category": CategoricalDtype},
-        **dict(zip(_numpy_string_types(), _numpy_types()))
-    }
-
-
-def _accepted_dtypes():
-    return _numpy_types() + _numpy_string_types() + _extra_types() + _extra_string_types()
-
-
-def regex_column(selector, df, raise_error=False):
+def regex_column(selector: SelectorType, df: DataFrame, raise_error: bool = False):
+    """Use a selector to perform a regex search on the columns within df."""
     c_fetch = [c for c in df.columns if re.search(selector, c)]
     if len(c_fetch) > 0:
         return Index(c_fetch, dtype=object,
@@ -70,7 +39,11 @@ def regex_column(selector, df, raise_error=False):
         return Index([], name=df.columns.name)
 
 
-def _get_selector_item(df, meta, cached, selector, raise_error=False):
+def _get_selector_item(df: DataFrame,
+                       meta: DataFrame,
+                       cached: Dict[str, SelectorType],
+                       selector: SelectorType,
+                       raise_error: bool = False) -> Index:
     """
     Accepts:
         type [object, int, float, np.float]
@@ -83,10 +56,13 @@ def _get_selector_item(df, meta, cached, selector, raise_error=False):
     if isinstance(selector, Index):
         # check to see if values in selector match df.column names
         return meta.index.intersection(selector)
-    elif selector in _accepted_dtypes():
+    elif selector in selector_types():
         # if it's a string option, convert to type
-        dec_map = _type_decoder_map()
-        if selector in dec_map:
+        dec_map = {
+            **{"object":object, "category":CategoricalDtype},
+            **dictzip(map(lambda n: n.__name__, t_numpy()), t_numpy())
+        }
+        if selector in dec_map.keys():
             selector = dec_map[selector]
         return df.columns[df.dtypes.eq(selector)]
     # check if selector is a callable object (i.e function)
@@ -122,7 +98,12 @@ def _get_selector_item(df, meta, cached, selector, raise_error=False):
         raise TypeError("selector type '{}' not recognized".format(type(selector)))
 
 
-def get_selector(df, meta, cached, selector, raise_error=False, select_join="OR"):
+def get_selector(df: DataFrame,
+                 meta: DataFrame,
+                 cached: Dict[str, SelectorType],
+                 selector: ListTup[SelectorType],
+                 raise_error: bool = False,
+                 select_join: str = "OR") -> Index:
     """
     Selector must be a list/tuple of selectors.
 

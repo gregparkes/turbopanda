@@ -12,6 +12,8 @@ import itertools as it
 import json
 
 # locals
+from typing import Optional, Dict
+
 from .metapanda import MetaPanda
 from .utils import instance_check
 from .deprecator import deprecated
@@ -19,7 +21,7 @@ from .deprecator import deprecated
 __all__ = ("read", "read_mp", 'read_raw_json')
 
 
-def read(filename: str, name: str = None, *args, **kwargs) -> MetaPanda:
+def read(filename: str, name: Optional[str] = None, *args, **kwargs) -> MetaPanda:
     """Reads in a data source from file and creates a MetaPanda object from it.
 
     Note that if multiple files are selected, they are returned in ALPHABETICAL ORDER, not
@@ -114,7 +116,7 @@ def read_mp(filename):
     return MetaPanda.from_json(filename)
 
 
-def read_raw_json(filename: str):
+def read_raw_json(filename: str) -> Dict:
     """
     Reads in a raw JSON file.
 

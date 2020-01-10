@@ -17,7 +17,8 @@ from __future__ import print_function
 import os
 import warnings
 from pandas import DataFrame
-from typing import Callable
+from typing import Callable, Optional
+from pandas import CategoricalDtype
 
 # locals
 from .metapanda import MetaPanda
@@ -33,7 +34,10 @@ def _set_index_def(df, values=('Unnamed:_0', 'Unnamed: 0')):
             df.set_index(v, inplace=True)
 
 
-def cached(func: Callable, filename: str = 'example1.json', *args, **kwargs):
+def cached(func: Callable,
+           filename: Optional[str] = 'example1.json',
+           *args,
+           **kwargs) -> MetaPanda:
     """Provides automatic {.json, .csv} caching for `turb.MetaPanda` or `pd.DataFrame`.
 
     .. note:: this is a direct-call cache function. Not cached.
@@ -109,7 +113,7 @@ def cached(func: Callable, filename: str = 'example1.json', *args, **kwargs):
             return mpf
 
 
-def cache(filename: str = "example1.json"):
+def cache(filename: Optional[str] = "example1.json") -> Callable:
     """Provides automatic {.json, .csv} caching for `turb.MetaPanda` or `pd.DataFrame`.
 
     .. note:: this is a decorator function, not to be called directly.
@@ -156,6 +160,7 @@ def cache(filename: str = "example1.json"):
 
     # define decorator
     def decorator(func):
+        """Basic decorator."""
         def _caching_function(*args, **kwargs):
             # if we find the file
             if os.path.isfile(filename):

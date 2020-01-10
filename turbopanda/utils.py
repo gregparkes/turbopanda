@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""Provides a host of utility functions."""
+
 # future imports
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import itertools as it
+from typing import Any, Dict, Tuple, Set, TypeVar, Union, List, Optional, Callable, Iterable
+
 # imports
 import numpy as np
 import pandas as pd
-import itertools as it
 from pandas.api.types import CategoricalDtype
 from scipy.stats import norm
 
-from typing import Any, Dict, Tuple, Set, Iterable, TypeVar, Sequence
+from .custypes import ListTup, ArrayLike, SetLike
 
-__all__ = ("fself", "is_twotuple", "instance_check", "dictzip",
+# defined custom custypes.py
+AsPandas = Union[pd.Series, pd.DataFrame]
+
+__all__ = ("fself", "is_twotuple", "instance_check", "dictzip", "dictmap", "t_numpy",
            "boolean_series_check", "check_list_type", "not_column_float",
            "is_column_float", "is_column_object", "is_column_int",
            "calc_mem", "remove_string_spaces", "nearest_factors", "is_missing_values",
@@ -22,26 +29,34 @@ __all__ = ("fself", "is_twotuple", "instance_check", "dictzip",
            "is_unique_id", "is_potential_id", "string_replace",
            "is_potential_stacker", "nunique", "object_to_categorical",
            "is_n_value_column", "boolean_to_integer", "integer_to_boolean",
-           "is_metapanda_pipe", "join", "belongs", "is_possible_category",
+           "join", "belongs", "is_possible_category",
            "standardize", "dict_to_tuple", "set_like", "union", "difference", "intersect")
 
 
-def c_float() -> Set:
-    """Returns accepted float types."""
+def c_float() -> Set[TypeVar]:
+    """Returns accepted float custypes.py."""
     return {np.float64, np.float32, np.float16, np.float, float}
 
 
-def c_int() -> Set:
-    """Returns accepted integer types."""
+def c_int() -> Set[TypeVar]:
+    """Returns accepted integer custypes.py."""
     return {np.int64, np.int32, np.int16, np.int8, np.int, np.uint, np.uint8, np.uint16, np.uint16, np.uint32, int}
 
 
-def intcat() -> Set:
-    """Returns accepted category types."""
+def t_numpy() -> Set[TypeVar]:
+    """Returns the supported custypes.py from NumPy."""
+    return {
+        np.int, np.bool, np.float, np.float64, np.float32, np.float16, np.int64,
+        np.int32, np.int16, np.int8, np.uint8, np.uint16, np.uint32, np.uint64
+    }
+
+
+def intcat() -> Set[TypeVar]:
+    """Returns accepted category custypes.py."""
     return {np.uint8, np.uint16}
 
 
-def fself(x):
+def fself(x: Any):
     """Self lambda function."""
     return x
 
@@ -51,16 +66,16 @@ def dict_to_tuple(d: Dict) -> Tuple:
     return tuple((a, b) for a, b in d.items())
 
 
-def dictzip(a: Iterable, b: Iterable) -> Dict:
+def dictzip(a: Iterable, b: ListTup) -> Dict:
     """Map together a, b to make {a: b}.
 
     a and b must be the same length.
 
     Parameters
     ----------
-    a : iterable
+    a : list/tuple
         A sequence of some kind
-    b : iterable
+    b : list/tuple
         A sequence of some kind
 
     Returns
@@ -71,9 +86,29 @@ def dictzip(a: Iterable, b: Iterable) -> Dict:
     return dict(it.zip_longest(a, b))
 
 
-def list_dir(obj: Any) -> Tuple:
+def dictmap(a: Iterable, b: Callable) -> Dict:
+    """Map together a with the result of function b to make {a: b}.
+
+    b must return something that can be placed in d.
+
+    Parameters
+    ----------
+    a : list/tuple
+        A sequence of some kind
+    b : function
+        A function b(y) returning something to be placed in d
+
+    Returns
+    -------
+    d : dict
+        Mapped dictionary
+    """
+    return dict(it.zip_longest(a, map(b, a)))
+
+
+def list_dir(obj: Any) -> List:
     """Lists all public functions, classes within a list directory."""
-    return (a for a in dir(obj) if not a.startswith("__") and not a.startswith("_"))
+    return [a for a in dir(obj) if not a.startswith("__") and not a.startswith("_")]
 
 
 def is_possible_category(ser: pd.Series) -> bool:
@@ -102,23 +137,27 @@ def is_column_object(ser: pd.Series) -> bool:
 
 
 def is_missing_values(ser: pd.Series) -> bool:
+    """Determine whether any missing values are present."""
     return ser.count() < ser.shape[0]
 
 
 def is_n_value_column(ser: pd.Series, n: int = 1):
+    """Determine whether the number of unique values equals some value n."""
     return nunique(ser) == n
 
 
 def is_unique_id(ser: pd.Series) -> bool:
-    # a definite algorithm for determining a unique column ID
+    """Determine whether ser is unique."""
     return ser.is_unique if is_column_int(ser) else False
 
 
 def is_potential_id(ser: pd.Series, thresh: float = 0.5) -> bool:
+    """Determine whether ser is a potential ID column."""
     return (ser.unique().shape[0] / ser.shape[0]) > thresh if is_column_int(ser) else False
 
 
 def is_potential_stacker(ser: pd.Series, regex: str = ";|\t|,|", thresh: float = 0.1) -> bool:
+    """Determine whether ser is a stacker-like column."""
     return ser.dropna().str.contains(regex).sum() > thresh if (ser.dtype == object) else False
 
 
@@ -152,22 +191,12 @@ def split_file_directory(filename: str):
     return directory, jname, ext
 
 
-def is_metapanda_pipe(p):
-    for pipe in p:
-        if len(pipe) != 3:
-            raise ValueError("pipe of length 3 is of length {}".format(len(pipe)))
-        # element 1: string
-        instance_check(pipe[0], str)
-        instance_check(pipe[1], (list, tuple))
-        instance_check(pipe[2], dict)
-    return True
-
-
-def nunique(ser: pd.Series) -> bool:
+def nunique(ser: pd.Series):
+    """Convert ser to be nunique."""
     return ser.nunique() if not_column_float(ser) else -1
 
 
-def is_twotuple(t: Tuple) -> bool:
+def is_twotuple(t: Tuple[Any, Any]) -> bool:
     """Checks whether an object is a list of (2,) tuples."""
     if isinstance(t, (list, tuple)):
         for i in t:
@@ -178,11 +207,11 @@ def is_twotuple(t: Tuple) -> bool:
     return True
 
 
-def string_replace(l, operations: Tuple):
+def string_replace(strings: Union[pd.Series, pd.Index], operations: Tuple[str, str]) -> pd.Series:
     """ Performs all replace operations on the string inplace """
     for op in operations:
-        l = l.str.replace(*op)
-    return l
+        strings = strings.str.replace(*op)
+    return strings
 
 
 def integer_to_boolean(ser: pd.Series) -> pd.Series:
@@ -190,7 +219,8 @@ def integer_to_boolean(ser: pd.Series) -> pd.Series:
     return ser.astype(np.bool) if (is_column_int(ser) and is_n_value_column(ser, 2)) else ser
 
 
-def object_to_categorical(ser: pd.Series, order=None, thresh: int = 30):
+def object_to_categorical(ser: pd.Series, order: Optional[ListTup] = None, thresh: int = 30) -> pd.Series:
+    """Convert ser to be of type 'category' if possible."""
     # get uniques if possible
     if 1 < nunique(ser) < thresh:
         if order is None:
@@ -207,25 +237,29 @@ def boolean_to_integer(ser: pd.Series) -> pd.Series:
 
 
 def boolean_series_check(ser: pd.Series):
+    """Check whether ser is full of booleans or not."""
     if not isinstance(ser, pd.Series):
         raise TypeError("bool_s must be of type [pd.Series], not {}".format(type(ser)))
     if ser.dtype not in [bool, np.bool]:
         raise TypeError("bool_s must contain booleans, not type '{}'".format(ser.dtype))
 
 
-def check_list_type(l: Iterable, t: TypeVar) -> bool:
-    for i, elem in enumerate(l):
+def check_list_type(elems: ListTup, t: TypeVar) -> bool:
+    """Checks the type of every element in the list."""
+    for i, elem in enumerate(elems):
         if not isinstance(elem, t):
             raise TypeError("type '{}' not found in list at index [{}]".format(t, i))
     return True
 
 
-def belongs(elem: Any, l: Iterable):
-    if elem not in l:
-        raise ValueError("element {} is not found in list: {}".format(elem, l))
+def belongs(elem: Any, types: ListTup[TypeVar]):
+    """Check whether every element is of type t."""
+    if elem not in types:
+        raise ValueError("element {} is not found in list: {}".format(elem, types))
 
 
 def instance_check(a: object, i: TypeVar):
+    """Check that a is an instance of type i."""
     if not isinstance(a, i):
         raise TypeError("object '{}' does not belong to type {}".format(a, i))
     elif isinstance(i, (list, tuple)):
@@ -233,11 +267,12 @@ def instance_check(a: object, i: TypeVar):
             raise TypeError("object '{}' is not of type None".format(a))
 
 
-def join(*pipes):
+def join(*pipes: Any) -> List:
+    """Perform it.chain.from_iterable on iterables."""
     return list(it.chain.from_iterable(pipes))
 
 
-def set_like(x: Sequence) -> pd.Index:
+def set_like(x: SetLike) -> pd.Index:
     """
     Convert x to something unique, set-like.
 
@@ -262,7 +297,7 @@ def set_like(x: Sequence) -> pd.Index:
             "x must be in {}, not of type {}".format(['list', 'tuple', 'pd.Series', 'pd.Index', 'set'], type(x)))
 
 
-def union(*args) -> pd.Index:
+def union(*args: SetLike) -> pd.Index:
     """Performs set union all passed arguments, whatever type they are.
 
     Parameters
@@ -291,7 +326,7 @@ def union(*args) -> pd.Index:
         return a
 
 
-def intersect(*args) -> pd.Index:
+def intersect(*args: SetLike) -> pd.Index:
     """Performs set intersect all passed arguments, whatever type they are.
 
     Parameters
@@ -315,7 +350,7 @@ def intersect(*args) -> pd.Index:
         return a
 
 
-def difference(a: Sequence, b: Sequence) -> pd.Index:
+def difference(a: SetLike, b: SetLike) -> pd.Index:
     """
     Performs set symmetric difference on a and b, whatever type they are.
 
@@ -335,6 +370,7 @@ def difference(a: Sequence, b: Sequence) -> pd.Index:
 
 
 def remove_string_spaces(df: pd.DataFrame):
+    """Performs strip on df.column names."""
     for c in df.columns[df.dtypes.eq(object)]:
         df[c] = df[c].str.strip()
     # if we have an obj index, strip this
@@ -342,7 +378,8 @@ def remove_string_spaces(df: pd.DataFrame):
         df.index = df.index.str.strip()
 
 
-def calc_mem(df: pd.DataFrame) -> float:
+def calc_mem(df: AsPandas) -> float:
+    """Calculate the memory usage in megabytes."""
     return (df.memory_usage().sum() / 1000000.) if (df.ndim > 1) else (df.memory_usage() / 1000000.)
 
 
@@ -353,16 +390,20 @@ def _factor(n: int):
     if not isinstance(n, (int, np.int, np.int64)):
         raise TypeError("'n' must be an integer")
 
-    def prime_powers(n):
-        # c goes through 2, 3, 5 then the infinite (6n+1, 6n+5) series
+    # noinspection PyRedundantParentheses
+    def prime_powers(_n):
+        """c goes through 2, 3, 5 then the infinite (6n+1, 6n+5) series."""
         for c in it.accumulate(it.chain([2, 1, 2], it.cycle([2, 4]))):
-            if c * c > n: break
-            if n % c: continue
+            if c * c > _n:
+                break
+            if _n % c:
+                continue
             d, p = (), c
-            while not n % c:
-                n, p, d = n // c, p * c, d + (p,)
+            while not _n % c:
+                _n, p, d = _n // c, p * c, d + (p,)
             yield (d)
-        if n > 1: yield ((n,))
+        if _n > 1:
+            yield ((_n,))
 
     r = [1]
     for e in prime_powers(n):
@@ -448,21 +489,21 @@ def nearest_factors(n: int, shape: str = "square", cutoff: int = 6, search_range
     # if our 'best' factors don't cut it...
     if abs(a - b) > cutoff:
         # create Range
-        R = np.arange(n, n + search_range, 1, dtype=np.int64)
+        rng = np.arange(n, n + search_range, 1, dtype=np.int64)
         # calculate new scores - using function
-        nscores = np.asarray([f_(i) for i in R])
+        nscores = np.asarray([f_(i) for i in rng])
         # calculate distance
         dist = np.abs(nscores[:, 0] - nscores[:, 1])
         # weight our distances by a normal distribution -
         # we don't want to generate too many plots!
-        w_dist = dist * (1. - norm.pdf(R, n, w_var))
+        w_dist = dist * (1. - norm.pdf(rng, n, w_var))
         # calculate new N
         return tuple(nscores[w_dist.argmin()])
     else:
         return a, b
 
 
-def standardize(x):
+def standardize(x: ArrayLike) -> ArrayLike:
     """
     Performs z-score standardization on vector x.
 

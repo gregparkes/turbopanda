@@ -24,7 +24,7 @@ from .fileio import *
 from .correlate import *
 from .cache import *
 from .pub_fig import *
-from .merger import merge
+from .merge import merge
 from .concat import concat
 
 __version__ = "0.1.9"

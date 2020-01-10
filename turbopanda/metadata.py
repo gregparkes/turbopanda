@@ -1,29 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Nov  6 17:10:17 2019
+"""Handling the construction and use of metadata associated with MetaPanda."""
 
-@author: gparkes
-
-Handling the construction and use of metadata associated with MetaPanda
-"""
 # future imports
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 # imports
+from typing import Set
 import pandas as pd
 
 # locals
 from .utils import is_missing_values, is_unique_id, is_potential_id, \
     is_potential_stacker, nunique, is_possible_category, object_to_categorical
 
-
 __all__ = ("meta_columns_default", "basic_construct", "categorize_meta", "add_metadata")
 
 
-def _reduce_data_type(ser):
+def _reduce_data_type(ser: pd.Series):
     """
     Given a pandas.Series, determine it's true datatype if it has missing values.
     """
@@ -33,22 +28,24 @@ def _reduce_data_type(ser):
         if ((ser.dtype != object) and (ser.dropna().shape[0] > 0)) else ser.dtype
 
 
-def _is_mixed_type(ser):
+def _is_mixed_type(ser: pd.Series) -> bool:
     return ser.apply(lambda x: type(x)).unique().shape[0] > 1
 
 
-def meta_columns_default():
-    return ["e_types", "is_unique", "is_potential_id", "is_potential_stacker",
-            "is_missing", "n_uniques"]
+def meta_columns_default() -> Set:
+    """The default metadata columns provided."""
+    return {"e_types", "is_unique", "is_potential_id", "is_potential_stacker",
+            "is_missing", "n_uniques"}
 
 
-def basic_construct(df):
+def basic_construct(df: pd.DataFrame) -> pd.DataFrame:
+    """Constructs a basic meta file."""
     _meta = pd.DataFrame({}, index=df.columns)
     _meta.index.name = "colnames"
     return _meta
 
 
-def categorize_meta(meta):
+def categorize_meta(meta: pd.DataFrame):
     """
     Go through the meta_ attribute and convert possible objects to type category.
 
@@ -59,7 +56,7 @@ def categorize_meta(meta):
             meta[column] = object_to_categorical(meta[column])
 
 
-def add_metadata(df, curr_meta):
+def add_metadata(df: pd.DataFrame, curr_meta: pd.DataFrame):
     """ Constructs a pd.DataFrame from the raw data. Returns meta"""
     # step 1. construct a DataFrame based on the column names as an index.
     loc_mapping = {

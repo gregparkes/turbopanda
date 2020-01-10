@@ -57,7 +57,7 @@ def save_figure(fig_obj,
     accepted_savemodes = ['first', 'update']
 
     if plot_type not in accepted_types:
-        raise TypeError("plot_type: [%s] not found in accepted types!" % plot_type)
+        raise TypeError("plot_type: [%s] not found in accepted custypes.py!" % plot_type)
 
     for st in save_types:
         if st not in file_types_supported:

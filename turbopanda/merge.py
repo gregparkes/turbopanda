@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Dec 10 16:37:45 2019
-
-@author: gparkes
-"""
+"""Determines the merging capabilities of turbopanda."""
 
 # future imports
 from __future__ import absolute_import
@@ -12,6 +8,7 @@ from __future__ import division
 from __future__ import print_function
 
 # imports
+from typing import Tuple, Union, Optional
 import numpy as np
 from pandas import merge as pmerge
 from pandas import DataFrame, Series, concat
@@ -20,11 +17,10 @@ import itertools as it
 # locals
 from .metapanda import MetaPanda
 from .utils import belongs
+from .custypes import DataSetType, PipeMetaPandaType
 
-__all__ = "merge"
 
-
-def _intersecting_pairs(sdf1, sdf2):
+def _intersecting_pairs(sdf1: DataFrame, sdf2: DataFrame) -> DataFrame:
     """
     Given two DataFrames, find all pairings of unions.
     """
@@ -44,7 +40,7 @@ def _intersecting_pairs(sdf1, sdf2):
     return DataFrame(arr, columns=["p1 in p2", "p2 in p1"], index=pairings)
 
 
-def _maximum_likelihood_pairs(pairings, ret_largest=True):
+def _maximum_likelihood_pairs(pairings: DataFrame, ret_largest: bool = True):
     """
     Given a pairings, choose the maximum likely pairing.
     """
@@ -57,7 +53,7 @@ def _maximum_likelihood_pairs(pairings, ret_largest=True):
         return pm[pm.gt(0)]
 
 
-def _single_merge(sdf1, sdf2, how):
+def _single_merge(sdf1: DataSetType, sdf2: DataSetType, how: str = 'inner') -> Union[DataFrame, MetaPanda]:
     """Check different use cases and merge d1 and d2 together."""
 
     # both are series.
@@ -134,7 +130,9 @@ def _single_merge(sdf1, sdf2, how):
     return mpf
 
 
-def merge(mdfs, how: str = 'inner', clean_pipe=None):
+def merge(mdfs: Tuple[DataSetType, ...],
+          how: str = 'inner',
+          clean_pipe: Optional[PipeMetaPandaType] = None):
     """
     Merges together a series of MetaPanda objects. This is primarily different
     to pd.merge as turb.merge will AUTOMATICALLY select for each pairing of DataFrame

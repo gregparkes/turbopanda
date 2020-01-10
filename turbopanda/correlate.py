@@ -10,30 +10,32 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-# imports
-import warnings
-import numpy as np
 import itertools as it
+# imports
+from typing import Union, List, Tuple, Optional, Dict
+
+import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr, spearmanr, pointbiserialr
 
+from .custypes import DataSetType, ArrayLike
+from .deprecator import deprecated
 # locals
 from .metapanda import MetaPanda
 from .utils import c_float, intcat, instance_check, dictzip
-from .deprecator import deprecated
 
 __all__ = ("correlate", "corr_long_to_short")
 
 
 def _wrap_corr_metapanda(df_corr, pdm):
-    C = MetaPanda(df_corr)
+    mpf = MetaPanda(df_corr)
     # copy over metadata - dropping columns that aren't present in df_corr
-    C.meta_ = pdm.meta_.loc[df_corr.columns]
+    mpf._meta = pdm.meta_.loc[df_corr.columns]
     # copy over selector
-    C._select = pdm.selectors_
+    mpf._select = pdm.selectors_
     # copy over name
-    C.name_ = pdm.name_
-    return C
+    mpf.name_ = pdm.name_
+    return mpf
 
 
 def _handle_debug(debug, xn, yn, r, corr_t):
@@ -42,15 +44,13 @@ def _handle_debug(debug, xn, yn, r, corr_t):
             return "{}:{} ({:0.3f}, {})".format(xn, yn, r, corr_t)
 
 
-def _r2(x, y):
+def _r2(x: ArrayLike, y: ArrayLike) -> Tuple[float, float]:
     r, p = pearsonr(x, y)
     return np.square(r), p
 
 
-def _row_to_matrix(rows):
-    """
-    Takes the verbose row output and converts to lighter matrix format.
-    """
+def _row_to_matrix(rows: pd.DataFrame) -> pd.DataFrame:
+    """Takes the verbose row output and converts to lighter matrix format."""
     square = rows.pivot("column1", "column2", "r")
     # fillna
     square.fillna(0.0, inplace=True)
@@ -61,7 +61,10 @@ def _row_to_matrix(rows):
     return square
 
 
-def _corr_two_variables(x: pd.Series, y: pd.Series, method: str = "spearman", debug: bool = False):
+def _corr_two_variables(x: pd.Series,
+                        y: pd.Series,
+                        method: str = "spearman",
+                        debug: bool = False) -> Dict:
     # returns name 1, name2, r, p-val and method used.
     df_cols = ("column1", "column2", "r", "p-val", "rtype", "n")
     # x and y must share the same index
@@ -84,7 +87,7 @@ def _corr_two_variables(x: pd.Series, y: pd.Series, method: str = "spearman", de
         )
 
     fmap = dictzip(("spearman", "pearson", "biserial", "r2"), (spearmanr, pearsonr, pointbiserialr, _r2))
-    # nx and ny may have new data types
+    # nx and ny may have new data custypes.py
     if nx.dtype in c_float() and ny.dtype in c_float():
         r = fmap[method](nx, ny)
         t = method
@@ -107,7 +110,10 @@ def _corr_two_variables(x: pd.Series, y: pd.Series, method: str = "spearman", de
     return dictzip(df_cols, (x.name, y.name, r[0], r[1], t, shared.sum()))
 
 
-def _corr_two_matrix_same(x, y, method="spearman", debug=False):
+def _corr_two_matrix_same(x: pd.DataFrame,
+                          y: pd.DataFrame,
+                          method: str = "spearman",
+                          debug: bool = False) -> pd.DataFrame:
     """
     Computes the correlation between two matrices X and Y of same size.
 
@@ -122,7 +128,11 @@ def _corr_two_matrix_same(x, y, method="spearman", debug=False):
     return pd.DataFrame(cor, index=x.columns, columns=[method, "p-val"])
 
 
-def _corr_two_matrix_diff(x, y, method='spearman', style='matrix', debug=False):
+def _corr_two_matrix_diff(x: pd.DataFrame,
+                          y: pd.DataFrame,
+                          method: str = 'spearman',
+                          style: str = 'matrix',
+                          debug: bool = False) -> pd.DataFrame:
     """
     Computes the correlation between two matrices X and Y of different columns lengths.
 
@@ -133,14 +143,17 @@ def _corr_two_matrix_diff(x, y, method='spearman', style='matrix', debug=False):
     # create combinations
     comb = list(it.product(x.columns.tolist(), y.columns.tolist()))
     # iterate and perform two_variable as before
-    DATA = pd.concat([
+    data = pd.concat([
         pd.Series(_corr_two_variables(x[x], y[y], method, debug=debug)) for (x, y) in comb
     ], axis=1, sort=False).T
 
-    return DATA if style == 'rows' else _row_to_matrix(DATA)
+    return data if style == 'rows' else _row_to_matrix(data)
 
 
-def _corr_matrix_singular(x, method="spearman", style="matrix", debug=False):
+def _corr_matrix_singular(x: pd.DataFrame,
+                          method: str = "spearman",
+                          style: str = "matrix",
+                          debug: bool = False) -> Union[Tuple[float, float], pd.Series, pd.DataFrame]:
     """
     Assumes X is of type pandas.DataFrame.
 
@@ -163,38 +176,46 @@ def _corr_matrix_singular(x, method="spearman", style="matrix", debug=False):
         cols = x.columns[sel_keep]
         return pd.Series(_corr_two_variables(x[cols[0]], x[cols[1]], method, debug=debug))
     else:
-        contin_X = x.loc[:, sel_keep]
+        contin_x = x.loc[:, sel_keep]
         # assign zeros/empty
-        R = []
+        ac = []
         # iterate over i,j pairs
-        for i in range(contin_X.shape[1]):
-            for j in range(i, contin_X.shape[1]):
-                R.append(
+        for i in range(contin_x.shape[1]):
+            for j in range(i, contin_x.shape[1]):
+                ac.append(
                     pd.Series(
-                        _corr_two_variables(contin_X.iloc[:, i], contin_X.iloc[:, j],
+                        _corr_two_variables(contin_x.iloc[:, i], contin_x.iloc[:, j],
                                             method=method, debug=debug)
                     )
                 )
-        DATA = pd.concat(R, axis=1, sort=False).T
+        data = pd.concat(ac, axis=1, sort=False).T
+        return data if style == 'rows' else _row_to_matrix(data)
 
-        return DATA if style == 'rows' else _row_to_matrix(DATA)
 
-
-def _corr_matrix_vector(x, y, method="spearman", style="matrix", debug=None):
+def _corr_matrix_vector(x: pd.DataFrame,
+                        y: pd.Series,
+                        method: str = "spearman",
+                        style: str = "matrix",
+                        debug: bool = None) -> pd.DataFrame:
     if x.shape[0] != y.shape[0]:
         raise ValueError("X.shape {} does not match Y.shape {}".format(x.shape, y.shape))
 
-    DATA = pd.concat(
+    data = pd.concat(
         [pd.Series(_corr_two_variables(x.iloc[:, i], y, method, debug=debug)) for i in range(x.shape[1])],
         axis=1, sort=False).T
 
-    return DATA if style == 'rows' else _row_to_matrix(DATA)
+    return data if style == 'rows' else _row_to_matrix(data)
 
 
 """##################### PUBLIC FUNCTIONS ####################################################### """
 
 
-def correlate(x, y=None, data=None, method: str = "spearman", style: str = "rows", debug: bool = False):
+def correlate(x: Union[str, List, Tuple, pd.Index, DataSetType],
+              y: Optional[Union[str, List, Tuple, pd.Index, DataSetType]] = None,
+              data: Optional[Union[pd.DataFrame, MetaPanda]] = None,
+              method: str = "spearman",
+              style: str = "rows",
+              debug: bool = False) -> Union[Dict, pd.DataFrame, MetaPanda]:
     """Correlates X and Y together to generate a correlation matrix.
 
     If X/Y are MetaPandas, returns a MetaPanda object, else returns pandas.DataFrame
@@ -223,7 +244,7 @@ def correlate(x, y=None, data=None, method: str = "spearman", style: str = "rows
 
     Returns
     -------
-    R : float/pd.DataFrame/turb.MetaPanda
+    R : dict/pd.DataFrame/turb.MetaPanda
         correlation matrix/rows
     """
     # check for data

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""This file handles the use of MetaPanda objects."""
 
 # future imports
-"""This file handles the use of MetaPanda objects."""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -13,18 +13,23 @@ import sys
 import warnings
 from copy import deepcopy
 from functools import wraps
+from typing import Tuple, Dict, Callable, Union, Optional
 
 import numpy as np
 import pandas as pd
+from pandas import CategoricalDtype
 from pandas.core.groupby.generic import DataFrameGroupBy
-from typing import Tuple, Dict, Iterable, Callable
 
 # locals
 from .analyze import intersection_grid
+from .custypes import SelectorType, ListTup, PipeTypeCleanElem, PipeTypeRawElem, PipeMetaPandaType
 from .metadata import *
-from .pipe import Pipe
-from .selection import get_selector, _type_encoder_map
+from .pipe import Pipe, is_pipe_structure
+from .selection import get_selector
 from .utils import *
+
+# defines a flexible type for MetaPanda
+
 
 
 class MetaPanda(object):
@@ -164,6 +169,7 @@ class MetaPanda(object):
     def _actionable(function: Callable) -> Callable:
         @wraps(function)
         def new_function(self, *args, **kwargs):
+            """."""
             if self.mode_ == "delay":
                 self._pipe["current"].append((function.__name__, args, kwargs))
             else:
@@ -267,7 +273,7 @@ class MetaPanda(object):
         else:
             raise ValueError("cannot use argument [selector] with axis=0, for rows")
 
-    def _rename_axis(self, old: Iterable, new: Iterable, axis: int = 1):
+    def _rename_axis(self, old: ListTup, new: ListTup, axis: int = 1):
         if axis == 1:
             self.df_.rename(columns=dict(zip(old, new)), inplace=True)
             self.meta_.rename(index=dict(zip(old, new)), inplace=True)
@@ -280,7 +286,7 @@ class MetaPanda(object):
         for col in self.meta_.columns[self.meta_.dtypes == "category"]:
             self.meta_[col].cat.remove_unused_categories(inplace=True)
 
-    def _drop_columns(self, select):
+    def _drop_columns(self, select: pd.Index):
         if select.size > 0:
             self.df_.drop(select, axis=1, inplace=True)
             self.meta_.drop(select, axis=0, inplace=True)
@@ -354,7 +360,7 @@ class MetaPanda(object):
                 warnings.warn("pipe_ element empty, nothing to compute.", UserWarning)
                 return
             # basic check of pipe
-            if is_metapanda_pipe(pipe):
+            if is_pipe_structure(pipe):
                 for fn, args, kwargs in pipe:
                     # check that MetaPanda has the function attribute
                     if hasattr(self, fn):
@@ -369,7 +375,7 @@ class MetaPanda(object):
 
     def _write_json(self, filename: str):
         # columns founded by meta_map are dropped
-        redundant_meta = meta_columns_default() + list(self.mapper_.keys())
+        redundant_meta = union(meta_columns_default(), list(self.mapper_.keys()))
         # saving_dict
         sd = {
             "data": self.df_.to_dict(),
@@ -392,7 +398,10 @@ class MetaPanda(object):
 
     """ ############################## OVERRIDDEN OPERATIONS ###################################### """
 
-    def __getitem__(self, selector):
+    def __copy__(self):
+        warnings.warn("the copy constructor in 'MetaPanda' has no functionality.", RuntimeWarning)
+
+    def __getitem__(self, *selector: SelectorType):
         """Fetch a subset determined by the selector."""
         # we take the columns that are NOT this selection, then drop to keep order.
         sel = self._selector_group(selector, axis=1)
@@ -400,7 +409,7 @@ class MetaPanda(object):
             # drop anti-selection to maintain order/sorting
             return self.df_[sel].squeeze()
 
-    def __delitem__(self, selector):
+    def __delitem__(self, *selector: SelectorType):
         """Delete columns determined by the selector."""
         # drops columns inplace
         self._drop_columns(self.view(selector))
@@ -461,17 +470,6 @@ class MetaPanda(object):
         """Fetch the dataframe with meta information."""
         return self._meta
 
-    @meta_.setter
-    def meta_(self, meta: pd.DataFrame):
-        if isinstance(meta, pd.DataFrame):
-            self._meta = meta
-            # categorize
-            categorize_meta(self._meta)
-            # set colnames
-            self._meta.index.name = "colnames"
-        else:
-            raise TypeError("'meta' must be of type [pd.DataFrame]")
-
     @property
     def n_(self) -> int:
         """Fetch the number of rows/samples within the df_ attribute."""
@@ -485,7 +483,7 @@ class MetaPanda(object):
     """ Additional meta information """
 
     @property
-    def selectors_(self) -> Dict:
+    def selectors_(self) -> Dict[Tuple]:
         """Fetch the cached selectors available."""
         return self._select
 
@@ -579,24 +577,24 @@ class MetaPanda(object):
         """
         return self.df_.head(k)
 
-    def dtypes(self, grouped: bool = True):
-        """Determine the grouped data types in the dataset.
+    def dtypes(self, grouped: bool = True) -> Union[pd.Series, pd.DataFrame]:
+        """Determine the grouped data custypes.py in the dataset.
 
         .. warning:: Not affected by `mode_` attribute.
 
         Parameters
         --------
         grouped : bool, optional
-            If True, returns the value_counts of each data type, else returns the direct types.
+            If True, returns the value_counts of each data type, else returns the direct custypes.py.
 
         Returns
         -------
-        true_types : pd.Series
+        true_types : pd.Series/pd.DataFrame
             A series of index (group/name) and value (count/type)
         """
         return self.meta_['e_types'].value_counts() if grouped else self.meta_['e_types']
 
-    def view(self, *selector) -> pd.Index:
+    def view(self, *selector: SelectorType) -> pd.Index:
         """View a selection of columns in `df_`.
 
         Select merely returns the columns of interest selected using this selector.
@@ -636,7 +634,7 @@ class MetaPanda(object):
         # we do this 'double-drop' to maintain the order of the DataFrame, because of set operations.
         return self.df_.columns.drop(self.view_not(*selector))
 
-    def search(self, *selector) -> pd.Index:
+    def search(self, *selector: SelectorType) -> pd.Index:
         """View the intersection of search terms, for columns in `df_`.
 
         Select merely returns the columns of interest selected using this selector.
@@ -680,7 +678,7 @@ class MetaPanda(object):
         # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
         return sel
 
-    def view_not(self, *selector) -> pd.Index:
+    def view_not(self, *selector: SelectorType) -> pd.Index:
         """View the non-selected columns in `df_`.
 
         Select merely returns the columns of interest NOT selected using this selector.
@@ -723,7 +721,7 @@ class MetaPanda(object):
         # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
         return self.df_.columns.drop(sel)
 
-    def copy(self):
+    def copy(self) -> "MetaPanda":
         """Create a copy of this instance.
 
         .. warning:: Not affected by `mode_` attribute.
@@ -745,7 +743,7 @@ class MetaPanda(object):
         return deepcopy(self)
 
     @_actionable
-    def apply(self, f_name: str, *f_args, **f_kwargs):
+    def apply(self, f_name: str, *f_args, **f_kwargs) -> "MetaPanda":
         """Apply a `pd.DataFrame` function to `df_`.
 
         e.g mdf.apply("groupby", ["counter","refseq_id"], as_index=False)
@@ -769,13 +767,15 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def apply_columns(self, f_name: str, *f_args, **f_kwargs):
+    def apply_columns(self, f_name: str, *f_args, **f_kwargs) -> "MetaPanda":
         """Apply a `pd.Index` function to `df_.columns`.
 
         The result is then returned to the columns attribute, so it should only accept transform-like operations.
 
         Thus to apply `strip` to all column names:
 
+        >>> import turbopanda as turb
+        >>> mdf = turb.MetaPanda()
         >>> mdf.apply_columns("strip")
 
         Parameters
@@ -795,13 +795,15 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def apply_index(self, f_name: str, *f_args, **f_kwargs):
+    def apply_index(self, f_name: str, *f_args, **f_kwargs) -> "MetaPanda":
         """Apply a `pd.Index` function to `df_.index`.
 
         The result is then returned to the index attribute, so it should only accept transform-like operations.
 
         Thus to apply `strip` to all index names:
 
+        >>> import turbopanda as turb
+        >>> mdf = turb.MetaPanda()
         >>> mdf.apply_columns("strip")
 
         Parameters
@@ -821,7 +823,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def drop(self, *selector):
+    def drop(self, *selector: SelectorType) -> "MetaPanda":
         """Drop the selected columns from `df_`.
 
         Given a selector or group of selectors, drop all of the columns selected within
@@ -832,7 +834,7 @@ class MetaPanda(object):
         Parameters
         -------
         selector : str or tuple args
-            Contains either types, meta column names, column names or regex-compliant strings
+            Contains either custypes.py, meta column names, column names or regex-compliant strings
 
         Returns
         -------
@@ -847,7 +849,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def keep(self, *selector):
+    def keep(self, *selector: SelectorType) -> "MetaPanda":
         """Keep the selected columns from `df_` only.
 
         Given a selector or group of selectors, keep all of the columns selected within
@@ -858,7 +860,7 @@ class MetaPanda(object):
         Parameters
         --------
         selector : str or tuple args
-            Contains either types, meta column names, column names or regex-compliant strings
+            Contains either custypes.py, meta column names, column names or regex-compliant strings
 
         Returns
         -------
@@ -872,7 +874,10 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def filter_rows(self, func: Callable, selector=None, *args):
+    def filter_rows(self,
+                    func: Callable,
+                    selector: ListTup[SelectorType] = None,
+                    *args) -> "MetaPanda":
         """Filter j rows using boolean-index returned from `function`.
 
         Given a function, filter out rows that do not meet the functions' criteria.
@@ -885,7 +890,7 @@ class MetaPanda(object):
             A function taking the whole dataset or subset, and returning a boolean
             `pd.Series` with True rows kept and False rows dropped
         selector : str or tuple args, optional
-            Contains either types, meta column names, column names or regex-compliant strings.
+            Contains either custypes.py, meta column names, column names or regex-compliant strings.
             If None, applies `func` to all columns.
         args : list, optional
             Additional arguments to pass as `func(x, *args)`
@@ -908,7 +913,7 @@ class MetaPanda(object):
         self.df_ = self.df_.loc[bs, :]
         return self
 
-    def cache(self, name: str, *selector):
+    def cache(self, name: str, *selector: SelectorType) -> "MetaPanda":
         """Add a cache element to `selectors_`.
 
         Saves a 'selector' to use at a later date. This can be useful if you
@@ -922,7 +927,7 @@ class MetaPanda(object):
         name : str
             A name to reference the selector with.
         selector : str or tuple args
-            Contains either types, meta column names, column names or regex-compliant strings
+            Contains either custypes.py, meta column names, column names or regex-compliant strings
 
         Warnings
         --------
@@ -943,7 +948,10 @@ class MetaPanda(object):
         # convert selector over to list to make it mutable
         selector = list(selector)
         # encode to string
-        enc_map = _type_encoder_map()
+        enc_map = {
+            **{object: "object", CategoricalDtype: "category"},
+            **dictmap(t_numpy(), lambda n: n.__name__)
+        }
         # encode the selector as a string ALWAYS.
         for i, s in enumerate(selector):
             if s in enc_map:
@@ -952,7 +960,7 @@ class MetaPanda(object):
         self._select[name] = selector
         return self
 
-    def cache_k(self, **caches):
+    def cache_k(self, **caches) -> "MetaPanda":
         """Add k cache elements to `selectors_`.
 
         Saves a group of 'selectors' to use at a later date. This can be useful
@@ -966,7 +974,7 @@ class MetaPanda(object):
         caches : dict (k, w)
             keyword: unique reference of the selector
             value: selector: str, tuple args
-                 Contains either types, meta column names, column names or regex-compliant
+                 Contains either custypes.py, meta column names, column names or regex-compliant
 
         Warnings
         --------
@@ -989,7 +997,7 @@ class MetaPanda(object):
                 self.cache(name, selector)
         return self
 
-    def cache_pipe(self, name: str, pipeline):
+    def cache_pipe(self, name: str, pipeline: PipeMetaPandaType) -> "MetaPanda":
         """Add a pipe element to `pipe_`.
 
         Saves a pipeline to use at a later date. Calls to `compute` can reference the name
@@ -1017,13 +1025,18 @@ class MetaPanda(object):
         """
         if name in self.pipe_.keys() and self._with_warnings:
             warnings.warn("pipe name '{}' already exists in .pipe, overriding".format(name), UserWarning)
-        if isinstance(pipeline, Pipe):
-            pipeline = pipeline.p
-        self.pipe_[name] = pipeline
+        if not isinstance(pipeline, Pipe):
+            # attempt to create a pipe from raw.
+            self.pipe_[name] = Pipe.raw(pipeline)
+        else:
+            self.pipe_[name] = pipeline
         return self
 
     @_actionable
-    def rename(self, ops: Iterable, selector=None, axis: int = 1):
+    def rename(self,
+               ops: Tuple[Tuple[str, str]],
+               selector: ListTup[SelectorType] = None,
+               axis: int = 1) -> "MetaPanda":
         """Perform a chain of .str.replace operations on `df_.columns`.
 
         .. note:: strings that are unchanged remain the same (are not NA'd).
@@ -1035,7 +1048,7 @@ class MetaPanda(object):
             At this stage we only accept *direct* replacements. No regex.
             Operations are performed 'in order'.
         selector : None, str, or tuple args, optional
-            Contains either types, meta column names, column names or regex-compliant strings
+            Contains either custypes.py, meta column names, column names or regex-compliant strings
             If None, all column names are subject to potential renaming
         axis : int, optional
             Choose from {1, 0} 1 = columns, 0 = index.
@@ -1056,7 +1069,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def add_prefix(self, pref: str, selector=None):
+    def add_prefix(self, pref: str, selector: ListTup[SelectorType] = None) -> "MetaPanda":
         """Add a prefix to all of the columns or selected columns.
 
         Parameters
@@ -1064,7 +1077,7 @@ class MetaPanda(object):
         pref : str
             The prefix to add
         selector : None, str, or tuple args, optional
-            Contains either types, meta column names, column names or regex-compliant strings
+            Contains either custypes.py, meta column names, column names or regex-compliant strings
             Allows user to specify subset to rename
 
         Returns
@@ -1077,7 +1090,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def add_suffix(self, suf: str, selector=None):
+    def add_suffix(self, suf: str, selector: ListTup[SelectorType] = None) -> "MetaPanda":
         """Add a suffix to all of the columns or selected columns.
 
         Parameters
@@ -1085,7 +1098,7 @@ class MetaPanda(object):
         suf : str
             The prefix to add
         selector : None, str, or tuple args, optional
-            Contains either types, meta column names, column names or regex-compliant strings
+            Contains either custypes.py, meta column names, column names or regex-compliant strings
             Allows user to specify subset to rename
 
         Returns
@@ -1100,11 +1113,11 @@ class MetaPanda(object):
     @_actionable
     def transform(self,
                   func: Callable,
-                  selector=None,
+                  selector: ListTup[SelectorType] = None,
                   method: str = 'transform',
                   whole: bool = False,
                   *args,
-                  **kwargs):
+                  **kwargs) -> "MetaPanda":
         """Perform an inplace transformation to a group of columns within the `df_` attribute.
 
         This flexible function provides capacity for a wide-range of transformations, including custom transformations.
@@ -1117,7 +1130,7 @@ class MetaPanda(object):
             A function taking the `pd.Series` x as input and returning `pd.Series` y as output
             If `whole`, accepts `pd.DataFrame` X, returning `pd.DataFrame` Y
         selector : None, str, or tuple args, optional
-            Contains either types, meta column names, column names or regex-compliant strings
+            Contains either custypes.py, meta column names, column names or regex-compliant strings
             If None, applies the function to all columns.
         method : str, optional
             Allows the user to specify which underlying DataFrame function to call.
@@ -1154,7 +1167,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def transform_k(self, ops: Iterable):
+    def transform_k(self, ops: Tuple[Callable, SelectorType]) -> "MetaPanda":
         """Perform multiple inplace transformations to a group of columns within `df_`.
 
         Allows a chain of k transformations to be applied, in order.
@@ -1164,7 +1177,7 @@ class MetaPanda(object):
         ops : list of 2-tuple
             Containing:
                 1. func : A function taking the pd.Series x_i as input and returning pd.Series y_i as output
-                2. selector : Contains either types, meta column names, column names or regex-compliant strings
+                2. selector : Contains either custypes.py, meta column names, column names or regex-compliant strings
                     Allows user to specify subset to rename
 
         Raises
@@ -1186,7 +1199,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def meta_map(self, name: str, selectors):
+    def meta_map(self, name: str, selectors: ListTup[SelectorType]) -> "MetaPanda":
         """Map a group of selectors with an identifier, in `mapper_`.
 
         Maps a group of selectors into a column in the meta-information
@@ -1199,7 +1212,7 @@ class MetaPanda(object):
         name : str
             The name of this overall grouping
         selectors : list/tuple of (str, or tuple args)
-            Each contains either types, meta column names, column names or regex-compliant strings
+            Each contains either custypes.py, meta column names, column names or regex-compliant strings
 
         Raises
         ------
@@ -1236,12 +1249,14 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def sort_columns(self, by: Tuple[str] = ("colnames"), ascending=True):
+    def sort_columns(self,
+                     by: Union[str, ListTup[str]] = "colnames",
+                     ascending: Union[bool, ListTup[bool]] = True) -> "MetaPanda":
         """Sorts `df_` using vast selection criteria.
 
         Parameters
         -------
-        by : tuple of str, optional
+        by : str, tuple of str, optional
             Sorts columns based on information in `meta_`, or by alphabet, or by index.
             Accepts {'colnames'} as additional options. 'colnames' is `index`
         ascending : bool, tuple of bool, optional
@@ -1259,6 +1274,8 @@ class MetaPanda(object):
         -------
         self
         """
+        if isinstance(by, str):
+            by = [by]
         if isinstance(by, tuple) and isinstance(ascending, (bool, tuple)):
             if len(by) != len(ascending):
                 raise ValueError(
@@ -1273,7 +1290,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def expand(self, column: str, sep: str = ","):
+    def expand(self, column: str, sep: str = ",") -> "MetaPanda":
         """Expand out a 'stacked' id column to a longer-form DataFrame.
 
         Expands out a 'stacked' id column to a longer-form DataFrame, and re-merging
@@ -1314,7 +1331,7 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def shrink(self, column: str, sep: str = ","):
+    def shrink(self, column: str, sep: str = ",") -> "MetaPanda":
         """Expand out a 'unstacked' id column to a shorter-form DataFrame.
 
         Shrinks down a 'duplicated' id column to a shorter-form dataframe, and re-merging
@@ -1355,7 +1372,10 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def split_categories(self, column: str, sep: str = ",", renames: Tuple[str] = None):
+    def split_categories(self,
+                         column: str,
+                         sep: str = ",",
+                         renames: Optional[Tuple[str]] = None) -> "MetaPanda":
         """Split a column into N categorical variables to be associated with df_.
 
         Parameters
@@ -1392,7 +1412,10 @@ class MetaPanda(object):
         self._df.columns.name = "colnames"
         return self
 
-    def compute(self, pipe=None, inplace: bool = False, update_meta: bool = False):
+    def compute(self,
+                pipe: Optional[PipeMetaPandaType] = None,
+                inplace: bool = False,
+                update_meta: bool = False) -> "MetaPanda":
         """Execute a pipeline on `df_`.
 
         Computes a pipeline to the MetaPanda object. If there are no parameters, it computes
@@ -1409,9 +1432,10 @@ class MetaPanda(object):
             If None, computes the stored pipe_.current pipeline.
             If str, computes the stored pipe_.<name> pipeline.
             If Pipe object, computes the elements in that class.
+            See `turb.Pipe` for details on acceptable input for Pipes.
         inplace : bool, optional
             If True, applies the pipe inplace, else returns a copy. Default has now changed
-            to return a copy.
+            to return a copy. Only True if `source='df'`.
         update_meta : bool, optional
             If True, resets the meta after the pipeline completes.
 
@@ -1442,10 +1466,10 @@ class MetaPanda(object):
             cpy.compute(pipe, inplace=True, update_meta=update_meta)
             return cpy
 
-    def compute_k(self, pipes, inplace: bool = False):
+    def compute_k(self, pipes: Tuple[PipeMetaPandaType, ...], inplace: bool = False):
         """Execute `k` pipelines on `df_`, in order.
 
-        Computes multiple pipelines to the MetaPanda object, including cached types such as `.current`
+        Computes multiple pipelines to the MetaPanda object, including cached custypes.py such as `.current`
 
         .. note:: the `meta_` attribute is **refreshed** after a call to `compute_k`.
 
@@ -1470,7 +1494,11 @@ class MetaPanda(object):
         # join and execute
         return self.compute(join(*pipes), inplace=inplace)
 
-    def write(self, filename: str = None, with_meta: bool = False, *args, **kwargs):
+    def write(self,
+              filename: str = None,
+              with_meta: bool = False,
+              *args,
+              **kwargs):
         """Save a MetaPanda to disk.
 
         .. warning:: Not affected by `mode_` attribute.

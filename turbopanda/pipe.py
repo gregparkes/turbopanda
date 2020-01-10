@@ -7,15 +7,19 @@ from __future__ import division
 from __future__ import print_function
 
 # imports
+from copy import deepcopy
+from typing import Union, List
+
+from pandas import to_numeric, Index
 from sklearn import preprocessing
-from pandas import to_numeric
-from typing import List, Tuple, Dict
 
 # locals
-from .utils import boolean_to_integer, object_to_categorical, is_n_value_column
+from .utils import boolean_to_integer, object_to_categorical, \
+    is_n_value_column, instance_check
+from .custypes import PipeTypeRawElem, ListTup, PipeTypeCleanElem
 
 
-def _attempt_float_cast(s):
+def _is_float_cast(s: str):
     try:
         float(s)
         return True
@@ -23,31 +27,39 @@ def _attempt_float_cast(s):
         return False
 
 
-def _is_bool_true(s):
-    return s in {"true", "True"}
+def _type_cast_argument(s: str):
+    """Casts a string 'type' into it's proper basic type.
 
-
-def _is_bool_false(s):
-    return s in {"false", "False"}
-
-
-def _type_cast_argument(s):
+    Works on integers, floats and bool.
+    """
     if s.isdigit():
         return int(s)
-    elif _attempt_float_cast(s):
+    elif _is_float_cast(s):
         return float(s)
-    elif _is_bool_true(s):
+    elif s in {'true', 'True'}:
         return True
-    elif _is_bool_false(s):
+    elif s in {'false', 'False'}:
         return False
     else:
         return s
 
 
-def _single_pipe(argument):
-    """
-    Converts a single command line into pipeable code for MetaPanda.
-    """
+def is_pipe_structure(pipe: ListTup[PipeTypeRawElem]) -> bool:
+    """Check whether the pipe passed fits our raw pipe structure."""
+    for p in pipe:
+        if len(p) != 3:
+            raise ValueError("pipe of length 3 is of length {}".format(len(pipe)))
+        # element 1: string
+        instance_check(pipe[0], str)
+        instance_check(pipe[1], (list, tuple))
+        instance_check(pipe[2], dict)
+    return True
+
+
+def _single_pipe(argument: PipeTypeCleanElem) -> List:
+    """Converts a single command line into pipeable code for MetaPanda."""
+    instance_check(argument[0], str)
+
     pipe_command = [argument[0]]
     pipe_d = {}
     pipe_t = []
@@ -71,7 +83,7 @@ def _single_pipe(argument):
     # assemble and return
     pipe_command.append(tuple(pipe_t))
     pipe_command.append(pipe_d)
-    return tuple(pipe_command)
+    return pipe_command
 
 
 class Pipe(object):
@@ -82,24 +94,30 @@ class Pipe(object):
 
     Attributes
     ----------
-    p_ : list
-        The steps of each argument in the pipeline
+    p_ : tuple of PipeTypeElems
+        The steps of each argument in the pipeline. See `custypes.py` for accepted PipeTypeElems.
 
     Methods
     -------
+    copy : None
+        Deepcopy this current object into a new one.
     None
     """
 
-    def __init__(self, *args):
-        """
+    def __init__(self, *args: PipeTypeCleanElem):
+        """Define a Pipeline for your object.
+
         Creates a pipeline for you using relative shorthand. Each argument
         is a step in the `Pipe`.
 
         Pipe can accept a bunch of arguments corresponding to pipe steps:
         >>> import turbopanda as turb
-        >>> turb.Pipe(['apply_columns', 'lower'])
+        >>> turb.Pipe(('apply_columns', 'lower'))
         ('apply_columns', ('lower',), {})
 
+        The leading argument for each step must be a string
+        naming the function you wish to call, with following arguments as *arg.
+        If a dictionary is passed, this becomes the **kwarg parameter.
         Pipe also accepts keyword arguments in the form of strings. 'axis=0'
 
         Parameters
@@ -111,21 +129,22 @@ class Pipe(object):
         -------
         self
         """
-        self._p = []
+        _p = []
         for arg in args:
-            self._p.append(_single_pipe(arg))
+            _p.append(_single_pipe(arg))
+        # convert to tuple and store
+        self._p = tuple(_p)
 
     @classmethod
-    def _raw(cls, p):
-        """
-        Defines a Pipe using straight raw input.
+    def raw(cls, p: ListTup[PipeTypeRawElem]) -> "Pipe":
+        """Defines a Pipe using straight raw input.
 
         Defined as:
             [<function name>, (<function args>), {<function keyword args}], ...
 
         Parameters
         ----------
-        p : list
+        p : list/tuple
             List of raw arguments as defined above.
 
         Returns
@@ -133,28 +152,42 @@ class Pipe(object):
         pipe : Pipe
             fresh Pipe object
         """
-        obj = cls()
-        obj._p = p
-        return obj
+        # perform check
+        if is_pipe_structure(p):
+            obj = cls()
+            obj._p = p
+            return obj
+        else:
+            raise ValueError("pipe: {} not of correct structure".format(p))
 
-    """ ############ PROPERTIES ################### """
+    """ ##################### PROPERTIES ################################ """
 
     @property
-    def p(self) -> List:
+    def p(self) -> ListTup[PipeTypeRawElem]:
+        """Return the raw pipeline."""
         return self._p
 
-    """ ############ OVERLOADED FUNCTIONS ############## """
+    """ ############ OVERLOADED FUNCTIONS ############################### """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """Represent the object as a string."""
         return "Pipe(n_elements={})".format(len(self.p))
+
+    """ ############### PUBLIC METHODS ################################### """
+
+    def copy(self):
+        """Copy this object into a new object."""
+        return deepcopy(self)
 
     """ ############ PUBLIC ACCESSIBLE PIPELINES TO PLUG-AND-PLAY .... ############### """
 
     @classmethod
-    def ml_regression(cls, mp, x_s, y_s, preprocessor: str = "scale"):
-        """
-        Creates a 'delay' pipe that will make your data 'machine-learning-ready'.
-        Prepares for a regression-based model.
+    def ml_regression(cls,
+                      mp,
+                      x_s: Union[ListTup[str], Index],
+                      y_s: Union[str, ListTup[str], Index],
+                      preprocessor: str = "scale") -> "Pipe":
+        """The default pipeline for Machine Learning Regression problems.
 
         Parameters
         --------
@@ -166,9 +199,8 @@ class Pipe(object):
             A list of y-feature(s)
         preprocessor : str, optional
             Name of preprocessing: default 'scale', choose from
-                [power_transform, minmax_scale, maxabs_scale, robust_scale,
-                 quantile_transform, scale, normalize]
-                Choose from sklearn.preprocessing.
+                {'power_transform', 'minmax_scale', 'maxabs_scale', 'robust_scale',
+                 'quantile_transform', 'scale', 'normalize'}
 
         Returns
         -------
@@ -182,7 +214,7 @@ class Pipe(object):
             raise ValueError("preprocessor function '{}' not found in sklearn.preprocessing".format(preprocessor))
 
         # out of the x-features, we only preprocess.scale continuous features.
-        return cls._raw([
+        return cls.raw((
             # drop objects, ids columns
             ("drop", (object, ".*id$", ".*ID$", "^ID.*", "^id.*"), {}),
             # drop any columns with single-value-type in
@@ -193,24 +225,34 @@ class Pipe(object):
             ("transform", (lambda x: x.fillna(x.mean()), x_s), {}),
             # apply standard scaling to X
             ("transform", (preproc_f,), {"selector": x_s, "whole": True}),
-        ])
+        ))
 
     @classmethod
-    def clean(cls):
-        """
+    def clean(cls, with_drop: bool = True) -> "Pipe":
+        """Pipeline to clean a pandas.DataFrame.
+
         Pipe that cleans the pandas.DataFrame. Applies a number of transformations which (attempt to) reduce the datatype,
-        cleaning column names.
+        cleaning column names. Transformations include:
+
+        * Dropping columns with only one unique value type.
+        * Converting columns to numeric where possible
+        * Converting object-columns to categoricals where possible
+        * Converting boolean columns to `uint8` type
+        * Stripping column names of spaces
+        * Renaming column names to eliminate tabs, whitespace and `-`
 
         Parameters
         --------
-        None
+        TODO: with_drop : bool, optional
+            If True, drops columns containing only one data value.
 
         Returns
         -------
         pipe : Pipe
             The pipeline object
         """
-        return cls._raw([
+
+        return cls.raw((
             # drop columns with only one value in
             ("drop", (lambda x: x.dropna().unique().shape[0] == 1,), {}),
             # shrink down data types where possible.
@@ -223,24 +265,17 @@ class Pipe(object):
             ("apply_columns", ("strip",), {}),
             # do some string stripping
             ("rename", ([(" ", "_"), ("\t", "_"), ("-", "")],), {}),
-        ])
+        ))
 
     @classmethod
-    def no_id(cls):
-        """
-        Pipe that drops ID-like columns from the dataset.
-        Includes regex string search for terms like id, ID, etc.
+    def no_id(cls) -> "Pipe":
+        """Pipeline to drop ID-like columns.
 
-        Parameters
-        --------
-        None
+        Drops columns containing {'ID', 'id', object}.
 
         Returns
         -------
         pipe : list
             The pipeline object
         """
-        return cls._raw([
-            # drops elements of type object, id selectors
-            ("drop", (object, ".*id$", ".*ID$", "^ID.*", "^id.*"), {})
-        ])
+        return cls(('drop', object, ".*id$", ".*ID$", "^ID.*", "^id.*"))

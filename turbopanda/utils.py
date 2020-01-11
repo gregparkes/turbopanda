@@ -16,7 +16,7 @@ import pandas as pd
 from pandas.api.types import CategoricalDtype
 from scipy.stats import norm
 
-from .custypes import ListTup, ArrayLike, SetLike
+from .custypes import ArrayLike, SetLike
 
 # defined custom custypes.py
 AsPandas = Union[pd.Series, pd.DataFrame]
@@ -219,7 +219,7 @@ def integer_to_boolean(ser: pd.Series) -> pd.Series:
     return ser.astype(np.bool) if (is_column_int(ser) and is_n_value_column(ser, 2)) else ser
 
 
-def object_to_categorical(ser: pd.Series, order: Optional[ListTup] = None, thresh: int = 30) -> pd.Series:
+def object_to_categorical(ser: pd.Series, order: Optional[Tuple] = None, thresh: int = 30) -> pd.Series:
     """Convert ser to be of type 'category' if possible."""
     # get uniques if possible
     if 1 < nunique(ser) < thresh:
@@ -244,7 +244,7 @@ def boolean_series_check(ser: pd.Series):
         raise TypeError("bool_s must contain booleans, not type '{}'".format(ser.dtype))
 
 
-def check_list_type(elems: ListTup, t: TypeVar) -> bool:
+def check_list_type(elems: Tuple, t: TypeVar) -> bool:
     """Checks the type of every element in the list."""
     for i, elem in enumerate(elems):
         if not isinstance(elem, t):
@@ -252,7 +252,7 @@ def check_list_type(elems: ListTup, t: TypeVar) -> bool:
     return True
 
 
-def belongs(elem: Any, types: ListTup[TypeVar]):
+def belongs(elem: Any, types: Union[TypeVar, Tuple[TypeVar, ...]]):
     """Check whether every element is of type t."""
     if elem not in types:
         raise ValueError("element {} is not found in list: {}".format(elem, types))

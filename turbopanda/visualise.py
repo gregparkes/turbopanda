@@ -252,28 +252,28 @@ def plot_coefficients(mml, normalize=False, use_absolute=False, drop_intercept=T
     f_apply = np.abs if use_absolute else fself
     norm_apply = standardize if normalize else fself
 
-    def _plot_single_box(m, ax, i):
-        if isinstance(m, MetaML):
-            if m.is_fit and hasattr(m, "coef_mat"):
+    def _plot_single_box(model, ax, index):
+        if isinstance(model, MetaML):
+            if model.is_fit and hasattr(model, "coef_mat"):
                 # new order
-                d_transf = m.coef_mat.apply(f_apply).apply(norm_apply)
-                if drop_intercept and ("intercept" in d_transf.index):
+                transformed = model.coef_mat.apply(f_apply).apply(norm_apply)
+                if drop_intercept and ("intercept" in transformed.index):
                     # intercept should be on index
-                    d_transf.drop("intercept", axis=0, inplace=True)
-                no = d_transf.mean(axis=1).sort_values().index
-                buf = len(m.coef_mat) / 20
+                    transformed.drop("intercept", axis=0, inplace=True)
+                no = transformed.mean(axis=1).sort_values().index
+                buf = len(model.coef_mat) / 20
                 # perform transformations and get data
-                data = d_transf.reindex(no)
-                if i == 0:
+                data = transformed.reindex(no)
+                if index == 0:
                     ax.boxplot(data, vert=False, labels=no)
                 else:
                     ax.boxplot(data, vert=False)
                     ax.set_yticks([])
                     ax.set_yticklabels([])
-                ax.set_ylim(-buf, len(m.coef_mat) + buf)
-                ax.vlines([0], ymin=0, ymax=len(m.coef_mat), linestyle="--", color="red")
+                ax.set_ylim(-buf, len(model.coef_mat) + buf)
+                ax.vlines([0], ymin=0, ymax=len(model.coef_mat), linestyle="--", color="red")
                 ax.set_xlabel("Coefficients")
-                ax.set_title("Model: {}".format(m.model_str))
+                ax.set_title("Model: {}".format(model.model_str))
                 ax.margins(y=0)
 
     if isinstance(mml, MetaML):

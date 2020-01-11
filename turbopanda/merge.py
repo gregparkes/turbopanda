@@ -15,9 +15,11 @@ from pandas import DataFrame, Series, concat
 import itertools as it
 
 # locals
-from .metapanda import MetaPanda
+from .metapanda import MetaPanda, PipeMetaPandaType
 from .utils import belongs
-from .custypes import DataSetType, PipeMetaPandaType
+
+# custom types
+DataSetType = Union[Series, DataFrame, MetaPanda]
 
 
 def _intersecting_pairs(sdf1: DataFrame, sdf2: DataFrame) -> DataFrame:
@@ -53,50 +55,39 @@ def _maximum_likelihood_pairs(pairings: DataFrame, ret_largest: bool = True):
         return pm[pm.gt(0)]
 
 
-def _single_merge(sdf1: DataSetType, sdf2: DataSetType, how: str = 'inner') -> Union[DataFrame, MetaPanda]:
+def _single_merge(sdf1: DataSetType,
+                  sdf2: DataSetType,
+                  how: str = 'inner') -> Union[DataFrame, MetaPanda]:
     """Check different use cases and merge d1 and d2 together."""
-
     # both are series.
     if isinstance(sdf1, Series) and isinstance(sdf2, Series):
         # perform pd.concat on the indexes.
         return concat((sdf1, sdf2), join='outer', axis=1, sort=False, copy=True)
     elif (isinstance(sdf1, DataFrame) and isinstance(sdf2, Series)) \
             or (isinstance(sdf1, Series) and isinstance(sdf2, DataFrame)):
-        # join on index.
+        # join on index. TODO: This if case may produce weird behavior.
         return concat((sdf1, sdf2), join='outer', axis=1, sort=False, copy=True)
     elif isinstance(sdf1, DataFrame) and isinstance(sdf2, DataFrame):
         # we call reset_index to allow for merges on the index also.
-        d1 = sdf1.reset_index()
-        d2 = sdf2.reset_index()
+        d1 = sdf1.reset_index(); d2 = sdf2.reset_index()
         new_name = 'df1__df2'
-        s1 = {}
-        s2 = {}
-        m1 = {}
-        m2 = {}
+        s1 = {}; s2 = {}
+        m1 = {}; m2 = {}
     elif isinstance(sdf1, MetaPanda) and isinstance(sdf2, DataFrame):
-        d1 = sdf1.df_
-        d2 = sdf2.reset_index()
+        d1 = sdf1.df_; d2 = sdf2.reset_index()
         new_name = sdf1.name_ + "__df2"
-        s1 = sdf1.selectors_
-        s2 = {}
-        m1 = sdf1.mapper_
-        m2 = {}
+        s1 = sdf1.selectors_; s2 = {}
+        m1 = sdf1.mapper_; m2 = {}
     elif isinstance(sdf1, DataFrame) and isinstance(sdf2, MetaPanda):
-        d1 = sdf1.reset_index()
-        d2 = sdf2.df_
+        d1 = sdf1.reset_index(); d2 = sdf2.df_
         new_name = "df1__" + sdf2.name_
-        s1 = {}
-        s2 = sdf2.selectors_
-        m1 = {}
-        m2 = sdf2.mapper_
+        s1 = {}; s2 = sdf2.selectors_
+        m1 = {}; m2 = sdf2.mapper_
     elif isinstance(sdf1, MetaPanda) and isinstance(sdf2, MetaPanda):
-        d1 = sdf1.df_
-        d2 = sdf2.df_
+        d1 = sdf1.df_; d2 = sdf2.df_
         new_name = sdf1.name_ + '__' + sdf2.name_
-        s1 = sdf1.selectors_
-        s2 = sdf2.selectors_
-        m1 = sdf1.mapper_
-        m2 = sdf2.mapper_
+        s1 = sdf1.selectors_; s2 = sdf2.selectors_
+        m1 = sdf1.mapper_; m2 = sdf2.mapper_
     else:
         raise TypeError("combination of type {}:{} not recognized".format(type(sdf1), type(sdf2)))
 

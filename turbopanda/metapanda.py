@@ -13,7 +13,7 @@ import sys
 import warnings
 from copy import deepcopy
 from functools import wraps
-from typing import Tuple, Dict, Callable, Union, Optional, Any
+from typing import Tuple, Dict, Callable, Union, Optional, List, Any
 
 import numpy as np
 import pandas as pd
@@ -22,11 +22,19 @@ from pandas.core.groupby.generic import DataFrameGroupBy
 
 # locals
 from .analyze import intersection_grid
-from .custypes import SelectorType, ListTup, PipeMetaPandaType, PandaIndex
+from .custypes import SelectorType, PandaIndex, PipeTypeRawElem, PipeTypeCleanElem
 from .metadata import *
 from .pipe import Pipe, is_pipe_structure
 from .selection import get_selector
 from .utils import *
+
+# define MetaPanda pipe type
+PipeMetaPandaType = Union[Tuple[PipeTypeCleanElem, ...],
+                          Tuple[PipeTypeRawElem, ...],
+                          List[PipeTypeCleanElem],
+                          List[PipeTypeRawElem],
+                          str,
+                          Pipe]
 
 
 class MetaPanda(object):
@@ -259,7 +267,7 @@ class MetaPanda(object):
 
     """ ############################ HIDDEN OPERATIONS ####################################### """
 
-    def _selector_group(self, s: ListTup[SelectorType, ...], axis: int = 1) -> pd.Index:
+    def _selector_group(self, s: Tuple[SelectorType, ...], axis: int = 1) -> pd.Index:
         if s is None:
             return self.df_.columns if axis == 1 else self.df_.index
         elif axis == 1:
@@ -385,6 +393,7 @@ class MetaPanda(object):
         if len(self.selectors_) > 0:
             sd['cache'] = self._select
         if len(self.pipe_) > 0:
+            # convert all Pipe elements inside to the full raw attribute type.
             sd['pipe'] = self.pipe_
         if len(self.mapper_) > 0:
             sd['mapper'] = self.mapper_
@@ -480,7 +489,7 @@ class MetaPanda(object):
     """ Additional meta information """
 
     @property
-    def selectors_(self) -> Dict[Tuple]:
+    def selectors_(self) -> Dict[str, Any]:
         """Fetch the cached selectors available."""
         return self._select
 
@@ -517,12 +526,12 @@ class MetaPanda(object):
             raise ValueError("'mode' must be ['instant', 'delay'], not '{}'".format(mode))
 
     @property
-    def pipe_(self) -> Dict:
+    def pipe_(self) -> Dict[str, Any]:
         """Fetch the cached pipelines."""
         return self._pipe
 
     @property
-    def mapper_(self) -> Dict:
+    def mapper_(self) -> Dict[str, Any]:
         """Fetch the mapping between unique name and selector groups."""
         return self._mapper
 
@@ -873,7 +882,7 @@ class MetaPanda(object):
     @_actionable
     def filter_rows(self,
                     func: Callable,
-                    selector: ListTup[SelectorType] = None,
+                    selector: Tuple[SelectorType, ...] = None,
                     *args) -> "MetaPanda":
         """Filter j rows using boolean-index returned from `function`.
 
@@ -957,7 +966,7 @@ class MetaPanda(object):
         self._select[name] = selector
         return self
 
-    def cache_k(self, **caches) -> "MetaPanda":
+    def cache_k(self, **caches: SelectorType) -> "MetaPanda":
         """Add k cache elements to `selectors_`.
 
         Saves a group of 'selectors' to use at a later date. This can be useful
@@ -1022,9 +1031,9 @@ class MetaPanda(object):
         """
         if name in self.pipe_.keys() and self._with_warnings:
             warnings.warn("pipe name '{}' already exists in .pipe, overriding".format(name), UserWarning)
-        if not isinstance(pipeline, Pipe):
+        if isinstance(pipeline, Pipe):
             # attempt to create a pipe from raw.
-            self.pipe_[name] = Pipe.raw(pipeline)
+            self.pipe_[name] = pipeline.p
         else:
             self.pipe_[name] = pipeline
         return self
@@ -1032,7 +1041,7 @@ class MetaPanda(object):
     @_actionable
     def rename(self,
                ops: Tuple[str, str],
-               selector: ListTup[SelectorType] = None,
+               selector: Tuple[SelectorType, ...] = None,
                axis: int = 1) -> "MetaPanda":
         """Perform a chain of .str.replace operations on `df_.columns`.
 
@@ -1066,7 +1075,8 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def add_prefix(self, pref: str, selector: ListTup[SelectorType] = None) -> "MetaPanda":
+    def add_prefix(self, pref: str,
+                   selector: Optional[Tuple[SelectorType, ...]] = None) -> "MetaPanda":
         """Add a prefix to all of the columns or selected columns.
 
         Parameters
@@ -1087,7 +1097,8 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def add_suffix(self, suf: str, selector: ListTup[SelectorType] = None) -> "MetaPanda":
+    def add_suffix(self, suf: str,
+                   selector: Optional[Tuple[SelectorType, ...]] = None) -> "MetaPanda":
         """Add a suffix to all of the columns or selected columns.
 
         Parameters
@@ -1110,7 +1121,7 @@ class MetaPanda(object):
     @_actionable
     def transform(self,
                   func: Callable,
-                  selector: ListTup[SelectorType] = None,
+                  selector: Optional[Tuple[SelectorType, ...]] = None,
                   method: str = 'transform',
                   whole: bool = False,
                   *args,
@@ -1196,7 +1207,8 @@ class MetaPanda(object):
         return self
 
     @_actionable
-    def meta_map(self, name: str, selectors: ListTup[SelectorType]) -> "MetaPanda":
+    def meta_map(self, name: str,
+                 selectors: Tuple[SelectorType, ...]) -> "MetaPanda":
         """Map a group of selectors with an identifier, in `mapper_`.
 
         Maps a group of selectors into a column in the meta-information
@@ -1247,8 +1259,8 @@ class MetaPanda(object):
 
     @_actionable
     def sort_columns(self,
-                     by: Union[str, ListTup[str]] = "colnames",
-                     ascending: Union[bool, ListTup[bool, ...]] = True) -> "MetaPanda":
+                     by: Union[str, Tuple[str, ...]] = "colnames",
+                     ascending: Union[bool, Tuple[bool, ...]] = True) -> "MetaPanda":
         """Sorts `df_` using vast selection criteria.
 
         Parameters
@@ -1372,7 +1384,7 @@ class MetaPanda(object):
     def split_categories(self,
                          column: str,
                          sep: str = ",",
-                         renames: Optional[Tuple[str]] = None) -> "MetaPanda":
+                         renames: Optional[Tuple[str, ...]] = None) -> "MetaPanda":
         """Split a column into N categorical variables to be associated with df_.
 
         Parameters
@@ -1463,7 +1475,9 @@ class MetaPanda(object):
             cpy.compute(pipe, inplace=True, update_meta=update_meta)
             return cpy
 
-    def compute_k(self, pipes: ListTup[PipeMetaPandaType, ...], inplace: bool = False):
+    def compute_k(self,
+                  pipes: Tuple[PipeMetaPandaType, ...],
+                  inplace: bool = False) -> "MetaPanda":
         """Execute `k` pipelines on `df_`, in order.
 
         Computes multiple pipelines to the MetaPanda object, including cached custypes.py such as `.current`
@@ -1492,10 +1506,10 @@ class MetaPanda(object):
         return self.compute(join(pipes), inplace=inplace)
 
     def write(self,
-              filename: str = None,
+              filename: Optional[str] = None,
               with_meta: bool = False,
               *args,
-              **kwargs):
+              **kwargs) -> "MetaPanda":
         """Save a MetaPanda to disk.
 
         .. warning:: Not affected by `mode_` attribute.
@@ -1520,7 +1534,7 @@ class MetaPanda(object):
 
         Returns
         -------
-        None
+        self
         """
         if filename is None:
             self._write_json(self.name_ + ".json")
@@ -1530,5 +1544,6 @@ class MetaPanda(object):
             self._write_json(filename)
         else:
             raise IOError("Doesn't recognize filename or type: '{}', must end in [csv, json]".format(filename))
+        return self
 
     _actionable = staticmethod(_actionable)

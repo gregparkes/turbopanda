@@ -8,7 +8,7 @@ from __future__ import print_function
 
 # imports
 from copy import deepcopy
-from typing import Union, List
+from typing import Union, List, Tuple
 
 from pandas import to_numeric, Index
 from sklearn import preprocessing
@@ -16,7 +16,7 @@ from sklearn import preprocessing
 # locals
 from .utils import boolean_to_integer, object_to_categorical, \
     is_n_value_column, instance_check
-from .custypes import PipeTypeRawElem, ListTup, PipeTypeCleanElem
+from .custypes import PipeTypeRawElem, PipeTypeCleanElem
 
 
 def _is_float_cast(s: str):
@@ -44,15 +44,15 @@ def _type_cast_argument(s: str):
         return s
 
 
-def is_pipe_structure(pipe: ListTup[PipeTypeRawElem]) -> bool:
+def is_pipe_structure(pipe: Tuple[PipeTypeRawElem, ...]) -> bool:
     """Check whether the pipe passed fits our raw pipe structure."""
     for p in pipe:
         if len(p) != 3:
             raise ValueError("pipe of length 3 is of length {}".format(len(pipe)))
         # element 1: string
-        instance_check(pipe[0], str)
-        instance_check(pipe[1], (list, tuple))
-        instance_check(pipe[2], dict)
+        instance_check(p[0], str)
+        instance_check(p[1], (list, tuple))
+        instance_check(p[2], dict)
     return True
 
 
@@ -136,7 +136,7 @@ class Pipe(object):
         self._p = tuple(_p)
 
     @classmethod
-    def raw(cls, p: ListTup[PipeTypeRawElem]) -> "Pipe":
+    def raw(cls, pipes: Tuple[PipeTypeRawElem, ...]) -> "Pipe":
         """Defines a Pipe using straight raw input.
 
         Defined as:
@@ -144,7 +144,7 @@ class Pipe(object):
 
         Parameters
         ----------
-        p : list/tuple
+        pipes : list/tuple
             List of raw arguments as defined above.
 
         Returns
@@ -153,17 +153,15 @@ class Pipe(object):
             fresh Pipe object
         """
         # perform check
-        if is_pipe_structure(p):
-            obj = cls()
-            obj._p = p
-            return obj
-        else:
-            raise ValueError("pipe: {} not of correct structure".format(p))
+        is_pipe_structure(pipes)
+        obj = cls()
+        obj._p = pipes
+        return obj
 
     """ ##################### PROPERTIES ################################ """
 
     @property
-    def p(self) -> ListTup[PipeTypeRawElem]:
+    def p(self) -> Tuple[PipeTypeRawElem, ...]:
         """Return the raw pipeline."""
         return self._p
 
@@ -184,8 +182,8 @@ class Pipe(object):
     @classmethod
     def ml_regression(cls,
                       mp,
-                      x_s: Union[ListTup[str], Index],
-                      y_s: Union[str, ListTup[str], Index],
+                      x_s: Union[Tuple[str, ...], Index],
+                      y_s: Union[str, Tuple[str, ...], Index],
                       preprocessor: str = "scale") -> "Pipe":
         """The default pipeline for Machine Learning Regression problems.
 

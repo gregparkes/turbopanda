@@ -9,12 +9,12 @@ from __future__ import print_function
 
 # imports
 import re
-from typing import Dict
+from typing import Dict, Tuple
 from pandas import CategoricalDtype, concat, Index, Series, DataFrame
 
 # locals
 from .utils import boolean_series_check, intersect, union, t_numpy, dictmap, dictzip
-from .custypes import SelectorType, ListTup
+from .custypes import SelectorType
 
 
 __all__ = ("regex_column", "get_selector", "selector_types")
@@ -23,7 +23,7 @@ __all__ = ("regex_column", "get_selector", "selector_types")
 def selector_types() -> Index:
     """Returns the acceptable selector data types that are searched for."""
     return union(
-        dictmap(t_numpy(), lambda n: n.__name__), {float, int, bool, object, CategoricalDtype, "object", "category"}
+        t_numpy(),  tuple(map(lambda n: n.__name__, t_numpy())), {float, int, bool, object, CategoricalDtype, "object", "category"}
     )
 
 
@@ -101,7 +101,7 @@ def _get_selector_item(df: DataFrame,
 def get_selector(df: DataFrame,
                  meta: DataFrame,
                  cached: Dict[str, SelectorType],
-                 selector: ListTup[SelectorType],
+                 selector: Tuple[SelectorType, ...],
                  raise_error: bool = False,
                  select_join: str = "OR") -> Index:
     """

@@ -16,14 +16,14 @@ from __future__ import print_function
 # imports
 import os
 import warnings
-from pandas import DataFrame
 from typing import Callable, Optional
-from pandas import CategoricalDtype
+from pandas import DataFrame
 
 # locals
-from .metapanda import MetaPanda
 from .fileio import read
+from .metapanda import MetaPanda
 from .utils import instance_check, belongs
+
 
 __all__ = ("cached", "cache")
 

@@ -2,30 +2,21 @@
 # -*- coding: utf-8 -*-
 
 # imports
-from typing import Tuple, Union, Set, List, TypeVar, Callable, Optional, Dict
-
+from typing import Tuple, Union, Set, List, TypeVar, Callable, Optional, Dict, Any
 from numpy import ndarray
-from pandas import pSeries, pDataFrame, pIndex
+from pandas import Series, DataFrame, Index
 from matplotlib.pyplot import Figure
-from .metapanda import MetaPanda
-from .pipe import Pipe
 
 # defined custom custypes.py
-ArrayLike = Union[ndarray, pSeries, pDataFrame]
+ArrayLike = Union[ndarray, Series, DataFrame]
 # index or series
-PandaIndex = Union[pSeries, pIndex]
+PandaIndex = Union[Series, Index]
 # set like
-SetLike = Union[Set, pIndex, List, Tuple, pSeries]
-# list or tuple
-ListTup = Union[List, Tuple]
+SetLike = Union[Set, Index, List, Tuple, Series]
 # a selector can be very broad.
-SelectorType = Optional[Union[TypeVar, str, pIndex, Callable]]
+SelectorType = Optional[Union[TypeVar, str, Index, Callable]]
 # pipe for Pipelines
 PipeTypeRawElem = Tuple[str, Tuple, Dict]
 PipeTypeCleanElem = Tuple[Union[str, Callable, Dict, TypeVar], ...]
-# specific pipe for MetaPanda
-PipeMetaPandaType = Union[ListTup[PipeTypeCleanElem, ...], ListTup[PipeTypeRawElem, ...], str, Pipe]
 # matplotlib Figure
 MatPlotFig = Figure
-# Broad DataSet Types
-DataSetType = Union[pSeries, pDataFrame, MetaPanda]

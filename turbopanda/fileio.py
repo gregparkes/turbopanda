@@ -12,7 +12,7 @@ import itertools as it
 import json
 
 # locals
-from typing import Optional, Dict
+from typing import Optional, Dict, Union, List
 
 from .metapanda import MetaPanda
 from .utils import instance_check
@@ -21,7 +21,10 @@ from .deprecator import deprecated
 __all__ = ("read", "read_mp", 'read_raw_json')
 
 
-def read(filename: str, name: Optional[str] = None, *args, **kwargs) -> MetaPanda:
+def read(filename: str,
+         name: Optional[str] = None,
+         *args,
+         **kwargs) -> Union[MetaPanda, List[MetaPanda]]:
     """Reads in a data source from file and creates a MetaPanda object from it.
 
     Note that if multiple files are selected, they are returned in ALPHABETICAL ORDER, not
@@ -63,20 +66,20 @@ def read(filename: str, name: Optional[str] = None, *args, **kwargs) -> MetaPand
     if len(glob_name) == 0:
         raise IOError("No files selected with filename {}".format(filename))
     else:
-        # maps the filetype to a potential pandas function.
-        pandas_types = ["csv", "CSV", "xls", "xlsx", "XLSX", "hdf"]
+        # maps the file type to a potential pandas function.
+        pandas_types = ("csv", "CSV", "xls", "xlsx", "XLSX", "hdf")
 
         def ext(s):
             return s.rsplit(".", 1)[-1]
 
-        def fetch_db(fl, n=None):
+        def fetch_db(fl: str, n=None) -> "MetaPanda":
             if ext(fl) in pandas_types:
                 return MetaPanda.from_pandas(fl, n, *args, **kwargs)
             elif ext(fl) == 'json':
                 return MetaPanda.from_json(fl, name=n, **kwargs)
             else:
                 raise ValueError(
-                    "file ending '{}' not recognized, must end with {}".format(fl, pandas_types + ['json']))
+                    "non-pandas file ending '{}' not recognized, must end with {}".format(fl, pandas_types))
 
         if isinstance(name, (list, tuple)):
             ds = [fetch_db(f, n) for f, n in it.zip_longest(glob_name, sorted(name))]

@@ -18,11 +18,15 @@ import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr, spearmanr, pointbiserialr
 
-from .custypes import DataSetType, ArrayLike
+from .custypes import ArrayLike
 from .deprecator import deprecated
 # locals
 from .metapanda import MetaPanda
 from .utils import c_float, intcat, instance_check, dictzip
+
+# user define dataset type
+DataSetType = Union[pd.Series, pd.DataFrame, MetaPanda]
+
 
 __all__ = ("correlate", "corr_long_to_short")
 

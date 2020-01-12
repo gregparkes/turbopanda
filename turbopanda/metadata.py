@@ -8,12 +8,13 @@ from __future__ import division
 from __future__ import print_function
 
 # imports
-from typing import Set
 import pandas as pd
+from typing import Tuple
 
 # locals
 from .utils import is_missing_values, is_unique_id, is_potential_id, \
     is_potential_stacker, nunique, is_possible_category, object_to_categorical
+
 
 __all__ = ("meta_columns_default", "basic_construct", "categorize_meta", "add_metadata")
 
@@ -32,10 +33,10 @@ def _is_mixed_type(ser: pd.Series) -> bool:
     return ser.apply(lambda x: type(x)).unique().shape[0] > 1
 
 
-def meta_columns_default() -> Set:
+def meta_columns_default() -> Tuple[str, ...]:
     """The default metadata columns provided."""
-    return {"e_types", "is_unique", "is_potential_id", "is_potential_stacker",
-            "is_missing", "n_uniques"}
+    return ("e_types", "is_unique", "is_potential_id", "is_potential_stacker",
+            "is_missing", "n_uniques")
 
 
 def basic_construct(df: pd.DataFrame) -> pd.DataFrame:

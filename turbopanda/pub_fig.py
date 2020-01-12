@@ -1,69 +1,84 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+"""Handles basic Figure methods."""
 # imports
 import os
 import warnings
+from typing import Tuple
 # locals
-from .utils import instance_check
+from .utils import instance_check, belongs
 import matplotlib.pyplot as plt
 
 
 __all__ = ['save_figure']
 
 
-def save_figure(fig_obj,
-                plot_type,
-                name="example1",
-                save_types=("png", "pdf"),
-                fp="./",
-                dpi=360,
-                savemode="first"):
-    """
+def save_figure(fig_obj: plt.Figure,
+                plot_type: str,
+                name: str = "example1",
+                save_types: Tuple[str, ...] = ("png", "pdf"),
+                fp: str = "./",
+                dpi: int = 360,
+                savemode: str = "first") -> bool:
+    """Saves a matplotlib figure in many formats.
+
     Given a matplotlib.Figure object, save appropriate numbers of Figures to the respective
     folders.
 
     Parameters
-    -------
-    fig : matplotlib.Figure
+    ----------
+    fig_obj : plt.Figure
         The figure object to save.
     plot_type : str
-        The type of plot this is, accepted inputs are:
-        ["scatter", "kde", "heatmap", "cluster", "bar", "hist", "kde", "quiver",
-        "box", "line", "venn", "multi", "pie"]
-    name : str (optional)
+        Choose from:
+            {"scatter", "kde", "heatmap", "cluster", "bar", "hist", "kde", "quiver",
+            "box", "line", "venn", "multi", "pie"}
+    name : str, optional
         The name of the file, this may be added to based on the other parameters
-    save_types : list (optional)
-        Contains every unique save type to use e.g ["png", "pdf", "svg"]..
-    fp : str (optional)
+    save_types : tuple of str, optional
+        Choose any from {"png", "pdf", "svg", "eps", "ps"}
+    fp : str, optional
         The file path to the root directory of saving images
-    dpi : int
+    dpi : int, optional
         The resolution in dots per inch; set to high if you want a good image
-    savemode : str
-        ['first', 'update']: if first, only saves if file isn't present, if update,
-        overrides saved figure
+    savemode : str, optional
+        Choose from {'first', 'update'}
+            if first, only saves if file isn't present
+            if update, overrides saved figure if present
+
+    Warnings
+    --------
+    UserWarning
+        If figure file itself already exists
+
+    Raises
+    ------
+    IOError
+        If the filepath does not exist
+    TypeError
+        If the arguments do not match their declared type
+    ValueError
+        If `plot_type`, `savemode` does not belong to an acceptable argument
 
     Returns
     -------
     success : bool
         Whether it was successful or not
     """
-    instance_check(fig_obj, plt.Figure)
-    accepted_types = [
+    accepted_types = (
         "scatter", "kde", "heatmap", "cluster", "bar", "hist", "kde", "quiver",
         "box", "line", "venn", "multi", "pie"
-    ]
-    file_types_supported = ["png", "pdf", "svg", "eps", "ps"]
-    accepted_savemodes = ['first', 'update']
+    )
+    file_types_supported = ("png", "pdf", "svg", "eps", "ps")
+    accepted_savemodes = ('first', 'update')
 
-    if plot_type not in accepted_types:
-        raise TypeError("plot_type: [%s] not found in accepted custypes.py!" % plot_type)
+    instance_check(fig_obj, plt.Figure)
+    belongs(plot_type, accepted_types)
+    belongs(savemode, accepted_savemodes)
 
     for st in save_types:
         if st not in file_types_supported:
             TypeError("save_type: [%s] not supported" % st)
-    if savemode not in accepted_savemodes:
-        raise ValueError("savemode: '{}' not found in {}".format(savemode, accepted_savemodes))
 
     # correct to ensure filepath has / at end
     if not fp.endswith("/"):

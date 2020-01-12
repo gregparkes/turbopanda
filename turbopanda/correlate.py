@@ -92,6 +92,8 @@ def _corr_two_variables(x: pd.Series,
 
     fmap = dictzip(("spearman", "pearson", "biserial", "r2"), (spearmanr, pearsonr, pointbiserialr, _r2))
     # nx and ny may have new data custypes.py
+    # print(nx.dtype, ny.dtype, c_float(), intcat())
+
     if nx.dtype in c_float() and ny.dtype in c_float():
         r = fmap[method](nx, ny)
         t = method

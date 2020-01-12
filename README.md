@@ -29,7 +29,9 @@ in the following fashion:
 
 ```python
 # where df is our pandas.DataFrame
-df.loc[:, df.columns[df.columns.str.contains('something_interesting_pattern')]]
+import pandas as pd
+df = pd.read_csv("some_data.csv")
+df_subset = df.loc[:, df.columns[df.columns.str.contains('something_interesting_pattern')]]
 ```
 
 Why on earth do I have to write so much just to select all columns with an 
@@ -41,7 +43,9 @@ How we fix this in `turbopanda` is as follows:
 
 ```python
 # mdf is our turbopanda.MetaPanda object
-mdf['something_interesting_pattern']
+import turbopanda as turb
+mdf = turb.read("some_data.csv")
+subset = mdf['something_interesting_pattern']
 ```
 
 where this returns a `pandas.DataFrame` with the selected columns. We expand this functionality
@@ -60,7 +64,8 @@ provides some much needed support in selection via data type, but doesn't go far
 
 ```python
 # x is dtype = np.float64.... what?
-x = pd.Series[0, 1, 0, 1, np.nan, 0, 0]
+import pandas as pd
+x = pd.Series([0, 1, 0, 1, np.nan, 0, 0])
 ```
 
 In `turbopanda`, metadata is calculated for the columns, including the *true data type*
@@ -109,7 +114,7 @@ The downstream effect of these issues is the poor handling *heterogenous*
 You will need to import the package as:
 
 ```python
->>> import turbopanda as turb
+import turbopanda as turb
 ```
 
 We recommend using `turb` as a shorthand to reduce the amount of writing
@@ -118,18 +123,16 @@ We recommend using `turb` as a shorthand to reduce the amount of writing
 
 ```python
 # where df is a pandas.DataFrame object.
->>> g = turb.MetaPanda(df)
->>> g
-MetaPanda(DataSet(n=3000, p=9, mem=0.214MB), mode='instant')
+import turbopanda as turb
+g = turb.MetaPanda(df)
 ```
 
 Alternatively a `MetaPanda` object can be created using the in-built 
 `read` function found in `turbopanda`:
 
 ```python
->>> g = turb.read("translation.csv")
->>> g
-MetaPanda(translation(n=3000, p=9, mem=0.214MB), mode='instant')
+import turbopanda as turb
+g = turb.read("translation.csv")
 ```
 
 here you see the `__repr__` of the object presents the dataset in terms
@@ -139,7 +142,7 @@ here you see the `__repr__` of the object presents the dataset in terms
 The raw pandas object can be accessed through the `df_` attribute:
 
 ```python
->>> g.head()
+g.head()
 ```
 
 | - | **Protein_IDs** | **Majority_protein_IDs** | **Protein_names** | **...** |
@@ -153,7 +156,7 @@ The raw pandas object can be accessed through the `df_` attribute:
 Whereas **metadata** can be accessed through the `meta_` which is automatically created upon instantiation:
 
 ```python
->>> g.meta_.head()
+g.meta_.head()
 ```
 
 | - | **mytypes** | **is_unique** | **potential_id** | **potential_stacker** |
@@ -178,21 +181,21 @@ Unlike traditional pandas which is clunky to access column subsets of
 Inputs examples could include:
 
 ```python
->>> g[object].head()
+g[object].head()
 ```
 
 Returns all of the columns of type `object`. Or we could return all 
 the columns whose name obeys some regular expression:
 
 ```python
->>> g["Intensity_[MG12S]*_1"].head()
+g["Intensity_[MG12S]*_1"].head()
 ```
 
 Or we could return all of the columns that are unique identifiers,
  as determined by the `meta_` column, `is_unique`:
 
 ```python
->>> g["is_unique"].head()
+g["is_unique"].head()
 ```
 
 Sometimes the columns returned may not be as expected for the user,
@@ -200,8 +203,7 @@ Sometimes the columns returned may not be as expected for the user,
  the `pd.Index` or list-like representation of the column names identified:
 
 ```python
->>> g.view(object)
-["Protein_IDs", "Majority_protein_IDs", "Protein_names", "Gene_names"]
+g.view(object)
 ```
 
 ### Complex access by multi-views
@@ -210,7 +212,7 @@ Sometimes the columns returned may not be as expected for the user,
 columns, by default, by keeping the **union** of search terms, for example:
 
 ```python
->>> g.view(float, "Gene")
+g.view(float, "Gene")
 ```
 
 Returns all of the columns of type `float` and where the string
@@ -224,7 +226,7 @@ a **selection** of columns and return the changes inplace, or
  create a new column. `turbopanda` solves this with the `transform` function:
 
 ```python
->>> g.transform(lambda x: x**2, float)
+g.transform(lambda x: x**2, float)
 ```
 
 This takes every column of type `float` and applies a square-function
@@ -240,18 +242,23 @@ section of this repository.
 
 `turbopanda` requires the following [dependencies](environment.yml):
 
-* python>=3.6
-* numpy>=1.11.0
-* scipy>=1.3
-* pandas>=0.25
-* matplotlib>=3.1.1
-* scikit-learn>=0.21
+* `python`>=3.6
+* `numpy`>=1.11.0
+* `scipy`>=1.3
+* `pandas`>=0.25
+* `matplotlib`>=3.1.1
+* `scikit-learn`>=0.21
+
+The following packages are needed to read or write `.xls` or `.hdf`/`.h5` files:
+
+* `xlrd`
+* `pytables`
 
 The following packages are not required but significantly improve 
 the usage of this package. If you are unfamiliar with the Jupyter 
 project see [here](https://jupyter.org/):
 
-* jupyter (1.0.0)
+* `jupyter` (1.0.0)
 
 ### From Cloning the GitHub Repository
 
@@ -260,6 +267,7 @@ Alternatively if you are cloning this [GitHub repository](https://github.com/gre
 ```bash
 git clone https://github.com/gregparkes/turbopanda.git
 conda env create -f environment.yml
+# or source activate turbopanda...
 conda activate turbopanda
 ```
 

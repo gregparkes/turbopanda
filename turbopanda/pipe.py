@@ -104,7 +104,7 @@ class Pipe(object):
     None
     """
 
-    def __init__(self, *args: PipeTypeCleanElem):
+    def __init__(self, *args: PipeTypeCleanElem) -> "Pipe":
         """Define a Pipeline for your object.
 
         Creates a pipeline for you using relative shorthand. Each argument

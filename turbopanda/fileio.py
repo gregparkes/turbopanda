@@ -37,6 +37,7 @@ def read(filename: str,
         A relative/absolute link to the file, with extension provided.
         Accepted extensions: {'csv', 'CSV', 'xls', 'xlsx', 'XLSX', 'json', 'hdf'}
         .json is a special use case and will use the MetaPanda format, NOT the pd.read_json function.
+        .hdf is a special use and stores both df_ and meta_ attributes.
         `filename` now accepts glob-compliant input to read in multiple files if selected.
     name : str/list of str, optional
         A custom name to use for the MetaPanda, else `filename` is used. Where this is a list, this

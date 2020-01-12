@@ -265,6 +265,28 @@ class MetaPanda(object):
 
         return mpf
 
+    @classmethod
+    def from_hdf(cls, filename: str, **kwargs):
+        """TODO: Read in a MetaPanda from a custom HDF5 file.
+
+        Reads in a datafile from hdf and creates a MetaPanda object from it.
+        There may be issues with storing pipe_, selector_ and
+        mapper_ objects due to their complexity.
+
+        Parameters
+        -------
+        filename : str
+            A relative/absolute link to the HDF file.
+        **kwargs : dict, optional
+            Other keyword arguments to pass to MetaPanda constructor
+
+        Returns
+        ------
+        mpf : MetaPanda
+            A MetaPanda object.
+        """
+        return NotImplemented
+
     """ ############################ HIDDEN OPERATIONS ####################################### """
 
     def _selector_group(self, s: Tuple[SelectorType, ...], axis: int = 1) -> pd.Index:
@@ -381,36 +403,35 @@ class MetaPanda(object):
     def _write_json(self, filename: str):
         # columns founded by meta_map are dropped
         redundant_meta = union(meta_columns_default(), list(self.mapper_.keys()))
+        reduced_meta = self.meta_.drop(redundant_meta, axis=1)
         # saving_dict
-        sd = {
-            "data": self.df_.to_dict(),
-            "name": self.name_
-        }
-        # only write these if we have data to write - this saves space.
-        reduced_meta = self.meta_.drop(redundant_meta, axis=1).to_dict()
-        if len(reduced_meta) > 0:
-            sd['meta'] = reduced_meta
-        if len(self.selectors_) > 0:
-            sd['cache'] = self._select
-        if len(self.pipe_) > 0:
-            # convert all Pipe elements inside to the full raw attribute type.
-            sd['pipe'] = self.pipe_
-        if len(self.mapper_) > 0:
-            sd['mapper'] = self.mapper_
 
+        compile_string = '{"data":%s,"meta":%s,"name":%s,"cache":%s,"mapper":%s,"pipe":%s}' % (
+            self.df_.to_json(path_or_buf=None, double_precision=12),
+            reduced_meta.to_json(path_or_buf=None, double_precision=12) if reduced_meta.shape[1] > 0 else "",
+            self.name_,
+            str(self.selectors_),
+            str(self.mapper_),
+            str(self.pipe_)
+        )
+        # determine file name.
         fn = filename if filename is not None else self.name_ + '.json'
         with open(fn, "w") as f:
-            json.dump(sd, f, separators=(",", ":"))
+            json.dump(compile_string, f)
+
+    def _write_hdf(self, filename: str):
+        """TODO: Saves a file in special HDF5 format."""
+        return NotImplemented
 
     """ ############################## OVERRIDDEN OPERATIONS ###################################### """
 
     def __copy__(self):
         warnings.warn("the copy constructor in 'MetaPanda' has no functionality.", RuntimeWarning)
 
-    def __getitem__(self, *selector: SelectorType):
+    def __getitem__(self, selector: Union[SelectorType, Tuple[SelectorType, ...], List[SelectorType]]):
         """Fetch a subset determined by the selector."""
         # we take the columns that are NOT this selection, then drop to keep order.
-        sel = self._selector_group(selector, axis=1)
+        sel = self._selector_group(selector)
         if sel.size > 0:
             # drop anti-selection to maintain order/sorting
             return self.df_[sel].squeeze()
@@ -420,7 +441,7 @@ class MetaPanda(object):
         # drops columns inplace
         self._drop_columns(self.view(selector))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Represent the object in a stringed format."""
         p = self.df_.shape[1] if self.df_.ndim > 1 else 1
         """

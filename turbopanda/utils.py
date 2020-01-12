@@ -8,7 +8,7 @@ from __future__ import division
 from __future__ import print_function
 
 import itertools as it
-from typing import Any, Dict, Tuple, Set, TypeVar, Union, List, Optional, Callable, Iterable
+from typing import Any, Dict, Tuple, TypeVar, Union, List, Optional, Callable, Iterable
 
 # imports
 import numpy as np
@@ -33,27 +33,29 @@ __all__ = ("fself", "is_twotuple", "instance_check", "dictzip", "dictmap", "t_nu
            "standardize", "dict_to_tuple", "set_like", "union", "difference", "intersect")
 
 
-def c_float() -> Set[TypeVar]:
+def c_float() -> Tuple[TypeVar, ...]:
     """Returns accepted float custypes.py."""
-    return {np.float64, np.float32, np.float16, np.float, float}
+    return np.float64, np.float32, np.float16, np.float, float
 
 
-def c_int() -> Set[TypeVar]:
+def c_int() -> Tuple[TypeVar, ...]:
     """Returns accepted integer custypes.py."""
-    return {np.int64, np.int32, np.int16, np.int8, np.int, np.uint, np.uint8, np.uint16, np.uint16, np.uint32, int}
+    return (np.int64, np.int32, np.int16, np.int8,
+            np.int, np.uint, np.uint8, np.uint16,
+            np.uint16, np.uint32, int)
 
 
-def t_numpy() -> Set[TypeVar]:
+def t_numpy() -> Tuple[TypeVar, ...]:
     """Returns the supported custypes.py from NumPy."""
-    return {
+    return (
         np.int, np.bool, np.float, np.float64, np.float32, np.float16, np.int64,
         np.int32, np.int16, np.int8, np.uint8, np.uint16, np.uint32, np.uint64
-    }
+    )
 
 
-def intcat() -> Set[TypeVar]:
+def intcat() -> Tuple[TypeVar, ...]:
     """Returns accepted category custypes.py."""
-    return {np.uint8, np.uint16}
+    return np.uint8, np.uint16
 
 
 def fself(x: Any):
@@ -252,10 +254,10 @@ def check_list_type(elems: Tuple, t: TypeVar) -> bool:
     return True
 
 
-def belongs(elem: Any, types: Union[TypeVar, Tuple[TypeVar, ...]]):
-    """Check whether every element is of type t."""
-    if elem not in types:
-        raise ValueError("element {} is not found in list: {}".format(elem, types))
+def belongs(elem: Any, home: Union[List[Any], Tuple[Any, ...]]):
+    """Check whether elem belongs in a list."""
+    if elem not in home:
+        raise ValueError("element {} is not found in list: {}".format(elem, home))
 
 
 def instance_check(a: object, i: TypeVar):

@@ -23,7 +23,9 @@ __all__ = ("regex_column", "get_selector", "selector_types")
 def selector_types() -> Index:
     """Returns the acceptable selector data types that are searched for."""
     return union(
-        t_numpy(),  tuple(map(lambda n: n.__name__, t_numpy())), {float, int, bool, object, CategoricalDtype, "object", "category"}
+        t_numpy(),
+        tuple(map(lambda n: n.__name__, t_numpy())),
+        (float, int, bool, object, CategoricalDtype, "object", "category")
     )
 
 
@@ -59,7 +61,7 @@ def _get_selector_item(df: DataFrame,
     elif selector in selector_types():
         # if it's a string option, convert to type
         dec_map = {
-            **{"object":object, "category":CategoricalDtype},
+            **{"object": object, "category": CategoricalDtype},
             **dictzip(map(lambda n: n.__name__, t_numpy()), t_numpy())
         }
         if selector in dec_map.keys():

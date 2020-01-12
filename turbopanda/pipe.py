@@ -18,6 +18,13 @@ from .utils import boolean_to_integer, object_to_categorical, \
     is_n_value_column, instance_check
 from .custypes import PipeTypeRawElem, PipeTypeCleanElem
 
+PipeMetaPandaType = Union[Tuple[PipeTypeCleanElem, ...],
+                          Tuple[PipeTypeRawElem, ...],
+                          List[PipeTypeCleanElem],
+                          List[PipeTypeRawElem],
+                          str,
+                          Pipe]
+
 
 def _is_float_cast(s: str):
     try:
@@ -239,9 +246,11 @@ class Pipe(object):
         * Stripping column names of spaces
         * Renaming column names to eliminate tabs, whitespace and `-`
 
+        TODO: with_drop parameter completion.
+
         Parameters
         --------
-        TODO: with_drop : bool, optional
+        with_drop : bool, optional
             If True, drops columns containing only one data value.
 
         Returns

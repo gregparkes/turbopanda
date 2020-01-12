@@ -24,17 +24,11 @@ from pandas.core.groupby.generic import DataFrameGroupBy
 from .analyze import intersection_grid
 from .custypes import SelectorType, PandaIndex, PipeTypeRawElem, PipeTypeCleanElem
 from .metadata import *
-from .pipe import Pipe, is_pipe_structure
+from .pipe import Pipe, is_pipe_structure, PipeMetaPandaType
 from .selection import get_selector
 from .utils import *
 
 # define MetaPanda pipe type
-PipeMetaPandaType = Union[Tuple[PipeTypeCleanElem, ...],
-                          Tuple[PipeTypeRawElem, ...],
-                          List[PipeTypeCleanElem],
-                          List[PipeTypeRawElem],
-                          str,
-                          Pipe]
 
 
 class MetaPanda(object):
@@ -128,7 +122,7 @@ class MetaPanda(object):
 
     def __init__(self,
                  dataset: pd.DataFrame,
-                 name: str = None,
+                 name: Optional[str] = None,
                  mode: str = "instant",
                  with_clean: bool = True,
                  with_warnings: bool = False):

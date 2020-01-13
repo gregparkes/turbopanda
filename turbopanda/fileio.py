@@ -74,6 +74,7 @@ def read(filename: str,
             return s.rsplit(".", 1)[-1]
 
         def fetch_db(fl: str, n=None) -> "MetaPanda":
+            """Fetches the appropriate datafile set."""
             if ext(fl) in pandas_types:
                 return MetaPanda.from_pandas(fl, n, *args, **kwargs)
             elif ext(fl) == 'json':
@@ -92,37 +93,15 @@ def read(filename: str,
         return ds if len(ds) > 1 else ds[0]
 
 
-@deprecated('0.1.8', '0.2.0', 'read')
-def read_mp(filename):
-    """
-    Reads in a MetaPanda object from it. Note that
-    this method only works if you read in a JSON file with
-    the format generated from a matching
-    write_mp() method.
-
-    .. TODO deprecated:: 0.1.8
-        `read_mp` will be removed in 0.2.0, use `read` instead.
-
-    Parameters
-    -------
-    filename : str
-        A relative/absolute link to the file, with .json optionally provided.
-
-    Returns
-    ------
-    mdf : MetaPanda
-        A MetaPanda object.
-
-    See Also
-    --------
-    turb.read : Reads in a data source from file and creates a MetaPanda object from it.
-    """
-    return MetaPanda.from_json(filename)
-
-
+@deprecated("0.1.9", "0.2.1", "read")
 def read_raw_json(filename: str) -> Dict:
     """
     Reads in a raw JSON file.
+
+    .. deprecated:: 0.1.9
+        `read_raw_json` will be removed in 0.2.1, use `read` instead.
+
+    TODO: deprecate 'read_raw_json' in version 0.2.1
 
     Parameters
     ----------

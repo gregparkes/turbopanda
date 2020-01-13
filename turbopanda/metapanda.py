@@ -255,7 +255,7 @@ class MetaPanda(object):
             mpf._pipe = mp["pipe"]
 
         # define metamaps if they exist
-        mpf._define_metamaps()
+        mpf.update_meta()
 
         return mpf
 
@@ -1260,7 +1260,9 @@ class MetaPanda(object):
         else:
             raise TypeError("'selectors' must be of type {list, tuple}")
 
-        igrid = intersection_grid(cnames)
+        # igrid = intersection_grid(cnames)
+        igrid = union(cnames)
+
         if igrid.shape[0] == 0:
             new_grid = pd.concat([pd.Series(n, index=val) for n, val in zip(selectors, cnames)], sort=False, axis=0)
             new_grid.name = name
@@ -1272,27 +1274,38 @@ class MetaPanda(object):
         self.mapper_[name] = selectors
         return self
 
+    def update_meta(self):
+        """Forces an update to the metadata.
+
+        .. warning:: This is experimental and may disappear or change in future updates.
+        """
+        warnings.warn(
+            "function 'update_meta' may be altered or removed in a future update.",
+            FutureWarning
+        )
+        self._define_metamaps()
+
     @_actionable
     def sort_columns(self,
-                     by: Union[str, Tuple[str, ...]] = "colnames",
-                     ascending: Union[bool, Tuple[bool, ...]] = True) -> "MetaPanda":
+                     by: Union[str, List[str]] = "colnames",
+                     ascending: Union[bool, List[bool]] = True) -> "MetaPanda":
         """Sorts `df_` using vast selection criteria.
 
         Parameters
         -------
-        by : str, tuple of str, optional
+        by : str, list of str, optional
             Sorts columns based on information in `meta_`, or by alphabet, or by index.
             Accepts {'colnames'} as additional options. 'colnames' is `index`
-        ascending : bool, tuple of bool, optional
+        ascending : bool, list of bool, optional
             Sort ascending vs descending.
-            If list/tuple, specify multiple ascending/descending combinations.
+            If list, specify multiple ascending/descending combinations.
 
         Raises
         ------
         ValueException
             If the length of `by` does not equal the length of `ascending`, in list instance.
         TypeException
-            If `by` or `ascending` is not of type {list, tuple}
+            If `by` or `ascending` is not of type {list}
 
         Returns
         -------
@@ -1300,17 +1313,17 @@ class MetaPanda(object):
         """
         if isinstance(by, str):
             by = [by]
-        if isinstance(by, tuple) and isinstance(ascending, (bool, tuple)):
-            if len(by) != len(ascending):
-                raise ValueError(
-                    "the length of 'by' {} must equal the length of 'ascending' {}".format(len(by), len(ascending)))
+        if isinstance(by, list) and isinstance(ascending, (bool, list)):
             if isinstance(ascending, bool):
                 ascending = [ascending] * len(by)
+            elif len(by) != len(ascending):
+                raise ValueError(
+                    "the length of 'by' {} must equal the length of 'ascending' {}".format(len(by), len(ascending)))
             if all([(col in self.meta_) or (col == "colnames") for col in by]):
                 self._meta = self.meta_.sort_values(by=by, axis=0, ascending=ascending)
                 self._df = self._df.reindex(self.meta_.index, axis=1)
         else:
-            raise TypeError("'by' or 'ascending' is not of type {list, tuple}")
+            raise TypeError("'by' or 'ascending' is not of type {list}")
         return self
 
     @_actionable

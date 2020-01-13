@@ -67,64 +67,53 @@ def _single_merge(sdf1: DataSetType,
             or (isinstance(sdf1, Series) and isinstance(sdf2, DataFrame)):
         # join on index. TODO: This if case may produce weird behavior.
         return concat((sdf1, sdf2), join='outer', axis=1, sort=False, copy=True)
-    elif isinstance(sdf1, DataFrame) and isinstance(sdf2, DataFrame):
-        # we call reset_index to allow for merges on the index also.
-        d1 = sdf1.reset_index(); d2 = sdf2.reset_index()
-        new_name = 'df1__df2'
-        s1 = {}; s2 = {}
-        m1 = {}; m2 = {}
-    elif isinstance(sdf1, MetaPanda) and isinstance(sdf2, DataFrame):
-        d1 = sdf1.df_; d2 = sdf2.reset_index()
-        new_name = sdf1.name_ + "__df2"
-        s1 = sdf1.selectors_; s2 = {}
-        m1 = sdf1.mapper_; m2 = {}
-    elif isinstance(sdf1, DataFrame) and isinstance(sdf2, MetaPanda):
-        d1 = sdf1.reset_index(); d2 = sdf2.df_
-        new_name = "df1__" + sdf2.name_
-        s1 = {}; s2 = sdf2.selectors_
-        m1 = {}; m2 = sdf2.mapper_
-    elif isinstance(sdf1, MetaPanda) and isinstance(sdf2, MetaPanda):
-        d1 = sdf1.df_; d2 = sdf2.df_
-        new_name = sdf1.name_ + '__' + sdf2.name_
-        s1 = sdf1.selectors_; s2 = sdf2.selectors_
-        m1 = sdf1.mapper_; m2 = sdf2.mapper_
     else:
-        raise TypeError("combination of type {}:{} not recognized".format(type(sdf1), type(sdf2)))
+        # assign attributes based on instance types, etc.
+        d1 = sdf1.df_ if isinstance(sdf1, MetaPanda) else sdf1.reset_index()
+        d2 = sdf2.df_ if isinstance(sdf2, MetaPanda) else sdf2.reset_index()
+        n1 = sdf1.name_ if hasattr(sdf1, "name_") else "df1"
+        n2 = sdf2.name_ if hasattr(sdf2, "name_") else "df2"
+        new_name = n1 + "__" + n2
+        s1 = sdf1.selectors_ if hasattr(sdf1, "selectors_") else {}
+        s2 = sdf2.selectors_ if hasattr(sdf2, "selectors_") else {}
+        m1 = sdf1.mapper_ if hasattr(sdf1, "mapper_") else {}
+        m2 = sdf2.mapper_ if hasattr(sdf2, "mapper_") else {}
 
-    # find the best union pair
-    pair, value = _maximum_likelihood_pairs(_intersecting_pairs(d1, d2))
-    # find out if we have a shared parameter
-    shared_param = pair[0] if pair[0] == pair[1] else None
+        # find the best union pair
+        pair, value = _maximum_likelihood_pairs(_intersecting_pairs(d1, d2))
+        # find out if we have a shared parameter
+        shared_param = pair[0] if pair[0] == pair[1] else None
 
-    # handling whether we have a shared param or not.
-    merge_extra = dict(how=how, suffixes=('_x', '_y'))
-    merge_shared = dict(on=shared_param) if shared_param is not None else dict(left_on=pair[0], right_on=pair[1])
+        # handling whether we have a shared param or not.
+        merge_extra = dict(how=how, suffixes=('_x', '_y'))
+        merge_shared = dict(on=shared_param) if shared_param is not None else dict(left_on=pair[0], right_on=pair[1])
 
-    # merge pandas.DataFrames together
-    df_m = pmerge(d1, d2, **merge_extra, **merge_shared)
+        # merge pandas.DataFrames together
+        df_m = pmerge(d1, d2, **merge_extra, **merge_shared)
 
-    if shared_param is None:
-        df_m.drop(pair[1], axis=1, inplace=True)
-    # drop any columns with 'counter' in
-    if 'counter' in df_m.columns:
-        df_m.drop('counter', axis=1, inplace=True)
-    # rename
-    df_m.rename(columns=dict(zip(df_m.columns.tolist(), d1.columns.tolist())), inplace=True)
-    # form a MetaPanda
-    mpf = MetaPanda(df_m, name=new_name)
-    # tack on extras
-    mpf._select = {**s1, **s2}
-    mpf._mapper = {**m1, **m2}
-    # generate meta columns
-    mpf._define_metamaps()
-    # pipes are not transferred over
-    return mpf
+        if shared_param is None:
+            df_m.drop(pair[1], axis=1, inplace=True)
+        # drop any columns with 'counter' in
+        if 'counter' in df_m.columns:
+            df_m.drop('counter', axis=1, inplace=True)
+        # rename
+        df_m.rename(columns=dict(zip(df_m.columns.tolist(), d1.columns.tolist())), inplace=True)
+        # form a MetaPanda
+        mpf = MetaPanda(df_m, name=new_name)
+        # tack on extras
+        mpf._select = {**s1, **s2}
+        mpf._mapper = {**m1, **m2}
+        # generate meta columns
+        mpf.update_meta()
+        # pipes are not transferred over
+        return mpf
 
 
 def merge(mdfs: Tuple[DataSetType, ...],
           how: str = 'inner',
           clean_pipe: Optional[PipeMetaPandaType] = None):
-    """
+    """Merge together K datasets.
+
     Merges together a series of MetaPanda objects. This is primarily different
     to pd.merge as turb.merge will AUTOMATICALLY select for each pairing of DataFrame
     which column names have the largest crossover of labels, using maximum-likelihood.

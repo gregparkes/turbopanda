@@ -20,6 +20,7 @@ from sklearn.cluster import FeatureAgglomeration
 # local imports
 from .distribution import Distribution
 from .utils import union
+from .deprecator import deprecated
 
 
 def _levenshtein_ratio_and_distance(s, t, ratio_calc=False):
@@ -96,10 +97,16 @@ def dist(df):
     ])
 
 
+@deprecated("0.1.9", "0.2.1", instead="utils.union", reason="`intersection_grid` superseded by `utils.union`'")
 def intersection_grid(indexes):
     """
     Given a list of pd.Index, calculates whether any of the values are shared
     between any of the indexes.
+
+    .. deprecated:: version 0.1.9
+        This function will be removed in version 0.2.1, use utils.union instead.
+
+    TODO: Deprecate in version 0.2.1
     """
     union_l = []
     for i in range(len(indexes)):

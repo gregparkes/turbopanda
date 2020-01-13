@@ -70,6 +70,7 @@ def _corr_two_variables(x: pd.Series,
                         method: str = "spearman",
                         debug: bool = False) -> Dict:
     # returns name 1, name2, r, p-val and method used.
+    print(x.name, y.name)
     df_cols = ("column1", "column2", "r", "p-val", "rtype", "n")
     # x and y must share the same index
     if not x.index.equals(y.index):
@@ -130,7 +131,7 @@ def _corr_two_matrix_same(x: pd.DataFrame,
         raise ValueError("X.shape {} does not match Y.shape {}".format(x.shape, y.shape))
 
     for i in range(x.shape[1]):
-        cor[i, :] = _corr_two_variables(x.iloc[:, i], y.iloc[:, i], method, debug=debug)
+        cor[i, :] = _corr_two_variables(x.iloc[:, i], y.iloc[:, i], method=method, debug=debug)
     return pd.DataFrame(cor, index=x.columns, columns=[method, "p-val"])
 
 
@@ -150,7 +151,7 @@ def _corr_two_matrix_diff(x: pd.DataFrame,
     comb = list(it.product(x.columns.tolist(), y.columns.tolist()))
     # iterate and perform two_variable as before
     data = pd.concat([
-        pd.Series(_corr_two_variables(x[x], y[y], method, debug=debug)) for (x, y) in comb
+        pd.Series(_corr_two_variables(x[xcols], y[ycols], method=method, debug=debug)) for (xcols, ycols) in comb
     ], axis=1, sort=False).T
 
     return data if style == 'rows' else _row_to_matrix(data)
@@ -271,11 +272,11 @@ def correlate(x: Union[str, List, Tuple, pd.Index, DataSetType],
         X_c = data.view(x) if (isinstance(x, str) and isinstance(data, MetaPanda)) else x
         Y_c = data.view(y) if (isinstance(y, str) and isinstance(data, MetaPanda)) else y
         # fetch X matrix
-        NX = data.df_[X_c] if isinstance(data, MetaPanda) else data[X_c]
+        NX = data.df_[X_c].squeeze() if isinstance(data, MetaPanda) else data[X_c]
         if y is None:
             NY = None
         else:
-            NY = data.df_[Y_c] if isinstance(data, MetaPanda) else data[Y_c]
+            NY = data.df_[Y_c].squeeze() if isinstance(data, MetaPanda) else data[Y_c]
 
     """ Handle different use cases....
         1. Y is None, and we have a DataFrame
@@ -310,19 +311,3 @@ def correlate(x: Union[str, List, Tuple, pd.Index, DataSetType],
             return _corr_two_matrix_diff(NX, NY, **ex_args)
     else:
         raise TypeError("X of type [{}], Y of type [{}], cannot compare".format(type(NX), type(NY)))
-
-
-@deprecated('0.1.8', '0.2.0', 'This method is no longer relevant')
-def corr_long_to_short(df):
-    """
-    Converts a long row-wise form of correlation into matrix.
-
-    .. TODO deprecated:: 0.1.8
-        This function will be removed in 0.2.0
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        The long-form dataframe.
-    """
-    return _row_to_matrix(df)

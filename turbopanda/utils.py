@@ -30,7 +30,8 @@ __all__ = ("fself", "is_twotuple", "instance_check", "dictzip", "dictmap", "t_nu
            "is_potential_stacker", "nunique", "object_to_categorical",
            "is_n_value_column", "boolean_to_integer", "integer_to_boolean",
            "join", "belongs", "is_possible_category",
-           "standardize", "dict_to_tuple", "set_like", "union", "difference", "intersect")
+           "standardize", "dict_to_tuple", "set_like", "union", "difference",
+           "intersect")
 
 
 def c_float() -> Tuple[TypeVar, ...]:
@@ -55,7 +56,7 @@ def t_numpy() -> Tuple[TypeVar, ...]:
 
 def intcat() -> Tuple[TypeVar, ...]:
     """Returns accepted category custypes.py."""
-    return np.uint8, np.uint16
+    return np.uint8, np.uint16, object
 
 
 def fself(x: Any):
@@ -115,7 +116,7 @@ def list_dir(obj: Any) -> List:
 
 def is_possible_category(ser: pd.Series) -> bool:
     """Checks whether the data type in Series is categorizable."""
-    return ser.dtype in ({object} | intcat())
+    return ser.dtype in intcat()
 
 
 def not_column_float(ser: pd.Series) -> bool:
@@ -143,7 +144,7 @@ def is_missing_values(ser: pd.Series) -> bool:
     return ser.count() < ser.shape[0]
 
 
-def is_n_value_column(ser: pd.Series, n: int = 1):
+def is_n_value_column(ser: pd.Series, n: int = 1) -> bool:
     """Determine whether the number of unique values equals some value n."""
     return nunique(ser) == n
 

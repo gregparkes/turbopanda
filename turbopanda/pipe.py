@@ -18,13 +18,6 @@ from .utils import boolean_to_integer, object_to_categorical, \
     is_n_value_column, instance_check
 from .custypes import PipeTypeRawElem, PipeTypeCleanElem
 
-PipeMetaPandaType = Union[Tuple[PipeTypeCleanElem, ...],
-                          Tuple[PipeTypeRawElem, ...],
-                          List[PipeTypeCleanElem],
-                          List[PipeTypeRawElem],
-                          str,
-                          Pipe]
-
 
 def _is_float_cast(s: str):
     try:
@@ -63,7 +56,7 @@ def is_pipe_structure(pipe: Tuple[PipeTypeRawElem, ...]) -> bool:
     return True
 
 
-def _single_pipe(argument: PipeTypeCleanElem) -> List:
+def _single_pipe(argument: PipeTypeCleanElem) -> Tuple:
     """Converts a single command line into pipeable code for MetaPanda."""
     instance_check(argument[0], str)
 
@@ -90,7 +83,7 @@ def _single_pipe(argument: PipeTypeCleanElem) -> List:
     # assemble and return
     pipe_command.append(tuple(pipe_t))
     pipe_command.append(pipe_d)
-    return pipe_command
+    return tuple(pipe_command)
 
 
 class Pipe(object):
@@ -111,7 +104,7 @@ class Pipe(object):
     None
     """
 
-    def __init__(self, *args: PipeTypeCleanElem) -> "Pipe":
+    def __init__(self, *args: PipeTypeCleanElem):
         """Define a Pipeline for your object.
 
         Creates a pipeline for you using relative shorthand. Each argument
@@ -259,6 +252,9 @@ class Pipe(object):
             The pipeline object
         """
 
+        drop_step = ("drop", (lambda x: x.dropna().unique().shape[0] == 1,), {})
+
+
         return cls.raw((
             # drop columns with only one value in
             ("drop", (lambda x: x.dropna().unique().shape[0] == 1,), {}),
@@ -286,3 +282,11 @@ class Pipe(object):
             The pipeline object
         """
         return cls(('drop', object, ".*id$", ".*ID$", "^ID.*", "^id.*"))
+
+
+PipeMetaPandaType = Union[Tuple[PipeTypeCleanElem, ...],
+                          Tuple[PipeTypeRawElem, ...],
+                          List[PipeTypeCleanElem],
+                          List[PipeTypeRawElem],
+                          str,
+                          Pipe]

@@ -37,7 +37,7 @@ def is_column_string(ser: pd.Series) -> bool:
     try:
         ser.dropna().str.contains("TestString_Hello")
         return True
-    except TypeError:
+    except AttributeError:
         return False
 
 

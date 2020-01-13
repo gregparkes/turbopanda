@@ -27,7 +27,7 @@ from .utils import c_float, intcat, instance_check, dictzip
 DataSetType = Union[pd.Series, pd.DataFrame, MetaPanda]
 
 
-__all__ = ("correlate", "corr_long_to_short")
+__all__ = ['correlate']
 
 
 def _wrap_corr_metapanda(df_corr, pdm):
@@ -69,7 +69,7 @@ def _corr_two_variables(x: pd.Series,
                         method: str = "spearman",
                         debug: bool = False) -> Dict:
     # returns name 1, name2, r, p-val and method used.
-    print(x.name, y.name)
+    # print(x.name, y.name)
     df_cols = ("column1", "column2", "r", "p-val", "rtype", "n")
     # x and y must share the same index
     if not x.index.equals(y.index):
@@ -226,6 +226,8 @@ def correlate(x: Union[str, List, Tuple, pd.Index, DataSetType],
 
     If X/Y are MetaPandas, returns a MetaPanda object, else returns pandas.DataFrame
 
+    ..warning:: Arguments will likely be rearranged/renamed in future updates 0.2.1 onwards.
+
     Parameters
     ---------
     x : (str, list, tuple, pd.Index) / pd.Series, pd.DataFrame, MetaPanda
@@ -253,6 +255,11 @@ def correlate(x: Union[str, List, Tuple, pd.Index, DataSetType],
     R : dict/pd.DataFrame/turb.MetaPanda
         correlation matrix/rows
     """
+    warnings.warn(
+        "in `correlate` from version 0.2.1 onwards, there will likely be changes to parameter order and name.",
+        FutureWarning
+    )
+
     # check for data
     if data is None:
         # assert that X is pd.Series, pd.DataFrame, MetaPanda

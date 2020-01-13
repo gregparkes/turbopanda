@@ -24,14 +24,14 @@ AsPandas = Union[pd.Series, pd.DataFrame]
 __all__ = ("fself", "is_twotuple", "instance_check", "dictzip", "dictmap", "t_numpy",
            "boolean_series_check", "check_list_type", "not_column_float",
            "is_column_float", "is_column_object", "is_column_int",
-           "calc_mem", "remove_string_spaces", "nearest_factors", "is_missing_values",
+           "calc_mem", "remove_string_spaces", "nearest_factors", "is_missing",
            "split_file_directory", "c_float", "c_int", "intcat",
            "is_unique_id", "is_potential_id", "string_replace",
            "is_potential_stacker", "nunique", "object_to_categorical",
            "is_n_value_column", "boolean_to_integer", "integer_to_boolean",
            "join", "belongs", "is_possible_category",
            "standardize", "dict_to_tuple", "set_like", "union", "difference",
-           "intersect")
+           "intersect", "interacting_set", "is_column_string")
 
 
 def c_float() -> Tuple[TypeVar, ...]:
@@ -139,7 +139,7 @@ def is_column_object(ser: pd.Series) -> bool:
     return ser.dtype in {object, pd.CategoricalDtype}
 
 
-def is_missing_values(ser: pd.Series) -> bool:
+def is_missing(ser: pd.Series) -> bool:
     """Determine whether any missing values are present."""
     return ser.count() < ser.shape[0]
 
@@ -156,12 +156,12 @@ def is_unique_id(ser: pd.Series) -> bool:
 
 def is_potential_id(ser: pd.Series, thresh: float = 0.5) -> bool:
     """Determine whether ser is a potential ID column."""
-    return (ser.unique().shape[0] / ser.shape[0]) > thresh if is_column_int(ser) else False
+    return (ser.unique().shape[0] / ser.shape[0]) > thresh if is_column_string(ser) else False
 
 
 def is_potential_stacker(ser: pd.Series, regex: str = ";|\t|,|", thresh: float = 0.1) -> bool:
     """Determine whether ser is a stacker-like column."""
-    return ser.dropna().str.contains(regex).sum() > thresh if (ser.dtype == object) else False
+    return ser.dropna().str.contains(regex).sum() > thresh if is_column_string(ser) else False
 
 
 def split_file_directory(filename: str):
@@ -263,7 +263,10 @@ def belongs(elem: Any, home: Union[List[Any], Tuple[Any, ...]]):
 
 def instance_check(a: object, i: TypeVar):
     """Check that a is an instance of type i."""
-    if not isinstance(a, i):
+    if isinstance(i, str):
+        if not hasattr(a, i):
+            raise AttributeError("object '{}' does not have attribute '{}'".format(a, i))
+    elif not isinstance(a, i):
         raise TypeError("object '{}' does not belong to type {}".format(a, i))
     elif isinstance(i, (list, tuple)):
         if None in i and a is not None:
@@ -292,7 +295,7 @@ def set_like(x: SetLike) -> pd.Index:
     if isinstance(x, (list, tuple)):
         return pd.Index(set(x))
     elif isinstance(x, (pd.Series, pd.Index)):
-        return pd.Index(x.dropna().unique())
+        return pd.Index(x.dropna().unique(), name=x.name)
     elif isinstance(x, set):
         return pd.Index(x)
     else:
@@ -370,6 +373,30 @@ def difference(a: SetLike, b: SetLike) -> pd.Index:
         Symmetric difference between a & b
     """
     return set_like(a).symmetric_difference(set_like(b))
+
+
+def interacting_set(sets):
+    """
+    Given a list of pd.Index, calculates whether any of the values are shared
+    between any of the indexes.
+    """
+    union_l = []
+    # generate a list of potential interactions.
+    for i in range(len(sets)):
+        for j in range(i + 1, len(sets)):
+            interact = intersect(sets[i], sets[j])
+            union_l.append(interact)
+
+    return union(*union_l)
+
+
+def is_column_string(ser: Union[pd.Series, pd.Index]) -> bool:
+    """Determines whether the column can operate on strings."""
+    try:
+        ser.dropna().str.contains("TestString_Hello")
+        return True
+    except AttributeError:
+        return False
 
 
 def remove_string_spaces(df: pd.DataFrame):

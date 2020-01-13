@@ -9,17 +9,17 @@ from __future__ import print_function
 
 # imports
 import pandas as pd
-from typing import Tuple
+from typing import Tuple, Callable, Dict
 
 # locals
-from .utils import is_missing_values, is_unique_id, is_potential_id, \
+from .utils import is_missing, is_unique_id, is_potential_id, \
     is_potential_stacker, nunique, is_possible_category, object_to_categorical
 
 
-__all__ = ("meta_columns_default", "basic_construct", "categorize_meta", "add_metadata")
+__all__ = ("default_columns", "basic_construct", "categorize_meta", "add_metadata")
 
 
-def _reduce_data_type(ser: pd.Series):
+def true_type(ser: pd.Series):
     """
     Given a pandas.Series, determine it's true datatype if it has missing values.
     """
@@ -29,14 +29,18 @@ def _reduce_data_type(ser: pd.Series):
         if ((ser.dtype != object) and (ser.dropna().shape[0] > 0)) else ser.dtype
 
 
-def _is_mixed_type(ser: pd.Series) -> bool:
+def is_mixed_type(ser: pd.Series) -> bool:
+    """Determines whether the column has mixed types in it."""
     return ser.apply(lambda x: type(x)).unique().shape[0] > 1
 
 
-def meta_columns_default() -> Tuple[str, ...]:
+def default_columns() -> Dict[str, Callable]:
     """The default metadata columns provided."""
-    return ("e_types", "is_unique", "is_potential_id", "is_potential_stacker",
-            "is_missing", "n_uniques")
+    return {"true_type":true_type, "is_mixed_type":is_mixed_type,
+            "is_unique_id":is_unique_id,
+            "is_potential_id":is_potential_id, "is_potential_stacker":is_potential_stacker,
+            "nunique":nunique
+    }
 
 
 def basic_construct(df: pd.DataFrame) -> pd.DataFrame:
@@ -57,18 +61,13 @@ def categorize_meta(meta: pd.DataFrame):
             meta[column] = object_to_categorical(meta[column])
 
 
-def add_metadata(df: pd.DataFrame, curr_meta: pd.DataFrame):
+def add_metadata(df: pd.DataFrame, curr_meta: pd.DataFrame, columns=None):
     """ Constructs a pd.DataFrame from the raw data. Returns meta"""
     # step 1. construct a DataFrame based on the column names as an index.
-    loc_mapping = {
-        "e_types": [_reduce_data_type(df[c]) for c in df],
-        "is_mixed_type": [_is_mixed_type(df[c]) for c in df],
-        "is_unique": [is_unique_id(df[c]) for c in df],
-        "is_potential_id": [is_potential_id(df[c]) for c in df],
-        "is_potential_stacker": [is_potential_stacker(df[c]) for c in df],
-        "is_missing": [is_missing_values(df[c]) for c in df],
-        "n_uniques": [nunique(df[c]) for c in df],
-    }
-    # add to the metadata.
-    for key, values in loc_mapping.items():
-        curr_meta[key] = values
+
+    _columns = df.columns if columns is None else columns
+    _func_mapping = default_columns()
+
+    rows = [{fn: func(df[row]) for fn, func in _func_mapping.items()} for row in _columns]
+
+    return pd.DataFrame(rows, index=_columns)

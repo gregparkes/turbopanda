@@ -103,7 +103,7 @@ def update_meta(self):
 def _reset_meta(self):
     self._meta = _basic_construct(self._df)
     # add in metadata rows.
-    _add_metadata(self._df, self._meta)
+    self._meta = _add_metadata(self._df, self._meta)
     # if we have mapper elements, add these in
     if len(self.mapper_) > 0:
         self.update_meta()

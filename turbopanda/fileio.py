@@ -18,7 +18,7 @@ from .metapanda import MetaPanda
 from .utils import instance_check
 from .deprecator import deprecated
 
-__all__ = ("read", "read_mp", 'read_raw_json')
+__all__ = ("read", 'read_raw_json')
 
 
 def read(filename: str,

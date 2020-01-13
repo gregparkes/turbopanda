@@ -332,23 +332,31 @@ class MetaPanda(object):
             raise ValueError("function '{}' not recognized in pandas.DataFrame.* API: {}".format(fn, dir(self.df_)))
 
     def _apply_index_function(self, fn: str, *fargs, **fkwargs):
+        """
+        TODO: Add warning in '_apply_index_function' if column is not string in this .str accessor.
+        """
         if hasattr(self.df_.index, fn):
             self.df_.index = getattr(self.df_.index, fn)(*fargs, **fkwargs)
             return self
         elif hasattr(self.df_.index.str, fn):
-            self.df_.index = getattr(self.df_.index.str, fn)(*fargs, **fkwargs)
+            if is_column_string(self.df_.index):
+                self.df_.index = getattr(self.df_.index.str, fn)(*fargs, **fkwargs)
             return self
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.index.[str.]* API".format(fn))
 
     def _apply_column_function(self, fn: str, *fargs, **fkwargs):
+        """
+        TODO: Add warning in '_apply_column_function' if column is not string in this .str accessor.
+        """
         if hasattr(self.df_.columns, fn):
             self.df_.columns = getattr(self.df_.columns, fn)(*fargs, **fkwargs)
             self.meta_.index = getattr(self.meta_.index, fn)(*fargs, **fkwargs)
             return self
         elif hasattr(self.df_.columns.str, fn):
-            self.df_.columns = getattr(self.df_.columns.str, fn)(*fargs, **fkwargs)
-            self.meta_.index = getattr(self.meta_.index.str, fn)(*fargs, **fkwargs)
+            if is_column_string(self.df_.columns) and is_column_string(self.meta_.index):
+                self.df_.columns = getattr(self.df_.columns.str, fn)(*fargs, **fkwargs)
+                self.meta_.index = getattr(self.meta_.index.str, fn)(*fargs, **fkwargs)
             return self
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.columns.[str.]* API".format(fn))
@@ -356,7 +364,7 @@ class MetaPanda(object):
     def _reset_meta(self):
         self._meta = basic_construct(self._df)
         # add in metadata rows.
-        add_metadata(self._df, self._meta)
+        self._meta = add_metadata(self._df, self._meta)
         # if we have mapper elements, add these in
         if len(self.mapper_) > 0:
             self._define_metamaps()
@@ -396,7 +404,7 @@ class MetaPanda(object):
 
     def _write_json(self, filename: str):
         # columns founded by meta_map are dropped
-        redundant_meta = union(meta_columns_default(), list(self.mapper_.keys()))
+        redundant_meta = union(list(default_columns().keys()), list(self.mapper_.keys()))
         reduced_meta = self.meta_.drop(redundant_meta, axis=1)
         # saving_dict
 
@@ -599,21 +607,21 @@ class MetaPanda(object):
         return self.df_.head(k)
 
     def dtypes(self, grouped: bool = True) -> Union[pd.Series, pd.DataFrame]:
-        """Determine the grouped data custypes.py in the dataset.
+        """Determine the grouped data types in the dataset.
 
         .. warning:: Not affected by `mode_` attribute.
 
         Parameters
         --------
         grouped : bool, optional
-            If True, returns the value_counts of each data type, else returns the direct custypes.py.
+            If True, returns the value_counts of each data type, else returns the direct types.
 
         Returns
         -------
         true_types : pd.Series/pd.DataFrame
             A series of index (group/name) and value (count/type)
         """
-        return self.meta_['e_types'].value_counts() if grouped else self.meta_['e_types']
+        return self.meta_['true_type'].value_counts() if grouped else self.meta_['true_type']
 
     def view(self, *selector: SelectorType) -> pd.Index:
         """View a selection of columns in `df_`.
@@ -855,7 +863,7 @@ class MetaPanda(object):
         Parameters
         -------
         selector : str or tuple args
-            Contains either custypes.py, meta column names, column names or regex-compliant strings
+            Contains either types, meta column names, column names or regex-compliant strings
 
         Returns
         -------
@@ -881,7 +889,7 @@ class MetaPanda(object):
         Parameters
         --------
         selector : str or tuple args
-            Contains either custypes.py, meta column names, column names or regex-compliant strings
+            Contains either types, meta column names, column names or regex-compliant strings
 
         Returns
         -------
@@ -911,7 +919,7 @@ class MetaPanda(object):
             A function taking the whole dataset or subset, and returning a boolean
             `pd.Series` with True rows kept and False rows dropped
         selector : str or tuple args, optional
-            Contains either custypes.py, meta column names, column names or regex-compliant strings.
+            Contains either types, meta column names, column names or regex-compliant strings.
             If None, applies `func` to all columns.
         args : list, optional
             Additional arguments to pass as `func(x, *args)`
@@ -948,7 +956,7 @@ class MetaPanda(object):
         name : str
             A name to reference the selector with.
         selector : str or tuple args
-            Contains either custypes.py, meta column names, column names or regex-compliant strings
+            Contains either types, meta column names, column names or regex-compliant strings
 
         Warnings
         --------
@@ -995,7 +1003,7 @@ class MetaPanda(object):
         caches : dict (k, w)
             keyword: unique reference of the selector
             value: selector: str, tuple args
-                 Contains either custypes.py, meta column names, column names or regex-compliant
+                 Contains either types, meta column names, column names or regex-compliant
 
         Warnings
         --------
@@ -1069,7 +1077,7 @@ class MetaPanda(object):
             At this stage we only accept *direct* replacements. No regex.
             Operations are performed 'in order'.
         selector : None, str, or tuple args, optional
-            Contains either custypes.py, meta column names, column names or regex-compliant strings
+            Contains either types, meta column names, column names or regex-compliant strings
             If None, all column names are subject to potential renaming
         axis : int, optional
             Choose from {1, 0} 1 = columns, 0 = index.
@@ -1099,7 +1107,7 @@ class MetaPanda(object):
         pref : str
             The prefix to add
         selector : None, str, or tuple args, optional
-            Contains either custypes.py, meta column names, column names or regex-compliant strings
+            Contains either types, meta column names, column names or regex-compliant strings
             Allows user to specify subset to rename
 
         Returns
@@ -1121,7 +1129,7 @@ class MetaPanda(object):
         suf : str
             The prefix to add
         selector : None, str, or tuple args, optional
-            Contains either custypes.py, meta column names, column names or regex-compliant strings
+            Contains either types, meta column names, column names or regex-compliant strings
             Allows user to specify subset to rename
 
         Returns
@@ -1153,7 +1161,7 @@ class MetaPanda(object):
             A function taking the `pd.Series` x as input and returning `pd.Series` y as output
             If `whole`, accepts `pd.DataFrame` X, returning `pd.DataFrame` Y
         selector : None, str, or tuple args, optional
-            Contains either custypes.py, meta column names, column names or regex-compliant strings
+            Contains either types, meta column names, column names or regex-compliant strings
             If None, applies the function to all columns.
         method : str, optional
             Allows the user to specify which underlying DataFrame function to call.
@@ -1200,7 +1208,7 @@ class MetaPanda(object):
         ops : list of 2-tuple
             Containing:
                 1. func : A function taking the pd.Series x_i as input and returning pd.Series y_i as output
-                2. selector : Contains either custypes.py, meta column names, column names or regex-compliant strings
+                2. selector : Contains either types, meta column names, column names or regex-compliant strings
                     Allows user to specify subset to rename
 
         Raises
@@ -1222,6 +1230,53 @@ class MetaPanda(object):
         return self
 
     @_actionable
+    def aggregate(self,
+                  func: Union[Callable, str],
+                  selectors: Union[Tuple[SelectorType, ...], List[Tuple[SelectorType, ...]]],
+                  keep: bool = False) -> "MetaPanda":
+        """Perform inplace column-wise aggregations to multiple selectors.
+
+        For example if we have a DataFrame such as:
+            DF(...,['c1', 'c2', 'c3', 'd1', 'd2', 'd3', 'e1', 'e2', 'e3'])
+            We aggregate such that columns ['c1', 'c2', 'c3'] -> c, etc.
+
+        ..note:: Uses the cached selector names to rename if they are used.
+
+        Parameters
+        ----------
+        func : str or function
+            If function: takes a pd.DataFrame x and returns pd.Series y, for each selection.
+            If str: choose from {'mean', 'sum', 'min', 'max', 'std', 'count'}.
+        selectors : (list of) str or tuple args
+            Contains either types, meta column names, column names or regex-compliant strings.
+        keep : bool, optional
+            If False, drops the rows from which the calculation was made.
+            If True, drops the rows from which the calculation was made.
+
+        Returns
+        -------
+        self
+        """
+        instance_check(selectors, (list, tuple))
+        instance_check(func, (str, "__callable__"))
+
+        for select in selectors:
+            _selection = self._selector_group(select)
+            _name = select if select in self.selectors_.keys() else _selection[0]
+            # modify group
+            _agg = self.df_[_selection].agg(func, axis=1)
+            _agg.name = _name
+            # associate with df_, meta_
+            if not keep:
+                self._drop_columns(select)
+            # append data to df
+            self.df_[_name] = _agg
+
+
+
+
+
+    @_actionable
     def meta_map(self, name: str,
                  selectors: Tuple[SelectorType, ...]) -> "MetaPanda":
         """Map a group of selectors with an identifier, in `mapper_`.
@@ -1236,7 +1291,7 @@ class MetaPanda(object):
         name : str
             The name of this overall grouping
         selectors : list/tuple of (str, or tuple args)
-            Each contains either custypes.py, meta column names, column names or regex-compliant strings
+            Each contains either types, meta column names, column names or regex-compliant strings
 
         Raises
         ------
@@ -1261,7 +1316,7 @@ class MetaPanda(object):
             raise TypeError("'selectors' must be of type {list, tuple}")
 
         # igrid = intersection_grid(cnames)
-        igrid = union(cnames)
+        igrid = interacting_set(cnames)
 
         if igrid.shape[0] == 0:
             new_grid = pd.concat([pd.Series(n, index=val) for n, val in zip(selectors, cnames)], sort=False, axis=0)
@@ -1508,7 +1563,7 @@ class MetaPanda(object):
                   inplace: bool = False) -> "MetaPanda":
         """Execute `k` pipelines on `df_`, in order.
 
-        Computes multiple pipelines to the MetaPanda object, including cached custypes.py such as `.current`
+        Computes multiple pipelines to the MetaPanda object, including cached types such as `.current`
 
         .. note:: the `meta_` attribute is **refreshed** after a call to `compute_k`.
 

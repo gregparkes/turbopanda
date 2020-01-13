@@ -97,14 +97,15 @@ def dist(df):
     ])
 
 
-@deprecated("0.1.9", "0.2.1", instead="utils.union", reason="`intersection_grid` superseded by `utils.union`'")
+@deprecated("0.1.9", "0.2.1", instead="utils.interacting_set",
+            reason="`intersection_grid` superseded by `utils.interacting_set`'")
 def intersection_grid(indexes):
     """
     Given a list of pd.Index, calculates whether any of the values are shared
     between any of the indexes.
 
     .. deprecated:: version 0.1.9
-        This function will be removed in version 0.2.1, use utils.union instead.
+        This function will be removed in version 0.2.1, use utils.interacting_set instead.
 
     TODO: Deprecate in version 0.2.1
     """

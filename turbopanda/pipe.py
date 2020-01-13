@@ -239,8 +239,6 @@ class Pipe(object):
         * Stripping column names of spaces
         * Renaming column names to eliminate tabs, whitespace and `-`
 
-        TODO: with_drop parameter completion.
-
         Parameters
         --------
         with_drop : bool, optional
@@ -252,12 +250,8 @@ class Pipe(object):
             The pipeline object
         """
 
-        drop_step = ("drop", (lambda x: x.dropna().unique().shape[0] == 1,), {})
-
-
-        return cls.raw((
-            # drop columns with only one value in
-            ("drop", (lambda x: x.dropna().unique().shape[0] == 1,), {}),
+        drop_step = [("drop", (lambda x: x.dropna().unique().shape[0] == 1,), {})]
+        extras = [
             # shrink down data types where possible.
             ("apply", ("transform", to_numeric,), {"errors": "ignore", "downcast": "unsigned"}),
             # convert int to categories
@@ -267,8 +261,9 @@ class Pipe(object):
             # strip column names
             ("apply_columns", ("strip",), {}),
             # do some string stripping
-            ("rename", ([(" ", "_"), ("\t", "_"), ("-", "")],), {}),
-        ))
+            ("rename", ([(" ", "_"), ("\t", "_"), ("-", "")],), {})
+        ]
+        return cls.raw(tuple(drop_step+extras)) if with_drop else cls.raw(tuple(extras))
 
     @classmethod
     def no_id(cls) -> "Pipe":

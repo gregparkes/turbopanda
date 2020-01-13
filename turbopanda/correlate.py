@@ -19,7 +19,6 @@ import pandas as pd
 from scipy.stats import pearsonr, spearmanr, pointbiserialr
 
 from .custypes import ArrayLike
-from .deprecator import deprecated
 # locals
 from .metapanda import MetaPanda
 from .utils import c_float, intcat, instance_check, dictzip

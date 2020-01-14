@@ -23,7 +23,7 @@ AsPandas = Union[pd.Series, pd.DataFrame]
 
 __all__ = ("fself", "is_twotuple", "instance_check", "dictzip", "dictmap", "t_numpy",
            "boolean_series_check", "check_list_type", "not_column_float",
-           "is_column_float", "is_column_object", "is_column_int",
+           "is_column_float", "is_column_object", "is_column_int", "is_column_intbool",
            "calc_mem", "remove_string_spaces", "nearest_factors", "is_missing",
            "split_file_directory", "c_float", "c_int", "intcat",
            "is_unique_id", "is_potential_id", "string_replace",
@@ -31,7 +31,7 @@ __all__ = ("fself", "is_twotuple", "instance_check", "dictzip", "dictmap", "t_nu
            "is_n_value_column", "boolean_to_integer", "integer_to_boolean",
            "join", "belongs", "is_possible_category",
            "standardize", "dict_to_tuple", "set_like", "union", "difference",
-           "intersect", "interacting_set", "is_column_string")
+           "intersect", "interacting_set", "is_column_string", "remove_na", "encode")
 
 
 def c_float() -> Tuple[TypeVar, ...]:
@@ -134,6 +134,11 @@ def is_column_int(ser: pd.Series) -> bool:
     return ser.dtype in c_int()
 
 
+def is_column_intbool(ser: pd.Series) -> bool:
+    """Determines whether the column is {0, 1} of ints."""
+    return ser.dtype in (np.uint8, np.uint16) and ser.nunique() == 2
+
+
 def is_column_object(ser: pd.Series) -> bool:
     """Checks whether the data type in Series is a object column."""
     return ser.dtype in {object, pd.CategoricalDtype}
@@ -146,7 +151,7 @@ def is_missing(ser: pd.Series) -> bool:
 
 def is_n_value_column(ser: pd.Series, n: int = 1) -> bool:
     """Determine whether the number of unique values equals some value n."""
-    return nunique(ser) == n
+    return ser.nunique() == n
 
 
 def is_unique_id(ser: pd.Series) -> bool:
@@ -156,7 +161,7 @@ def is_unique_id(ser: pd.Series) -> bool:
 
 def is_potential_id(ser: pd.Series, thresh: float = 0.5) -> bool:
     """Determine whether ser is a potential ID column."""
-    return (ser.unique().shape[0] / ser.shape[0]) > thresh if is_column_string(ser) else False
+    return (ser.nunique() / ser.shape[0]) > thresh if is_column_string(ser) else False
 
 
 def is_potential_stacker(ser: pd.Series, regex: str = ";|\t|,|", thresh: float = 0.1) -> bool:
@@ -225,9 +230,9 @@ def integer_to_boolean(ser: pd.Series) -> pd.Series:
 def object_to_categorical(ser: pd.Series, order: Optional[Tuple] = None, thresh: int = 30) -> pd.Series:
     """Convert ser to be of type 'category' if possible."""
     # get uniques if possible
-    if 1 < nunique(ser) < thresh:
+    if 1 < ser.nunique() < thresh:
         if order is None:
-            return ser.astype(CategoricalDtype(np.sort(ser.dropna().unique()), ordered=True))
+            return ser.astype(CategoricalDtype(ser.dropna().unique(), ordered=False))
         else:
             return ser.astype(CategoricalDtype(order, ordered=True))
     else:
@@ -273,8 +278,11 @@ def instance_check(a: object, i: TypeVar):
             raise TypeError("object '{}' is not of type None".format(a))
 
 
-def join(*pipes: Iterable[Any]) -> List:
+def join(*pipes: Optional[Iterable[Any]]) -> List:
     """Perform it.chain.from_iterable on iterables."""
+    # filter out None elements.
+    pipes = list(filter(None.__ne__, pipes))
+    # use itertools to chain together elements.
     return list(it.chain.from_iterable(pipes))
 
 
@@ -547,3 +555,111 @@ def standardize(x: ArrayLike) -> ArrayLike:
         return (x - np.nanmean(x, axis=0)) / np.nanstd(x, axis=0)
     else:
         raise TypeError("x must be of type [pd.Series, pd.DataFrame, np.ndarray]")
+
+
+def _remove_na_single(x, axis='rows'):
+    """Remove NaN in a single array.
+    This is an internal Pingouin function.
+    """
+    if x.ndim == 1:
+        # 1D arrays
+        x_mask = ~np.isnan(x)
+    else:
+        # 2D arrays
+        ax = 1 if axis == 'rows' else 0
+        x_mask = ~np.any(np.isnan(x), axis=ax)
+    # Check if missing values are present
+    if ~x_mask.all():
+        ax = 0 if axis == 'rows' else 1
+        ax = 0 if x.ndim == 1 else ax
+        x = x.compress(x_mask, axis=ax)
+    return x
+
+
+def remove_na(x: np.ndarray, y: np.ndarray = None, paired=False, axis='rows'):
+    """Remove missing values along a given axis in one or more (paired) numpy
+    arrays.
+
+    Adapted from the `pingouin` library, made by Raphael Vallat.
+
+    .. [1] https://github.com/raphaelvallat/pingouin/blob/master/pingouin/correlation.py
+
+    Parameters
+    ----------
+    x, y : np.ndarray, array like
+        Data. ``x`` and ``y`` must have the same number of dimensions.
+        ``y`` can be None to only remove missing values in ``x``.
+    paired : bool
+        Indicates if the measurements are paired or not.
+    axis : str
+        Axis or axes along which missing values are removed.
+        Can be 'rows' or 'columns'. This has no effect if ``x`` and ``y`` are
+        one-dimensional arrays.
+
+    Returns
+    -------
+    x, y : np.ndarray
+        Data without missing values
+
+    Examples
+    --------
+    Single 1D array
+    >>> import numpy as np
+    >>> from pingouin import remove_na
+    >>> x = [6.4, 3.2, 4.5, np.nan]
+    >>> remove_na(x)
+    array([6.4, 3.2, 4.5])
+    With two paired 1D arrays
+    >>> y = [2.3, np.nan, 5.2, 4.6]
+    >>> remove_na(x, y, paired=True)
+    (array([6.4, 4.5]), array([2.3, 5.2]))
+    With two independent 2D arrays
+    >>> x = np.array([[4, 2], [4, np.nan], [7, 6]])
+    >>> y = np.array([[6, np.nan], [3, 2], [2, 2]])
+    >>> x_no_nan, y_no_nan = remove_na(x, y, paired=False)
+    """
+    # Safety checks
+    x = np.asarray(x)
+    assert x.size > 1, 'x must have more than one element.'
+    assert axis in ['rows', 'columns'], 'axis must be rows or columns.'
+
+    if y is None:
+        return _remove_na_single(x, axis=axis)
+    elif isinstance(y, (int, float, str)):
+        return _remove_na_single(x, axis=axis), y
+    elif isinstance(y, (list, np.ndarray)):
+        y = np.asarray(y)
+        # Make sure that we just pass-through if y have only 1 element
+        if y.size == 1:
+            return _remove_na_single(x, axis=axis), y
+        if x.ndim != y.ndim or paired is False:
+            # x and y do not have the same dimension
+            x_no_nan = _remove_na_single(x, axis=axis)
+            y_no_nan = _remove_na_single(y, axis=axis)
+            return x_no_nan, y_no_nan
+
+    # At this point, we assume that x and y are paired and have same dimensions
+    if x.ndim == 1:
+        # 1D arrays
+        x_mask = ~np.isnan(x)
+        y_mask = ~np.isnan(y)
+    else:
+        # 2D arrays
+        ax = 1 if axis == 'rows' else 0
+        x_mask = ~np.any(np.isnan(x), axis=ax)
+        y_mask = ~np.any(np.isnan(y), axis=ax)
+
+    # Check if missing values are present
+    if ~x_mask.all() or ~y_mask.all():
+        ax = 0 if axis == 'rows' else 1
+        ax = 0 if x.ndim == 1 else ax
+        both = np.logical_and(x_mask, y_mask)
+        x = x.compress(both, axis=ax)
+        y = y.compress(both, axis=ax)
+    return x, y
+
+
+def encode(df: pd.DataFrame) -> str:
+    """Encodes a pandas.DataFrame and returns a SHA256 unique key."""
+    import hashlib
+    return hashlib.sha256(df.to_json().encode()).hexdigest()

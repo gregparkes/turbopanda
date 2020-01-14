@@ -16,7 +16,7 @@ from typing import Optional, Dict, Union, List
 
 from .metapanda import MetaPanda
 from .utils import instance_check
-from .deprecator import deprecated
+from ._deprecator import deprecated
 
 __all__ = ("read", 'read_raw_json')
 

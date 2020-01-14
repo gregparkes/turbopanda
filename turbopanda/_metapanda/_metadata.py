@@ -21,7 +21,7 @@ def _reduce_data_type(ser: pd.Series):
     # return 'reduced' Series if we're missing data and dtype is not an object, else just return the default dtype
 
     return pd.to_numeric(ser.dropna(), errors="ignore", downcast="unsigned").dtype \
-        if ((ser.dtype != object) and (ser.dropna().shape[0] > 0)) else ser.dtype
+        if ((ser.dtype != object) and (ser.count() > 0)) else ser.dtype
 
 
 def _is_mixed_type(ser: pd.Series) -> bool:

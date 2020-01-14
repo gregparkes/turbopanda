@@ -21,7 +21,7 @@ from .metaml import MetaML
 from .pipe import Pipe
 from .visualise import *
 from .fileio import *
-from .correlate import correlate
+from .correlate import *
 from .cache import *
 from .pub_fig import *
 from .merge import merge

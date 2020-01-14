@@ -9,6 +9,7 @@ from __future__ import print_function
 
 # imports
 import json
+import hashlib
 import sys
 import warnings
 from copy import deepcopy
@@ -27,8 +28,6 @@ from .metadata import *
 from .pipe import Pipe, is_pipe_structure, PipeMetaPandaType
 from .selection import get_selector
 from .utils import *
-
-# define MetaPanda pipe type
 
 
 class MetaPanda(object):
@@ -93,6 +92,8 @@ class MetaPanda(object):
     cache_pipe(name, pipe)
         Adds a pipe element to `pipe_`
     rename(ops, selector=None, axis=1)
+        Perform a chain of .str.replace operations on a given `df_` or `meta_` column.
+    rename_axis(ops, selector=None, axis=1)
         Performs a chain of .str.replace operations on `df_.columns`
     add_prefix(pref, selector=None)
         Adds a string prefix to selected columns
@@ -102,6 +103,8 @@ class MetaPanda(object):
         Performs an inplace transformation to a group of columns within `df_`.
     transform_k(ops)
         Performs multiple inplace transformations to a group of columns within `df_`
+    aggregate(func, selectors, keep=False)
+        Perform inplace column-wise aggregations to multiple selectors.
     meta_map(name, selectors)
         Maps a group of selectors with an identifier, in `mapper_`
     sort_columns(by="alphabet", ascending=True)
@@ -233,11 +236,17 @@ class MetaPanda(object):
             A MetaPanda object.
         """
         # read in JSON
-        with open(filename, "r") as f:
-            mp = json.load(f)
+        with open(filename, "rb") as f:
+            # reads in JSON string from the file
+            mp = f.read()
+        # convert into Python objects - dict
+        obj = json.loads(mp)
+        # extract checksum, compare to current object.
+        if "checksum" not in obj.keys():
+            raise IOError("'checksum' not found in JSON file: {}".format(filename))
         # go over attributes and assign where available
-        if "data" in mp.keys():
-            df = pd.DataFrame.from_dict(mp["data"])
+        if "data" in obj.keys():
+            df = pd.DataFrame.from_dict(obj["data"])
             df.index.name = "counter"
             df.columns.name = "colnames"
             # assign to self
@@ -245,17 +254,19 @@ class MetaPanda(object):
         else:
             raise ValueError("column 'data' not found in MetaPandaJSON")
 
-        if "cache" in mp.keys():
-            mpf._select = mp["cache"]
-        if "mapper" in mp.keys():
-            mpf._mapper = mp["mapper"]
-        if "name" in mp.keys() and "name" not in kwargs.keys():
-            mpf.name_ = mp["name"]
-        if "pipe" in mp.keys():
-            mpf._pipe = mp["pipe"]
+        if "cache" in obj.keys():
+            mpf._select = obj["cache"]
+        if "mapper" in obj.keys():
+            mpf._mapper = obj["mapper"]
+        if "name" in obj.keys() and "name" not in kwargs.keys():
+            mpf.name_ = obj["name"]
+        if "pipe" in obj.keys():
+            mpf._pipe = obj["pipe"]
 
-        # define metamaps if they exist
-        mpf.update_meta()
+        # checksum check.
+        chk = hashlib.sha256(json.dumps(mpf.df_.columns.tolist()).encode()).hexdigest()
+        if obj['checksum'] != chk:
+            raise IOError("checksum stored: %s doesn't match %s" % (obj['checksum'], chk))
 
         return mpf
 
@@ -362,12 +373,10 @@ class MetaPanda(object):
             raise ValueError("function '{}' not recognized in pandas.DataFrame.columns.[str.]* API".format(fn))
 
     def _reset_meta(self):
-        self._meta = basic_construct(self._df)
         # add in metadata rows.
-        self._meta = add_metadata(self._df, self._meta)
+        self._meta = add_metadata(self._df)
         # if we have mapper elements, add these in
-        if len(self.mapper_) > 0:
-            self._define_metamaps()
+        self._define_metamaps()
 
     def _define_metamaps(self):
         if len(self.mapper_) > 0:
@@ -406,20 +415,25 @@ class MetaPanda(object):
         # columns founded by meta_map are dropped
         redundant_meta = union(list(default_columns().keys()), list(self.mapper_.keys()))
         reduced_meta = self.meta_.drop(redundant_meta, axis=1)
-        # saving_dict
-
-        compile_string = '{"data":%s,"meta":%s,"name":%s,"cache":%s,"mapper":%s,"pipe":%s}' % (
-            self.df_.to_json(path_or_buf=None, double_precision=12),
-            reduced_meta.to_json(path_or_buf=None, double_precision=12) if reduced_meta.shape[1] > 0 else "",
-            self.name_,
-            str(self.selectors_),
-            str(self.mapper_),
-            str(self.pipe_)
+        # encode data
+        stringed_data = self.df_.to_json(double_precision=12)
+        stringed_meta = reduced_meta.to_json(double_precision=12) if reduced_meta.shape[1] > 0 else "{}"
+        # generate checksum - using just the column names.
+        checksum = hashlib.sha256(json.dumps(self.df_.columns.tolist()).encode()).hexdigest()
+        # compilation string
+        compile_string = '{"data":%s,"meta":%s,"name":%s,"cache":%s,"mapper":%s,"pipe":%s,"checksum":%s}' % (
+            stringed_data,
+            stringed_meta,
+            json.dumps(self.name_),
+            json.dumps(self.selectors_),
+            json.dumps(self.mapper_),
+            json.dumps(self.pipe_),
+            json.dumps(checksum),
         )
         # determine file name.
         fn = filename if filename is not None else self.name_ + '.json'
-        with open(fn, "w") as f:
-            json.dump(compile_string, f)
+        with open(fn, "wb") as f:
+            f.write(compile_string.encode())
 
     def _write_hdf(self, filename: str):
         """TODO: Saves a file in special HDF5 format."""
@@ -483,7 +497,6 @@ class MetaPanda(object):
             # compute cleaning.
             if self._with_clean:
                 self.compute(Pipe.clean(), inplace=True)
-
             if "colnames" not in self._df.columns:
                 self._df.columns.name = "colnames"
             if "counter" not in self._df.columns:
@@ -557,33 +570,6 @@ class MetaPanda(object):
     def mapper_(self) -> Dict[str, Any]:
         """Fetch the mapping between unique name and selector groups."""
         return self._mapper
-
-    """ ############################### BOOLEAN PROPERTIES ##################################################"""
-
-    @property
-    def is_square(self) -> bool:
-        """Determine whether the matrix is square-shaped."""
-        return self.n_ == self.p_
-
-    @property
-    def is_symmetric(self) -> bool:
-        """Determine whether the matrix is symmetric."""
-        return self.is_square and (np.allclose(self.df_, self.df_.T))
-
-    @property
-    def is_positive_definite(self) -> bool:
-        """Determine whether the matrix is positive-definite."""
-        return self.is_square and np.all(np.linalg.eigvals(self.df_.values) > 0)
-
-    @property
-    def is_singular(self) -> bool:
-        """Determine whether the matrix is singular."""
-        return np.linalg.cond(self.df_.values) >= (1. / sys.float_info.epsilon)
-
-    @property
-    def is_orthogonal(self) -> bool:
-        """Determine whether the matrix is orthogonal."""
-        return self.is_square and np.allclose(np.dot(self.df_.values, self.df_.values.T), np.eye(self.p_))
 
     """ ################################ PUBLIC FUNCTIONS ################################################### """
 
@@ -1066,7 +1052,52 @@ class MetaPanda(object):
                ops: Tuple[str, str],
                selector: Tuple[SelectorType, ...] = None,
                axis: int = 1) -> "MetaPanda":
-        """Perform a chain of .str.replace operations on `df_.columns`.
+        """Perform a chain of .str.replace operations on a given `df_` or `meta_` column.
+
+        .. warning:: `rename` will become `rename_axis` in version 0.2.2, use `rename_axis` instead.
+
+        TODO: convert this function as to allow it to 'rename' a given column(s) using pd.Series.str.replace ops.
+            Allow this to happen to either a column in df_ or meta_, as appropriate.
+            Parameters: ops, selector -> column, axis -> None, new_name = None (inplace if None, creates new col if not)
+
+        Parameters
+        -------
+        ops : list of tuple (2,)
+            Where the first value of each tuple is the string to find, with its replacement
+            At this stage we only accept *direct* replacements. No regex.
+            Operations are performed 'in order'.
+        selector : None, str, or tuple args, optional
+            Contains either types, meta column names, column names or regex-compliant strings
+            If None, all column names are subject to potential renaming
+        axis : int, optional
+            Choose from {1, 0} 1 = columns, 0 = index.
+
+        Returns
+        -------
+        self
+        """
+        warnings.warn(
+            "`rename` will fundamentally change in version 0.2.2, use `rename_axis` instead.",
+            FutureWarning
+        )
+
+        # check ops is right format
+        is_twotuple(ops)
+        belongs(axis, [0, 1])
+
+        curr_cols = sel_cols = self._selector_group(selector, axis)
+        # performs the replacement operation inplace
+        curr_cols = string_replace(curr_cols, ops)
+        # rename using mapping
+        self._rename_axis(sel_cols, curr_cols, axis)
+        return self
+
+    @_actionable
+    def rename_axis(self,
+                    ops: Tuple[str, str],
+                    selector: Tuple[SelectorType, ...] = None,
+                    axis: int = 1) -> "MetaPanda":
+        """Perform a chain of .str.replace operations on one of the axes.
 
         .. note:: strings that are unchanged remain the same (are not NA'd).
 
@@ -1242,6 +1273,8 @@ class MetaPanda(object):
 
         ..note:: Uses the cached selector names to rename if they are used.
 
+        TODO: Complete the implementation of this function.
+
         Parameters
         ----------
         func : str or function
@@ -1257,6 +1290,11 @@ class MetaPanda(object):
         -------
         self
         """
+        warnings.warn(
+            "`aggregate` is not fully implemented yet.",
+            UserWarning
+        )
+
         instance_check(selectors, (list, tuple))
         instance_check(func, (str, "__callable__"))
 
@@ -1272,9 +1310,7 @@ class MetaPanda(object):
             # append data to df
             self.df_[_name] = _agg
 
-
-
-
+        return NotImplemented
 
     @_actionable
     def meta_map(self, name: str,

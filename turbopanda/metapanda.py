@@ -28,6 +28,7 @@ from .metadata import *
 from .pipe import Pipe, is_pipe_structure, PipeMetaPandaType
 from .selection import get_selector
 from .utils import *
+from ._deprecator import deprecated
 
 
 class MetaPanda(object):
@@ -187,7 +188,7 @@ class MetaPanda(object):
         -------
         filename : str
             A relative/absolute link to the file, with extension provided.
-            Accepted extensions: {'csv', 'xls', 'xlsx', 'XLSX', 'hdf', 'sql'}
+            Accepted extensions: {'csv', 'xls', 'xlsx', 'XLSX'', 'sql'}
         name : str, optional
             A custom name to use for the MetaPanda.
             If None, `filename` is used.
@@ -201,9 +202,10 @@ class MetaPanda(object):
         mdf : MetaPanda
             A MetaPanda object.
         """
+
         file_ext_map = {
-            "csv": pd.read_csv, "xls": pd.read_excel, "xlsx": pd.read_excel,
-            "hdf": pd.read_hdf, "sql": pd.read_sql, "XLSX": pd.read_excel
+            "csv": pd.read_csv, "xls": pd.read_excel,
+            "xlsx": pd.read_excel, "sql": pd.read_sql
         }
 
         # split filename into parts and check
@@ -343,23 +345,23 @@ class MetaPanda(object):
             raise ValueError("function '{}' not recognized in pandas.DataFrame.* API: {}".format(fn, dir(self.df_)))
 
     def _apply_index_function(self, fn: str, *fargs, **fkwargs):
-        """
-        TODO: Add warning in '_apply_index_function' if column is not string in this .str accessor.
-        """
         if hasattr(self.df_.index, fn):
             self.df_.index = getattr(self.df_.index, fn)(*fargs, **fkwargs)
             return self
         elif hasattr(self.df_.index.str, fn):
             if is_column_string(self.df_.index):
                 self.df_.index = getattr(self.df_.index.str, fn)(*fargs, **fkwargs)
+            else:
+                warnings.warn(
+                    "operation pandas.Index.str.'{}' cannot operate on index because they are not of type str.".format(
+                        fn),
+                    PendingDeprecationWarning
+                )
             return self
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.index.[str.]* API".format(fn))
 
     def _apply_column_function(self, fn: str, *fargs, **fkwargs):
-        """
-        TODO: Add warning in '_apply_column_function' if column is not string in this .str accessor.
-        """
         if hasattr(self.df_.columns, fn):
             self.df_.columns = getattr(self.df_.columns, fn)(*fargs, **fkwargs)
             self.meta_.index = getattr(self.meta_.index, fn)(*fargs, **fkwargs)
@@ -368,6 +370,12 @@ class MetaPanda(object):
             if is_column_string(self.df_.columns) and is_column_string(self.meta_.index):
                 self.df_.columns = getattr(self.df_.columns.str, fn)(*fargs, **fkwargs)
                 self.meta_.index = getattr(self.meta_.index.str, fn)(*fargs, **fkwargs)
+            else:
+                warnings.warn(
+                    "operation pandas.Index.str.'{}' cannot operate on columns/index because they are not of type str.".format(
+                        fn),
+                    PendingDeprecationWarning
+                )
             return self
         else:
             raise ValueError("function '{}' not recognized in pandas.DataFrame.columns.[str.]* API".format(fn))
@@ -501,11 +509,11 @@ class MetaPanda(object):
                 self._df.columns.name = "colnames"
             if "counter" not in self._df.columns:
                 self._df.index.name = "counter"
-        elif isinstance(df, (pd.Series, DataFrameGroupBy)):
+        elif isinstance(df, DataFrameGroupBy):
             # again, we'll just pretend the user knows what they're doing...
             self._df = df
         else:
-            raise TypeError("'df' must be of type [pd.Series, pd.DataFrame, DataFrameGroupBy]")
+            raise TypeError("'df' must be of type [pd.DataFrame, pd.DataFrameGroupBy]")
 
     @property
     def meta_(self) -> pd.DataFrame:
@@ -521,6 +529,11 @@ class MetaPanda(object):
     def p_(self) -> int:
         """Fetch the number of dimensions within the df_ attribute."""
         return self.df_.shape[1]
+
+    @property
+    def columns(self) -> pd.Index:
+        """Forward on 'columns' property."""
+        return self.df_.columns
 
     """ Additional meta information """
 
@@ -559,7 +572,7 @@ class MetaPanda(object):
         if mode in ("instant", "delay"):
             self._mode = mode
         else:
-            raise ValueError("'mode' must be ['instant', 'delay'], not '{}'".format(mode))
+            raise ValueError("'mode' must be of ('instant', 'delay'), not '{}'".format(mode))
 
     @property
     def pipe_(self) -> Dict[str, Any]:
@@ -590,6 +603,7 @@ class MetaPanda(object):
         ndf : pandas.DataFrame
             First k rows of df_
         """
+        instance_check(k, int)
         return self.df_.head(k)
 
     def dtypes(self, grouped: bool = True) -> Union[pd.Series, pd.DataFrame]:
@@ -607,6 +621,7 @@ class MetaPanda(object):
         true_types : pd.Series/pd.DataFrame
             A series of index (group/name) and value (count/type)
         """
+        instance_check(grouped, bool)
         return self.meta_['true_type'].value_counts() if grouped else self.meta_['true_type']
 
     def view(self, *selector: SelectorType) -> pd.Index:
@@ -623,24 +638,18 @@ class MetaPanda(object):
         .. warning:: Not affected by `mode_` attribute.
 
         .. note:: `view` *preserves* the order in which columns appear within the DataFrame.
-
-        .. note:: any numpy data type, like np.float64, np.uint8
-
         Parameters
-        -------
+        ----------
         selector : str or tuple args
             See above for what constitutes an *appropriate selector*.
-
         Warnings
         --------
         UserWarning
             If the selection returned is empty.
-
         Returns
         ------
         sel : pd.Index
             The list of column names selected, or empty
-
         See Also
         --------
         view_not : View the non-selected columns in `df_`.
@@ -663,24 +672,18 @@ class MetaPanda(object):
         .. warning:: Not affected by `mode_` attribute.
 
         .. note:: `view` *preserves* the order in which columns appear within the DataFrame.
-
-        .. note:: any numpy data type, like np.float64, np.uint8
-
         Parameters
         -------
         selector : str or tuple args
             See above for what constitutes an *appropriate selector*.
-
         Warnings
         --------
         UserWarning
             If the selection returned is empty.
-
         Returns
         ------
         sel : pd.Index
             The list of column names selected, or empty
-
         See Also
         --------
         view_not : Views the non-selected columns in `df_`.
@@ -707,24 +710,18 @@ class MetaPanda(object):
         .. warning:: Not affected by `mode_` attribute.
 
         .. note:: `view_not` *preserves* the order in which columns appear within the DataFrame.
-
-        .. note::  any numpy data type, like np.float64, np.uint8.
-
         Parameters
-        -------
+        ----------
         selector : str or tuple args
             See above for what constitutes an *appropriate selector*.
-
         Warnings
         --------
         UserWarning
             If the selection returned is empty.
-
         Returns
         ------
         sel : pd.Index
             The list of column names NOT selected, or empty
-
         See Also
         --------
         view : View a selection of columns in `df_`.
@@ -745,12 +742,10 @@ class MetaPanda(object):
         ------
         CopyException
             Module specific errors with copy.deepcopy
-
         Returns
         -------
         mdf2 : MetaPanda
             A copy of this object
-
         See Also
         --------
         copy.deepcopy(x) : Return a deep copy of x.
@@ -766,18 +761,19 @@ class MetaPanda(object):
             assumes pandas.DataFrame is returned.
 
         Parameters
-        -------
+        ----------
         f_name : str
             The name of the function
         f_args : list/tuple, optional
             Arguments to pass to the function
         f_kwargs : dict, optional
             Keyword arguments to pass to the function
-
         Returns
         -------
         self
         """
+        instance_check(f_name, str)
+
         self._apply_function(f_name, *f_args, **f_kwargs)
         return self
 
@@ -1047,14 +1043,15 @@ class MetaPanda(object):
             self.pipe_[name] = pipeline
         return self
 
-    @_actionable
+    @deprecated("0.1.9", "0.2.2", instead="rename_axis",
+                reason="This function will be adapted to rename strings in df_ columns using regex/str.replace ops.")
     def rename(self,
                ops: Tuple[str, str],
                selector: Tuple[SelectorType, ...] = None,
                axis: int = 1) -> "MetaPanda":
         """Perform a chain of .str.replace operations on a given `df_` or `meta_` column.
 
-        .. warning:: `rename` will become `rename_axis` in version 0.2.2, use `rename_axis` instead.
+        .. deprecated:: `rename` will become `rename_axis` in version 0.2.2, use `rename_axis` instead.
 
         TODO: convert this function as to allow it to 'rename' a given column(s) using pd.Series.str.replace ops.
             Allow this to happen to either a column in df_ or meta_, as appropriate.
@@ -1076,10 +1073,6 @@ class MetaPanda(object):
         -------
         self
         """
-        warnings.warn(
-            "`rename` will fundamentally change in version 0.2.2, use `rename_axis` instead.",
-            FutureWarning
-        )
 
         # check ops is right format
         is_twotuple(ops)
@@ -1095,7 +1088,7 @@ class MetaPanda(object):
     @_actionable
     def rename_axis(self,
                     ops: Tuple[str, str],
-                    selector: Tuple[SelectorType, ...] = None,
+                    selector: Optional[Tuple[SelectorType, ...]] = None,
                     axis: int = 1) -> "MetaPanda":
         """Perform a chain of .str.replace operations on one of the axes.
 
@@ -1273,7 +1266,7 @@ class MetaPanda(object):
 
         ..note:: Uses the cached selector names to rename if they are used.
 
-        TODO: Complete the implementation of this function.
+        TODO: Complete the implementation of `aggregate` function.
 
         Parameters
         ----------

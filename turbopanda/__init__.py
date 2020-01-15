@@ -23,7 +23,7 @@ from .visualise import *
 from .fileio import *
 from .correlate import *
 from .cache import *
-from .pub_fig import *
+from ._pub_fig import *
 from .merge import merge
 
 __version__ = "0.2.0"

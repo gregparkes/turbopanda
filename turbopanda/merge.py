@@ -154,7 +154,14 @@ def merge(mdfs: Tuple[DataSetType, ...],
         for ds in mdfs[1:]:
             nmdf = _single_merge(nmdf, ds, how=how)
 
+    # add on a meta_ column indicating the source of every feature.
+    col_sources = concat([Series(ds.name_, index=ds.df_.columns.copy()) for ds in mdfs],
+                         axis=0, sort=False)
+    nmdf.meta_["datasets"] = col_sources
+
+    # compute clean if applicable
     if clean_pipe is not None and isinstance(nmdf, MetaPanda):
-        return nmdf.compute(clean_pipe, inplace=False)
-    else:
-        return nmdf
+        nmdf.compute(clean_pipe, inplace=True)
+
+    # return
+    return nmdf

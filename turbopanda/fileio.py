@@ -6,11 +6,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-# imports
-import glob
-import itertools as it
-import json
-
 # locals
 from typing import Optional, Dict, Union, List
 
@@ -18,11 +13,12 @@ from .metapanda import MetaPanda
 from .utils import instance_check
 from ._deprecator import deprecated
 
+
 __all__ = ("read", 'read_raw_json')
 
 
 def read(filename: str,
-         name: Optional[str] = None,
+         name: Optional[Union[str, List[str]]] = None,
          *args,
          **kwargs) -> Union[MetaPanda, List[MetaPanda]]:
     """Reads in a data source from file and creates a MetaPanda object from it.
@@ -35,13 +31,13 @@ def read(filename: str,
     ----------
     filename : str
         A relative/absolute link to the file, with extension provided.
-        Accepted extensions: {'csv', 'CSV', 'xls', 'xlsx', 'XLSX', 'json', 'hdf'}
+        Accepted extensions: {'csv'', 'xls', 'xlsx', 'sql', 'json', 'hdf'}
         .json is a special use case and will use the MetaPanda format, NOT the pd.read_json function.
         .hdf is a special use and stores both df_ and meta_ attributes.
         `filename` now accepts glob-compliant input to read in multiple files if selected.
     name : str/list of str, optional
-        A custom name to use for the MetaPanda, else `filename` is used. Where this is a list, this
-        is sorted to alphabetically match the filename.
+        A custom name to use for the MetaPanda, else `filename` is used. Where this is a `list`, this
+        is sorted to alphabetically match `filename`.
     args : list, optional
         Additional args to pass to pd.read_[ext]/MetaPanda()
     kwargs : dict, optional
@@ -60,7 +56,13 @@ def read(filename: str,
         A MetaPanda object. Returns a list of MetaPanda if `filename` is glob-like and
         selects multiple files.
     """
+    # imports for this function
+    import glob
+    import itertools as it
+
+    # checks
     instance_check(filename, str)
+    instance_check(name, (type(None), str, list, tuple))
 
     # use the glob package to allow for unix-like searching. Sorted alphabetically
     glob_name = sorted(glob.glob(filename))
@@ -68,10 +70,11 @@ def read(filename: str,
         raise IOError("No files selected with filename {}".format(filename))
     else:
         # maps the file type to a potential pandas function.
-        pandas_types = ("csv", "CSV", "xls", "xlsx", "XLSX", "hdf")
+        pandas_types = ("csv", "xls", "xlsx", "sql")
 
         def ext(s):
-            return s.rsplit(".", 1)[-1]
+            """Extracts the file extension (in lower)"""
+            return s.rsplit(".", 1)[-1].lower()
 
         def fetch_db(fl: str, n=None) -> "MetaPanda":
             """Fetches the appropriate datafile set."""
@@ -93,15 +96,15 @@ def read(filename: str,
         return ds if len(ds) > 1 else ds[0]
 
 
-@deprecated("0.1.9", "0.2.1", "read")
+@deprecated("0.1.9", "0.2.2", "read")
 def read_raw_json(filename: str) -> Dict:
     """
     Reads in a raw JSON file.
 
     .. deprecated:: 0.1.9
-        `read_raw_json` will be removed in 0.2.1, use `read` instead.
+        `read_raw_json` will be removed in 0.2.2, use `read` instead.
 
-    TODO: deprecate 'read_raw_json' in version 0.2.1
+    TODO: deprecate 'read_raw_json' in version 0.2.2
 
     Parameters
     ----------
@@ -114,6 +117,8 @@ def read_raw_json(filename: str) -> Dict:
         The JSON object found in the file.
     """
     instance_check(filename, str)
+
+    import json
 
     with open(filename, "r") as f:
         mp = json.load(f)

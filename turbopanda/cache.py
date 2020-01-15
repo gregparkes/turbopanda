@@ -31,7 +31,7 @@ __all__ = ("cached", "cache")
 def _set_index_def(df, values=('Unnamed:_0', 'Unnamed: 0')):
     for v in values:
         if v in df.columns:
-            df.set_index(v, inplace=True)
+            df = df.rename(columns={v: "counter"}).set_index("counter")
 
 
 def cached(func: Callable,
@@ -104,7 +104,7 @@ def cached(func: Callable,
             return mpf
         elif isinstance(mpf, DataFrame):
             # save
-            mpf.to_csv(filename)
+            mpf.to_csv(filename, index=None)
             # return as MetaPanda
             return MetaPanda(mpf)
         else:
@@ -177,7 +177,7 @@ def cache(filename: Optional[str] = "example1.json") -> Callable:
                     return mpf
                 elif isinstance(mpf, DataFrame):
                     # save
-                    mpf.to_csv(filename)
+                    mpf.to_csv(filename, index=None)
                     return MetaPanda(mpf)
                 else:
                     warnings.warn("returned object from cache not of type [pd.DataFrame, turb.MetaPanda], not cached",

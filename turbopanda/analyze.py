@@ -18,9 +18,9 @@ import pandas as pd
 from sklearn.cluster import FeatureAgglomeration
 
 # local imports
-from .distribution import Distribution
 from .utils import union
 from ._deprecator import deprecated
+from ._distribution import Distribution
 
 
 def _levenshtein_ratio_and_distance(s, t, ratio_calc=False):

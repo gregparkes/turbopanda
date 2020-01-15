@@ -23,15 +23,14 @@ AsPandas = Union[pd.Series, pd.DataFrame]
 
 __all__ = ("fself", "is_twotuple", "instance_check", "dictzip", "dictmap", "t_numpy",
            "boolean_series_check", "check_list_type", "not_column_float",
-           "is_column_float", "is_column_object", "is_column_int", "is_column_intbool",
+           "is_column_float", "is_column_object", "is_column_int",
            "calc_mem", "remove_string_spaces", "nearest_factors", "is_missing",
            "split_file_directory", "c_float", "c_int", "intcat",
-           "is_unique_id", "is_potential_id", "string_replace",
-           "is_potential_stacker", "nunique", "object_to_categorical",
+           "is_unique_id", "string_replace", "object_to_categorical",
            "is_n_value_column", "boolean_to_integer", "integer_to_boolean",
            "join", "belongs", "is_possible_category",
            "standardize", "dict_to_tuple", "set_like", "union", "difference",
-           "intersect", "interacting_set", "is_column_string", "remove_na", "encode")
+           "intersect", "interacting_set", "is_column_string", "remove_na")
 
 
 def c_float() -> Tuple[TypeVar, ...]:
@@ -134,14 +133,9 @@ def is_column_int(ser: pd.Series) -> bool:
     return ser.dtype in c_int()
 
 
-def is_column_intbool(ser: pd.Series) -> bool:
-    """Determines whether the column is {0, 1} of ints."""
-    return ser.dtype in (np.uint8, np.uint16) and ser.nunique() == 2
-
-
 def is_column_object(ser: pd.Series) -> bool:
     """Checks whether the data type in Series is a object column."""
-    return ser.dtype in {object, pd.CategoricalDtype}
+    return ser.dtype in (object, pd.CategoricalDtype)
 
 
 def is_missing(ser: pd.Series) -> bool:
@@ -159,18 +153,11 @@ def is_unique_id(ser: pd.Series) -> bool:
     return ser.is_unique if is_column_int(ser) else False
 
 
-def is_potential_id(ser: pd.Series, thresh: float = 0.5) -> bool:
-    """Determine whether ser is a potential ID column."""
-    return (ser.nunique() / ser.shape[0]) > thresh if is_column_string(ser) else False
-
-
-def is_potential_stacker(ser: pd.Series, regex: str = ";|\t|,|", thresh: float = 0.1) -> bool:
-    """Determine whether ser is a stacker-like column."""
-    return ser.dropna().str.contains(regex).sum() > thresh if is_column_string(ser) else False
-
-
 def split_file_directory(filename: str):
     """Breaks down the filename pathway into constitute parts.
+
+    e.g a string "path/to/some_data/datafile.csv" returns:
+        ("path/to/some_data", "datafile", "csv")
 
     Parameters
     --------
@@ -180,11 +167,12 @@ def split_file_directory(filename: str):
     Returns
     -------
     directory : str
-        The directory linking to the file
+        The directory linking to the file (no `/` at the end)
     jname : str
-        The name of the file (without extension)
+        The name of the file, (no `.` or extension)
     ext : str
-        Extension type
+        Extension type without `.`, always returned as lowercase.
+        e.g Does not return {'CSV', 'XLSX'} but {'csv', 'xlsx'}
     """
     fs = filename.rsplit("/", 1)
     if len(fs) == 0:
@@ -196,12 +184,7 @@ def split_file_directory(filename: str):
         directory, fname = fs
     # just the name without the extension
     jname, ext = fname.split(".", 1)
-    return directory, jname, ext
-
-
-def nunique(ser: pd.Series):
-    """Convert ser to be nunique."""
-    return ser.nunique() if not_column_float(ser) else -1
+    return directory, jname, ext.lower()
 
 
 def is_twotuple(t: Tuple[Any, Any]) -> bool:
@@ -248,7 +231,7 @@ def boolean_series_check(ser: pd.Series):
     """Check whether ser is full of booleans or not."""
     if not isinstance(ser, pd.Series):
         raise TypeError("bool_s must be of type [pd.Series], not {}".format(type(ser)))
-    if ser.dtype not in [bool, np.bool]:
+    if ser.dtype not in (bool, np.bool):
         raise TypeError("bool_s must contain booleans, not type '{}'".format(ser.dtype))
 
 
@@ -286,20 +269,25 @@ def join(*pipes: Optional[Iterable[Any]]) -> List:
     return list(it.chain.from_iterable(pipes))
 
 
-def set_like(x: SetLike) -> pd.Index:
+def set_like(x: SetLike = None) -> pd.Index:
     """
     Convert x to something unique, set-like.
 
     Parameters
     ----------
-    x : list, tuple, pd.Series, set, pd.Index
-        A list of variables
+    x : str, list, tuple, pd.Series, set, pd.Index, optional
+        A variable that can be made set-like.
+        strings are wrapped.
 
     Returns
     -------
     y : pd.Index
         Set-like result.
     """
+    if x is None:
+        return pd.Index([])
+    if isinstance(x, str):
+        return pd.Index([x])
     if isinstance(x, (list, tuple)):
         return pd.Index(set(x))
     elif isinstance(x, (pd.Series, pd.Index)):
@@ -308,7 +296,8 @@ def set_like(x: SetLike) -> pd.Index:
         return pd.Index(x)
     else:
         raise TypeError(
-            "x must be in {}, not of type {}".format(['list', 'tuple', 'pd.Series', 'pd.Index', 'set'], type(x)))
+            "x must be in {}, not of type {}".format(
+                ['None', 'str', 'list', 'tuple', 'pd.Series', 'pd.Index', 'set'], type(x)))
 
 
 def union(*args: SetLike) -> pd.Index:
@@ -316,7 +305,7 @@ def union(*args: SetLike) -> pd.Index:
 
     Parameters
     ----------
-    args : list, tuple, pd.Series, set, pd.Index
+    args : str, list, tuple, pd.Series, set, pd.Index
         k List-like arguments
 
     Raises
@@ -345,7 +334,7 @@ def intersect(*args: SetLike) -> pd.Index:
 
     Parameters
     ----------
-    args : list, tuple, pd.Series, set, pd.Index
+    args : str, list, tuple, pd.Series, set, pd.Index
         k List-like arguments
 
     Returns
@@ -370,9 +359,9 @@ def difference(a: SetLike, b: SetLike) -> pd.Index:
 
     Parameters
     ----------
-    a : list, tuple, pd.Series, set, pd.Index
+    a : str, list, tuple, pd.Series, set, pd.Index
         List-like a
-    b : list, tuple, pd.Series, set, pd.Index
+    b : str, list, tuple, pd.Series, set, pd.Index
         List-like b
 
     Returns
@@ -600,23 +589,6 @@ def remove_na(x: np.ndarray, y: np.ndarray = None, paired=False, axis='rows'):
     -------
     x, y : np.ndarray
         Data without missing values
-
-    Examples
-    --------
-    Single 1D array
-    >>> import numpy as np
-    >>> from pingouin import remove_na
-    >>> x = [6.4, 3.2, 4.5, np.nan]
-    >>> remove_na(x)
-    array([6.4, 3.2, 4.5])
-    With two paired 1D arrays
-    >>> y = [2.3, np.nan, 5.2, 4.6]
-    >>> remove_na(x, y, paired=True)
-    (array([6.4, 4.5]), array([2.3, 5.2]))
-    With two independent 2D arrays
-    >>> x = np.array([[4, 2], [4, np.nan], [7, 6]])
-    >>> y = np.array([[6, np.nan], [3, 2], [2, 2]])
-    >>> x_no_nan, y_no_nan = remove_na(x, y, paired=False)
     """
     # Safety checks
     x = np.asarray(x)
@@ -657,9 +629,3 @@ def remove_na(x: np.ndarray, y: np.ndarray = None, paired=False, axis='rows'):
         x = x.compress(both, axis=ax)
         y = y.compress(both, axis=ax)
     return x, y
-
-
-def encode(df: pd.DataFrame) -> str:
-    """Encodes a pandas.DataFrame and returns a SHA256 unique key."""
-    import hashlib
-    return hashlib.sha256(df.to_json().encode()).hexdigest()

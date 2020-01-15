@@ -37,9 +37,9 @@ def _type_cast_argument(s: str):
         return int(s)
     elif _is_float_cast(s):
         return float(s)
-    elif s in {'true', 'True'}:
+    elif s in ('true', 'True'):
         return True
-    elif s in {'false', 'False'}:
+    elif s in ('false', 'False'):
         return False
     else:
         return s

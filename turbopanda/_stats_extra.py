@@ -134,13 +134,13 @@ def power_corr(r=None, n=None, power=None, alpha=0.05, tail='two-sided'):
     significance level of a correlation test.
     Parameters
     ----------
-    r : float
+    r : float, optional
         Correlation coefficient.
-    n : int
+    n : int, optional
         Number of observations (sample size).
-    power : float
+    power : float, optional
         Test power (= 1 - type II error).
-    alpha : float
+    alpha : float, optional
         Significance level (type I error probability).
         The default is 0.05.
     tail : str

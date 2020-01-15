@@ -57,7 +57,7 @@ def _get_selector_item(df: DataFrame,
         return Index([], name=df.columns.name)
     if isinstance(selector, Index):
         # check to see if values in selector match df.column names
-        return meta.index.intersection(selector)
+        return intersect(meta.index, selector)
     elif selector in selector_types():
         # if it's a string option, convert to type
         dec_map = {

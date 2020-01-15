@@ -23,7 +23,8 @@ class Distribution(object):
     Series of data, and fits the best distribution to it where possible.
 
     Distributions currently checked include:
-        {'norm', 'lognorm', 'expon', 'pareto', 'logistic', 't', 'laplace', 'uniform', 'halfnorm'}
+        {'norm', 'lognorm', 'expon', 'pareto', 'logistic', 't', 'laplace',
+        'uniform', 'halfnorm'}
 
     Includes generating random numbers and plotting methods.
     """

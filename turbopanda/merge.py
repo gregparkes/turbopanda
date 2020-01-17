@@ -16,10 +16,16 @@ import itertools as it
 
 # locals
 from .metapanda import MetaPanda, PipeMetaPandaType
-from .utils import belongs
+from .utils import belongs, intersect, instance_check, check_list_type
 
 # custom types
 DataSetType = Union[Series, DataFrame, MetaPanda]
+
+
+def _has_majority_index_overlap(df1, df2):
+    """Checks whether the indices overlap in majority. Bool"""
+    ins = intersect(df1.index, df2.index)
+    return ins.shape[0] > (np.mean((df1.shape[0], df2.shape[0])) // 2)
 
 
 def _intersecting_pairs(sdf1: DataFrame, sdf2: DataFrame) -> DataFrame:
@@ -58,19 +64,17 @@ def _maximum_likelihood_pairs(pairings: DataFrame, ret_largest: bool = True):
 def _single_merge(sdf1: DataSetType,
                   sdf2: DataSetType,
                   how: str = 'inner') -> Union[DataFrame, MetaPanda]:
-    """Check different use cases and merge d1 and d2 together.
-
-    TODO: Implement index-column-checking for MetaPanda as well as DataFrame.
-
+    """
+    Check different use cases and merge d1 and d2 together.
     """
     # both are series.
     if isinstance(sdf1, Series) and isinstance(sdf2, Series):
         # perform pd.concat on the indexes.
-        return concat((sdf1, sdf2), join='outer', axis=1, sort=False, copy=True)
+        return concat((sdf1, sdf2), join=how, axis=1, sort=False, copy=True)
     elif (isinstance(sdf1, DataFrame) and isinstance(sdf2, Series)) \
             or (isinstance(sdf1, Series) and isinstance(sdf2, DataFrame)):
         # join on index. TODO: This if case may produce weird behavior.
-        return concat((sdf1, sdf2), join='outer', axis=1, sort=False, copy=True)
+        return concat((sdf1, sdf2), join=how, axis=1, sort=False, copy=True)
     else:
         # assign attributes based on instance types, etc.
         d1 = sdf1.df_ if isinstance(sdf1, MetaPanda) else sdf1.reset_index()
@@ -83,26 +87,32 @@ def _single_merge(sdf1: DataSetType,
         m1 = sdf1.mapper_ if hasattr(sdf1, "mapper_") else {}
         m2 = sdf2.mapper_ if hasattr(sdf2, "mapper_") else {}
 
-        # find the best union pair
-        pair, value = _maximum_likelihood_pairs(_intersecting_pairs(d1, d2))
-        # find out if we have a shared parameter
-        shared_param = pair[0] if pair[0] == pair[1] else None
+        # if both of the dataframes find that their INDEX overlap...
+        if _has_majority_index_overlap(d1, d2):
+            # simply use concat
+            df_m = concat((d1, d2), sort=False, join=how, axis=1, copy=True)
+        else:
+            # find the best union pair
+            pair, value = _maximum_likelihood_pairs(_intersecting_pairs(d1, d2))
+            # find out if we have a shared parameter
+            shared_param = pair[0] if pair[0] == pair[1] else None
 
-        # handling whether we have a shared param or not.
-        merge_extra = dict(how=how, suffixes=('_x', '_y'))
-        merge_shared = dict(on=shared_param) if shared_param is not None else dict(left_on=pair[0], right_on=pair[1])
+            # handling whether we have a shared param or not.
+            merge_extra = dict(how=how, suffixes=('_x', '_y'))
+            merge_shared = dict(on=shared_param) if shared_param is not None else dict(left_on=pair[0], right_on=pair[1])
 
-        # merge pandas.DataFrames together
-        df_m = pmerge(d1, d2, **merge_extra, **merge_shared)
+            # merge pandas.DataFrames together
+            df_m = pmerge(d1, d2, **merge_extra, **merge_shared)
 
-        if shared_param is None:
-            df_m.drop(pair[1], axis=1, inplace=True)
-        # drop any columns with 'counter' in
-        if 'counter' in df_m.columns:
-            df_m.drop('counter', axis=1, inplace=True)
-        # rename
-        df_m.rename(columns=dict(zip(df_m.columns.tolist(), d1.columns.tolist())), inplace=True)
-        # form a MetaPanda
+            if shared_param is None:
+                df_m.drop(pair[1], axis=1, inplace=True)
+            # drop any columns with 'counter' in
+            if 'counter' in df_m.columns:
+                df_m.drop('counter', axis=1, inplace=True)
+            # rename
+            df_m.rename(columns=dict(zip(df_m.columns.tolist(), d1.columns.tolist())), inplace=True)
+
+        # HANDLE METAPANDA stuff
         mpf = MetaPanda(df_m, name=new_name)
         # tack on extras
         mpf._select = {**s1, **s2}
@@ -114,6 +124,7 @@ def _single_merge(sdf1: DataSetType,
 
 
 def merge(mdfs: Tuple[DataSetType, ...],
+          name: Optional[str] = None,
           how: str = 'inner',
           clean_pipe: Optional[PipeMetaPandaType] = None):
     """Merge together K datasets.
@@ -126,6 +137,9 @@ def merge(mdfs: Tuple[DataSetType, ...],
     ---------
     mdfs : list of pd.Series/pd.DataFrame/MetaPanda
         An ordered set of DataFrames to merge together. Must be at least 2 elements.
+    name : str, optional
+        A new name to give the merged dataset.
+        If None, joins together the names of every dataset in `mdfs`.
     how : str, optional
         Choose from {'inner', 'outer', 'left'}, see pandas.merge for more details.
         'inner': drops rows that aren't found in all Datasets
@@ -147,6 +161,9 @@ def merge(mdfs: Tuple[DataSetType, ...],
     nmdf : MetaPanda
         The fully merged Dataset
     """
+    # check the element type of every mdf
+    check_list_type(mdfs, (Series, DataFrame, MetaPanda))
+    instance_check(name, (type(None), str))
     belongs(how, ['left', 'inner', 'outer'])
 
     if len(mdfs) < 2:
@@ -163,6 +180,9 @@ def merge(mdfs: Tuple[DataSetType, ...],
                          axis=0, sort=False)
     nmdf.meta_["datasets"] = col_sources
 
+    # override name if given
+    if name is not None and isinstance(nmdf, MetaPanda):
+        nmdf.name_ = name
     # compute clean if applicable
     if clean_pipe is not None and isinstance(nmdf, MetaPanda):
         nmdf.compute(clean_pipe, inplace=True)

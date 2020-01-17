@@ -108,6 +108,8 @@ class MetaPanda(object):
         Perform inplace column-wise aggregations to multiple selectors.
     meta_map(name, selectors)
         Maps a group of selectors with an identifier, in `mapper_`
+    update_meta(None)
+        Forces an update to reset the `meta_` attribute.
     sort_columns(by="alphabet", ascending=True)
         Sorts `df_` using vast selection criteria
     expand(column, sep=",")
@@ -276,7 +278,9 @@ class MetaPanda(object):
 
     @classmethod
     def from_hdf(cls, filename: str, **kwargs):
-        """TODO: Read in a MetaPanda from a custom HDF5 file.
+        """Read in a MetaPanda from a custom HDF5 file.
+
+        TODO: Implement `from_hdf` function.
 
         Reads in a datafile from hdf and creates a MetaPanda object from it.
         There may be issues with storing pipe_, selector_ and
@@ -446,8 +450,35 @@ class MetaPanda(object):
             f.write(compile_string.encode())
 
     def _write_hdf(self, filename: str):
-        """TODO: Saves a file in special HDF5 format."""
+        """Saves a file in special HDF5 format.
+
+        TODO: Implement `_write_hdf` function.
+        """
         return NotImplemented
+
+    def _seeded_checksum(self):
+        """Generates a seeded checksum for a MetaPanda, given it's `df_`.
+
+        TODO Implement into `write_json` and `from_json` the seeded checksum
+
+        Includes columns and some data inside, but not all for computational reasons.
+        """
+        if self.n_ < 10 or self.p_ < 3:
+            warnings.warn("_seeded_checksum not viable, dataset too small.", UserWarning)
+            return '0'
+        # set the seed
+        np.random.seed(123456789)
+        # determine selected columns
+        _sel_cols = np.random.choice(self.df_.columns, size=(3,), replace=False)
+        # stringify columns
+        _str_cols = json.dumps(list(set(self.df_.columns)))
+        # set a new seed and determine selected subset of data for seed
+        np.random.seed(987654321)
+        _sel_data = json.dumps(self.df_.sample(n=10).loc[:, _sel_cols].round(2).to_dict())
+        # generate sha256 and add together
+        chk1 = hashlib.sha256(_str_cols.encode()).hexdigest()
+        chk2 = hashlib.sha256(_sel_data.encode()).hexdigest()
+        return chk1 + chk2
 
     """ ############################## OVERRIDDEN OPERATIONS ###################################### """
 
@@ -1263,11 +1294,6 @@ class MetaPanda(object):
                   keep: bool = False) -> "MetaPanda":
         """Perform inplace column-wise aggregations to multiple selectors.
 
-        For example if we have a DataFrame such as:
-            DF(...,['c1', 'c2', 'c3', 'd1', 'd2', 'd3', 'e1', 'e2', 'e3'])
-            We aggregate such that columns ['c1', 'c2', 'c3'] -> c, etc.
-            >>> aggregate("sum", name="C", selector="c[1-3]")
-
         ..note:: Uses the cached selector names to rename if they are used.
 
         Parameters
@@ -1287,11 +1313,14 @@ class MetaPanda(object):
         Returns
         -------
         self
+
+        Examples
+        --------
+        For example if we have a DataFrame such as:
+            DF(...,['c1', 'c2', 'c3', 'd1', 'd2', 'd3', 'e1', 'e2', 'e3'])
+            We aggregate such that columns ['c1', 'c2', 'c3'] -> c, etc.
+            >>> aggregate("sum", name="C", selector="c[1-3]")
         """
-        warnings.warn(
-            "`aggregate` is not fully implemented yet.",
-            UserWarning
-        )
         instance_check(name, (type(None), str))
         instance_check(func, (str, "__callable__"))
         instance_check(keep, bool)
@@ -1317,6 +1346,27 @@ class MetaPanda(object):
         # append data to df
         self.df_[_name] = _agg
         return self
+
+    def eval(self, expr: str):
+        """Evaluate a Python expression as a string on `df_`.
+
+        See `pandas.eval` documentation for more details.
+
+        TODO: Implement `eval()` function.
+
+        Parameters
+        ----------
+        expr : str
+            The expression to evaluate. This string cannot contain any Python statements, only Python expressions.
+            We allow cached 'selectors' to emulate group-like evaluations.
+
+        Examples
+        --------
+        >>> import turbopanda as turb
+        >>> mdf = turb.read("somefile.csv")
+        >>> mdf.eval("c=a+b") # creates column c by adding a + b
+        """
+        return NotImplemented
 
     @_actionable
     def meta_map(self, name: str,
@@ -1371,17 +1421,20 @@ class MetaPanda(object):
         self.mapper_[name] = selectors
         return self
 
-    def update_meta(self):
+    def update_meta(self) -> "MetaPanda":
         """Forces an update to the metadata.
 
+        This involves a full `meta_` reset, so columns present may be lost.
+
         .. warning:: This is experimental and may disappear or change in future updates.
+
+        Returns
+        -------
+        self
         """
-        warnings.warn(
-            "function 'update_meta' may be altered or removed in a future update.",
-            FutureWarning
-        )
         self._reset_meta()
         self._define_metamaps()
+        return self
 
     @_actionable
     def sort_columns(self,

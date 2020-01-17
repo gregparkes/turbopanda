@@ -31,7 +31,7 @@ __all__ = ("fself", "is_twotuple", "instance_check", "dictzip", "dictmap", "t_nu
            "join", "belongs", "is_possible_category",
            "standardize", "dict_to_tuple", "set_like", "union", "difference",
            "intersect", "interacting_set", "is_column_string", "remove_na",
-           "common_substring_match", "pairwise")
+           "common_substring_match", "pairwise", "reformat")
 
 
 def c_float() -> Tuple[TypeVar, ...]:
@@ -670,3 +670,33 @@ def common_substring_match(a, b):
         return a[match.a:match.a + match.size]
     else:
         raise ValueError("in 'common_substring_match', no match was found")
+
+
+def reformat(s, df):
+    """Using DataFrame `df`, reformat a string column using pattern `s`.
+
+    e.g reformat("{data_group}_{data_source}", df)
+        Creates a pd.Series looking like pattern s using column data_group, data_sources input.
+
+    .. note:: currently does not allow specification for type args:
+        e.g reformat("{data_number:0.3f}", df)
+
+    Parameters
+    ----------
+    s : str
+        The regex pattern to conform to.
+    df : pd.DataFrame
+        A dataset containing columns selected for in `s`.
+
+    Returns
+    -------
+    ser : pd.Series
+        Reformatted column.
+    """
+    import re
+    columns = re.findall('.*?\{([a-zA-Z0-9\_\-]+)\}.*?', s)
+    d = []
+    for i, r in df.iterrows():
+        mmap = dict(zip(columns, r[columns]))
+        d.append(s.format(**mmap))
+    return pd.Series(d, index=df.index)

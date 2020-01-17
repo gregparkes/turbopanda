@@ -58,7 +58,7 @@ def categorize_meta(meta: pd.DataFrame):
             meta[column] = object_to_categorical(meta[column])
 
 
-def add_metadata(df: pd.DataFrame, columns=None):
+def add_metadata(df: pd.DataFrame):
     """ Constructs a pd.DataFrame from the raw data. Returns meta"""
     # step 1. construct a DataFrame based on the column names as an index.
     _func_mapping = default_columns()

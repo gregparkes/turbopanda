@@ -328,17 +328,13 @@ def _corr_two_matrix_diff(data: pd.DataFrame,
     instance_check(y, (list, tuple, pd.Index))
     instance_check(covar, (type(None), str, list, tuple, pd.Index))
 
-    # join together the list/strings of column names
-    cols = union(x, y, covar)
-    _data = data[cols]
-
     # create combinations
     comb = list(it.product(x, y))
     # iterate and perform two_variable as before
     if covar is None:
-        result_k = [bicorr(_data[xc], _data[yc], method=method) for (xc, yc) in comb]
+        result_k = [bicorr(data[xc], data[yc], method=method) for (xc, yc) in comb]
     else:
-        result_k = [partial_bicorr(_data, xc, yc, covar, method=method) for (xc, yc) in comb]
+        result_k = [partial_bicorr(data, xc, yc, covar, method=method) for (xc, yc) in comb]
 
     result = pd.concat(result_k, axis=0, sort=False).reset_index().rename(columns={"index": "method"})
     return result
@@ -412,10 +408,10 @@ def correlate_mat(data, covar=None, method="spearman"):
         else _corr_matrix_singular(data.df_, **args)
 
 
-def correlate(data,
-              x=None,
-              y=None,
-              covar=None,
+def correlate(data: Union[pd.DataFrame, MetaPanda],
+              x: Optional[Union[str, List[str], Tuple[str, ...], pd.Index]] = None,
+              y: Optional[Union[str, List[str], Tuple[str, ...], pd.Index]] = None,
+              covar: Optional[Union[str, List[str], Tuple[str, ...], pd.Index]] = None,
               method: str = "spearman") -> pd.DataFrame:
     """Correlates X and Y together to generate a correlation matrix.
 
@@ -427,19 +423,13 @@ def correlate(data,
         The full dataset.
     x : (str, list, tuple, pd.Index), optional
         Subset of input(s) for column names.
-        if None, uses the full dataset. Y must be None in this case also.
-        If str, MUST be a MetaPanda selector.
-        If list/tuple/pd.Index, directly selects columns in df_.
+            if None, uses the full dataset. Y must be None in this case also.
     y : (str, list, tuple, pd.Index)
         Subset of output(s) for column names.
-        if None, uses the full dataset (from optional `x` subset)
-        If str, MUST be a MetaPanda selector.
-        If list/tuple/pd.Index, directly selects columns in df_.
+            if None, uses the full dataset (from optional `x` subset)
     covar : (str, list, tuple, pd.Index), optional
         set of covariate(s). Covariates are needed to compute partial correlations.
-        If None, uses standard correlation.
-        If str, MUST be a MetaPanda selector.
-        If list/tuple/pd.Index, directly selects columns in df_. These columns cannot coexist with `x` or `y`
+            If None, uses standard correlation.
     method : str, optional
         Method to correlate with. Choose from:
             'pearson' : Pearson product-moment correlation
@@ -492,22 +482,15 @@ def correlate(data,
 
     # data cannot be NONE
     instance_check(data, (pd.DataFrame, MetaPanda))
-    instance_check(x, (type(None), list, tuple, pd.Index))
-    instance_check(y, (type(None), list, tuple, pd.Index))
+    instance_check(x, (type(None), str, list, tuple, pd.Index))
+    instance_check(y, (type(None), str, list, tuple, pd.Index))
     instance_check(covar, (type(None), str, list, tuple, pd.Index))
     belongs(method, ('pearson', 'spearman', 'kendall', 'biserial', 'percbend', 'shepherd', 'skipped'))
     # downcast to dataframe option
     df = data.df_ if isinstance(data, MetaPanda) else data
-
-    """
-    USE CASES:
-    ---------
-        -> x, y, covar = None: matrix_singular[full]
-        -> x (str, list); y, covar = None: matrix_singular[subset]     s.t. len(x) > 1
-        -> x (str); y (str); covar = None: bicorr                      s.t. len(x) = 1, len(y) = 1
-        -> x (str); y (str); covar (str, list): partial_bicorr         s.t. len(x) = 1, len(y) = 1
-        -> x, covar, y (str, list): COMPLEX
-    """
+    # downcast if list/tuple/pd.index is of length 1
+    x = x[0] if (isinstance(x, (tuple, list, pd.Index)) and len(x) == 1) else x
+    y = y[0] if (isinstance(x, (tuple, list, pd.Index)) and len(y) == 1) else y
 
     if x is None and y is None:
         return _corr_matrix_singular(df, covar=covar, method=method)
@@ -521,7 +504,7 @@ def correlate(data,
     elif isinstance(x, (list, tuple, pd.Index)) and isinstance(y, (list, tuple, pd.Index)):
         return _corr_two_matrix_diff(df, x, y, covar=covar, method=method)
     else:
-        raise ValueError("XC: {}; YC: {}; COVA: {} combination unknown.".format(x,y,covar))
+        raise ValueError("XC: {}; YC: {}; COVA: {} combination unknown.".format(x, y, covar))
 
 
 #########################################################################################################

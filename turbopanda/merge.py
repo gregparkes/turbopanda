@@ -58,7 +58,11 @@ def _maximum_likelihood_pairs(pairings: DataFrame, ret_largest: bool = True):
 def _single_merge(sdf1: DataSetType,
                   sdf2: DataSetType,
                   how: str = 'inner') -> Union[DataFrame, MetaPanda]:
-    """Check different use cases and merge d1 and d2 together."""
+    """Check different use cases and merge d1 and d2 together.
+
+    TODO: Implement index-column-checking for MetaPanda as well as DataFrame.
+
+    """
     # both are series.
     if isinstance(sdf1, Series) and isinstance(sdf2, Series):
         # perform pd.concat on the indexes.

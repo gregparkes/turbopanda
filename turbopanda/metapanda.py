@@ -269,7 +269,9 @@ class MetaPanda(object):
         chk = hashlib.sha256(json.dumps(mpf.df_.columns.tolist()).encode()).hexdigest()
         if obj['checksum'] != chk:
             raise IOError("checksum stored: %s doesn't match %s" % (obj['checksum'], chk))
-
+        # apply additional metadata columns
+        mpf.update_meta()
+        # return
         return mpf
 
     @classmethod
@@ -1256,24 +1258,27 @@ class MetaPanda(object):
     @_actionable
     def aggregate(self,
                   func: Union[Callable, str],
-                  selectors: Union[Tuple[SelectorType, ...], List[Tuple[SelectorType, ...]]],
+                  name: Optional[str] = None,
+                  selector: Optional[Tuple[SelectorType, ...]] = None,
                   keep: bool = False) -> "MetaPanda":
         """Perform inplace column-wise aggregations to multiple selectors.
 
         For example if we have a DataFrame such as:
             DF(...,['c1', 'c2', 'c3', 'd1', 'd2', 'd3', 'e1', 'e2', 'e3'])
             We aggregate such that columns ['c1', 'c2', 'c3'] -> c, etc.
+            >>> aggregate("sum", name="C", selector="c[1-3]")
 
         ..note:: Uses the cached selector names to rename if they are used.
-
-        TODO: Complete the implementation of `aggregate` function.
 
         Parameters
         ----------
         func : str or function
             If function: takes a pd.DataFrame x and returns pd.Series y, for each selection.
             If str: choose from {'mean', 'sum', 'min', 'max', 'std', 'count'}.
-        selectors : (list of) str or tuple args
+        name : str, optional
+            A name for the aggregated column.
+            If None, will attempt to extract common pattern subset out of columns.
+        selector : (list of) str or tuple args
             Contains either types, meta column names, column names or regex-compliant strings.
         keep : bool, optional
             If False, drops the rows from which the calculation was made.
@@ -1287,23 +1292,31 @@ class MetaPanda(object):
             "`aggregate` is not fully implemented yet.",
             UserWarning
         )
-
-        instance_check(selectors, (list, tuple))
+        instance_check(name, (type(None), str))
         instance_check(func, (str, "__callable__"))
+        instance_check(keep, bool)
 
-        for select in selectors:
-            _selection = self._selector_group(select)
-            _name = select if select in self.selectors_.keys() else _selection[0]
-            # modify group
-            _agg = self.df_[_selection].agg(func, axis=1)
-            _agg.name = _name
-            # associate with df_, meta_
-            if not keep:
-                self._drop_columns(select)
-            # append data to df
-            self.df_[_name] = _agg
+        _selection = self._selector_group(selector)
 
-        return NotImplemented
+        if name is None:
+            if selector in self.selectors_:
+                _name = selector
+            else:
+                # calculate the best name by common substring matching
+                pairs = pairwise(common_substring_match, _selection)
+                _name = pd.Series(pairs).value_counts().idxmax()
+        else:
+            _name = name
+
+        # modify group
+        _agg = self.df_[_selection].agg(func, axis=1)
+        _agg.name = _name
+        # associate with df_, meta_
+        if not keep:
+            self._drop_columns(_selection)
+        # append data to df
+        self.df_[_name] = _agg
+        return self
 
     @_actionable
     def meta_map(self, name: str,
@@ -1367,6 +1380,7 @@ class MetaPanda(object):
             "function 'update_meta' may be altered or removed in a future update.",
             FutureWarning
         )
+        self._reset_meta()
         self._define_metamaps()
 
     @_actionable

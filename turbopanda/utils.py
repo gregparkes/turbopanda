@@ -30,7 +30,8 @@ __all__ = ("fself", "is_twotuple", "instance_check", "dictzip", "dictmap", "t_nu
            "is_n_value_column", "boolean_to_integer", "integer_to_boolean",
            "join", "belongs", "is_possible_category",
            "standardize", "dict_to_tuple", "set_like", "union", "difference",
-           "intersect", "interacting_set", "is_column_string", "remove_na")
+           "intersect", "interacting_set", "is_column_string", "remove_na",
+           "common_substring_match", "pairwise")
 
 
 def c_float() -> Tuple[TypeVar, ...]:
@@ -267,6 +268,33 @@ def join(*pipes: Optional[Iterable[Any]]) -> List:
     pipes = list(filter(None.__ne__, pipes))
     # use itertools to chain together elements.
     return list(it.chain.from_iterable(pipes))
+
+
+def pairwise(f, x):
+    """Conduct a pairwise operation on a list of elements, receiving them in pairs.
+
+    e.g for list x = [1, 2, 3] we conduct:
+        for i in range(3):
+            for j in range(i, 3):
+                operation[i, j]
+
+    Parameters
+    ----------
+    f : function
+        Receives two arguments and returns something
+    x : list-like
+        A list of strings, parameters etc, to pass to f
+
+    Returns
+    -------
+    y : list-like
+        A list of the return elements from f(x)
+    """
+    y = []
+    pairs = it.combinations(x, 2)
+    for p1, p2 in pairs:
+        y.append(f(p1, p2))
+    return join(y)
 
 
 def set_like(x: SetLike = None) -> pd.Index:
@@ -629,3 +657,16 @@ def remove_na(x: np.ndarray, y: np.ndarray = None, paired=False, axis='rows'):
         x = x.compress(both, axis=ax)
         y = y.compress(both, axis=ax)
     return x, y
+
+
+def common_substring_match(a, b):
+    """Given two strings, find the longest common substring.
+
+     Also known as the Longest Common Substring problem."""
+    from difflib import SequenceMatcher
+    match = SequenceMatcher(None, a, b).find_longest_match(0, len(a), 0, len(b))
+    # return the longest substring
+    if match.size != 0:
+        return a[match.a:match.a + match.size]
+    else:
+        raise ValueError("in 'common_substring_match', no match was found")

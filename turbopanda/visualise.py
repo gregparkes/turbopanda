@@ -18,9 +18,8 @@ from .utils import nearest_factors, belongs, fself, standardize
 from .metaml import MetaML
 from ._pub_fig import save_figure
 
-
 __all__ = ("plot_scatter_grid", "plot_missing", "plot_hist_grid",
-           "plot_coefficients", "plot_actual_vs_predicted")
+           "plot_coefficients", "plot_actual_vs_predicted", "shape_multiplot")
 
 
 def _iqr(a):
@@ -54,7 +53,7 @@ def _generate_diag_like_grid(n, direction, ax_size=2):
     f1, f2 = nearest_factors(n, shape="diag")
     fmax, fmin = max(f1, f2), min(f1, f2)
     # get longest one
-    tup, nc, nr = ((ax_size*fmin, ax_size*fmax), fmin, fmax) \
+    tup, nc, nr = ((ax_size * fmin, ax_size * fmax), fmin, fmax) \
         if direction == 'row' else ((ax_size * fmax, ax_size * fmin), fmax, fmin)
     fig, axes = plt.subplots(ncols=nc, nrows=nr, figsize=tup)
     if axes.ndim > 1:
@@ -81,6 +80,33 @@ def _freedman_diaconis_bins(a):
 
 
 """ ################################### USEFUL FUNCTIONS ######################################"""
+
+
+def shape_multiplot(n_plots: int, arrange: str = "square", ax_size: int = 2):
+    """Determines the most optimal shape for a set of plots.
+
+    Parameters
+    ----------
+    n_plots : int
+        The total number of plots.
+    arrange : str
+        Choose from {'square', 'row' 'column'}. Indicates preference for direction
+        of plots.
+    ax_size : int
+        The square size of each plot.
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        The figure
+    axes : list of matplotlib.ax.Axes
+        A list of axes to use.
+    """
+    if n_plots == 1:
+        return plt.subplots(figsize=(ax_size, ax_size))
+    else:
+        return _generate_square_like_grid(n_plots) \
+            if arrange == 'square' else _generate_diag_like_grid(n_plots, arrange)
 
 
 def plot_missing(mdf):

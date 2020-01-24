@@ -6,7 +6,7 @@ import pandas as pd
 from typing import Optional, Tuple
 
 from ._bool_series import is_n_value_column, is_column_int, \
-    _nunique, is_column_object
+    nunique, is_column_object
 
 
 def integer_to_boolean(ser: pd.Series) -> pd.Series:
@@ -22,7 +22,7 @@ def object_to_categorical(ser: pd.Series,
     # get uniques if possible
     if not is_column_object(ser):
         return ser
-    elif 1 < _nunique(ser) < thresh:
+    elif 1 < nunique(ser) < thresh:
         if order is None:
             return ser.astype(pd.CategoricalDtype(np.sort(ser.dropna().unique()), ordered=True))
         else:

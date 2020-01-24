@@ -256,7 +256,7 @@ class Pipe(object):
         drop_step = [("drop", (lambda x: x.nunique() == 1,), {})]
         extras = [
             # shrink down data types where possible.
-            ("transform", (to_numeric,), {"selector": (np.float64, np.int64),
+            ("transform", (to_numeric,), {"selector": ("float64", "int64"),
                                           "errors": "ignore", "downcast": "unsigned"}),
             # strip column names
             ("apply_columns", ("strip",), {}),
@@ -276,7 +276,7 @@ class Pipe(object):
         pipe : list
             The pipeline object
         """
-        return cls(('drop', object, ".*id$", ".*ID$", "^ID.*", "^id.*"))
+        return cls(('drop', "object", ".*id$", ".*ID$", "^ID.*", "^id.*"))
 
 
 PipeMetaPandaType = Union[Tuple[PipeTypeCleanElem, ...],

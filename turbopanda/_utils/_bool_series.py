@@ -6,13 +6,7 @@ import pandas as pd
 from ._typegroups import c_cat, c_float, c_int
 
 
-__all__ = ("is_possible_category", "not_column_float", "is_column_float",
-           "is_column_int", "is_column_object", "is_missing_values"
-           "is_n_value_column", "is_unique_id", "is_potential_id",
-           "is_potential_stacker", "is_column_string")
-
-
-def _nunique(ser: pd.Series) -> int:
+def nunique(ser: pd.Series) -> int:
     """Convert ser to be nunique."""
     return ser.nunique() if not_column_float(ser) else -1
 

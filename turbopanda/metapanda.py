@@ -398,14 +398,14 @@ class MetaPanda(object):
                 self.meta_map(k, v)
 
     def _apply_pipe(self, pipe):
-        # checks
+        # extract stored string if it is present.
         if isinstance(pipe, str):
             # see if name is cached away.
             if pipe in self.pipe_.keys():
                 pipe = self.pipe_[pipe]
             else:
                 raise ValueError("pipe name '{}' not found in .pipe attribute".format(pipe))
-        elif isinstance(pipe, Pipe):
+        if isinstance(pipe, Pipe):
             pipe = pipe.p
         if isinstance(pipe, (list, tuple)):
             if len(pipe) == 0 and self._with_warnings:

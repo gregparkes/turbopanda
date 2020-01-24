@@ -9,20 +9,20 @@ from __future__ import print_function
 
 # imports
 import re
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 from pandas import CategoricalDtype, concat, Index, Series, DataFrame
 
 # locals
-from .utils import boolean_series_check, intersect, union, t_numpy, dictmap, dictzip
+from .utils import boolean_series_check, intersect, union, t_numpy, dictmap, dictzip, join
 from .custypes import SelectorType
 
 
 __all__ = ("regex_column", "get_selector", "selector_types")
 
 
-def selector_types() -> Index:
+def selector_types() -> List:
     """Returns the acceptable selector data types that are searched for."""
-    return union(
+    return join(
         t_numpy(),
         tuple(map(lambda n: n.__name__, t_numpy())),
         (float, int, bool, object, CategoricalDtype, "object", "category")

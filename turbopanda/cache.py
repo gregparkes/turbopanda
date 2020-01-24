@@ -22,16 +22,18 @@ from pandas import DataFrame
 # locals
 from .fileio import read
 from .metapanda import MetaPanda
-from .utils import instance_check, belongs
+from .utils import instance_check, belongs, intersect
 
 
 __all__ = ("cached", "cache")
 
 
-def _set_index_def(df, values=('Unnamed:_0', 'Unnamed: 0')):
-    for v in values:
-        if v in df.columns:
-            df = df.rename(columns={v: "counter"}).set_index("counter")
+def _set_index_def(df, values=('Unnamed:_0', 'Unnamed: 0', 'colnames', 'index')):
+    # determine intersection between desired values and columns in df.
+    _shared = intersect(df.columns.tolist(), values)
+    # set these guys as the new index.
+    if _shared.shape[0] > 0:
+        df = df.set_index(_shared.tolist())
 
 
 def cached(func: Callable,
@@ -176,8 +178,8 @@ def cache(filename: Optional[str] = "example1.json") -> Callable:
                     mpf.write(filename)
                     return mpf
                 elif isinstance(mpf, DataFrame):
-                    # save
-                    mpf.to_csv(filename, index=None)
+                    # save - bumping index into the file.
+                    mpf.reset_index().to_csv(filename, index=None)
                     return MetaPanda(mpf)
                 else:
                     warnings.warn("returned object from cache not of type [pd.DataFrame, turb.MetaPanda], not cached",

@@ -677,6 +677,7 @@ def reformat(s, df):
 
     e.g reformat("{data_group}_{data_source}", df)
         Creates a pd.Series looking like pattern s using column data_group, data_sources input.
+        Does not allow spaces within the column name.
 
     .. note:: currently does not allow specification for type args:
         e.g reformat("{data_number:0.3f}", df)

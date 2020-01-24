@@ -399,8 +399,31 @@ def _corr_matrix_vector(data: pd.DataFrame,
 """##################### PUBLIC FUNCTIONS ####################################################### """
 
 
-def correlate_mat(data, covar=None, method="spearman"):
-    """Correlates data matrix into row set. No additional parameters."""
+def correlate_mat(data, covar=None, method="spearman") -> pd.DataFrame:
+    """Correlates data matrix into row set. No additional parameters.
+
+    Parameters
+    ----------
+    data : pd.DataFrame / MetaPanda
+        The full dataset.
+    covar : (str, list, tuple, pd.Index), optional
+        set of covariate(s). Covariates are needed to compute partial correlations.
+            If None, uses standard correlation.
+    method : str, optional
+        Method to correlate with. Choose from:
+            'pearson' : Pearson product-moment correlation
+            'spearman' : Spearman rank-order correlation
+            'kendall' : Kendall’s tau (ordinal data)
+            'biserial' : Biserial correlation (continuous and boolean data only)
+            'percbend' : percentage bend correlation (robust)
+            'shepherd' : Shepherd's pi correlation (robust Spearman)
+            'skipped' : skipped correlation (robust Spearman, requires sklearn)
+
+    Returns
+    -------
+    R : pd.DataFrame
+        correlation rows (based on pingouin structure)
+    """
     instance_check(data, (pd.DataFrame, MetaPanda))
 
     args = dict(covar=covar, method=method)
@@ -439,7 +462,6 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
             'percbend' : percentage bend correlation (robust)
             'shepherd' : Shepherd's pi correlation (robust Spearman)
             'skipped' : skipped correlation (robust Spearman, requires sklearn)
-
     Returns
     -------
     R : pd.DataFrame
@@ -475,10 +497,6 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
     Mbin -0.014405 -0.015622 -0.007009  1.000000 -0.076614
     Ybin -0.149210 -0.094309  0.161334 -0.076614  1.000000
     """
-    warnings.warn(
-        "in `correlate` from version 0.2.0 onwards, there will likely be changes to parameter order and name.",
-        PendingDeprecationWarning
-    )
 
     # data cannot be NONE
     instance_check(data, (pd.DataFrame, MetaPanda))
@@ -512,7 +530,7 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
 #########################################################################################################
 
 
-def pcm(df):
+def pcm(df: Union[pd.DataFrame, MetaPanda]) -> pd.DataFrame:
     """Partial correlation matrix.
 
     Adapted from the `pingouin` library, made by Raphael Vallat.
@@ -557,6 +575,7 @@ def pcm(df):
     Mbin -0.014405 -0.015622 -0.007009  1.000000 -0.076614
     Ybin -0.149210 -0.094309  0.161334 -0.076614  1.000000
     """
+    df = df.df_ if isinstance(df, MetaPanda) else df
     V = df.cov()  # Covariance matrix
     Vi = np.linalg.pinv(V)  # Inverse covariance matrix
     D = np.diag(np.sqrt(1 / np.diag(Vi)))

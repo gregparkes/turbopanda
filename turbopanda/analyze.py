@@ -19,7 +19,6 @@ from sklearn.cluster import FeatureAgglomeration
 
 # local imports
 from .utils import union
-from ._deprecator import deprecated
 from ._distribution import Distribution
 
 
@@ -57,11 +56,11 @@ def _levenshtein_ratio_and_distance(s, t, ratio_calc=False):
                                      distance[row - 1][col - 1] + cost)  # Cost of substitutions
     if ratio_calc:
         # Computation of the Levenshtein Distance Ratio
-        ratio = ((len(s) + len(t)) - distance[row][col]) / (len(s) + len(t))
+        ratio = ((len(s) + len(t)) - distance[-1][-1]) / (len(s) + len(t))
         return ratio
     else:
         # This is the minimum number of edits needed to convert string a to string b
-        return "The strings are {} edits away".format(distance[row][col])
+        return "The strings are {} edits away".format(distance[-1][-1])
 
 
 def _levenshtein_matrix(columns):
@@ -77,6 +76,7 @@ def _levenshtein_matrix(columns):
 
 
 def agglomerate(columns):
+    """Agglomerate column names based on edit distance."""
     # calculate lev distance
     lev_m = _levenshtein_matrix(columns)
     fa = FeatureAgglomeration(2).fit(lev_m)
@@ -84,7 +84,7 @@ def agglomerate(columns):
 
 
 def dist(df):
-    """ Given pandas.DataFrame, find the best distribution for all """
+    """Given pandas.DataFrame, find the best distribution for all """
     # select numerical columns
     d = Distribution()
     # fit each numerical column
@@ -95,23 +95,3 @@ def dist(df):
     return pd.concat([
         pd.Series(np.nan, not_numcols), pd.Series(model_names, numcols)
     ])
-
-
-@deprecated("0.1.9", "0.2.1", instead="utils.interacting_set",
-            reason="`intersection_grid` superseded by `utils.interacting_set`'")
-def intersection_grid(indexes):
-    """
-    Given a list of pd.Index, calculates whether any of the values are shared
-    between any of the indexes.
-
-    .. deprecated:: version 0.1.9
-        This function will be removed in version 0.2.1, use utils.interacting_set instead.
-
-    TODO: Deprecate in version 0.2.1
-    """
-    union_l = []
-    for i in range(len(indexes)):
-        for j in range(i + 1, len(indexes)):
-            ints = indexes[i].intersection(indexes[j])
-            union_l.append(ints)
-    return union(*union_l)

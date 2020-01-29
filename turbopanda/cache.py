@@ -136,7 +136,7 @@ def cache(filename: Optional[str] = "example1.json") -> Callable:
 
     Warnings
     --------
-    FutureWarning
+    ImportWarning
         Returned object from cache isn't of type {pd.DataFrame, MetaPanda}
 
     Raises

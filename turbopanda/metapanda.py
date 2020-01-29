@@ -22,7 +22,6 @@ from pandas import CategoricalDtype
 from pandas.core.groupby.generic import DataFrameGroupBy
 
 # locals
-from .analyze import intersection_grid
 from .custypes import SelectorType, PandaIndex, PipeTypeRawElem, PipeTypeCleanElem
 from .metadata import *
 from .pipe import Pipe, is_pipe_structure, PipeMetaPandaType
@@ -378,7 +377,7 @@ class MetaPanda(object):
                 self.meta_.index = getattr(self.meta_.index.str, fn)(*fargs, **fkwargs)
             else:
                 warnings.warn(
-                    "operation pandas.Index.str.'{}' cannot operate on columns/index because they are not of type str.".format(
+                    "operation pandas.Index.str.'{}' invalid because column/index is not of type str.".format(
                         fn),
                     PendingDeprecationWarning
                 )

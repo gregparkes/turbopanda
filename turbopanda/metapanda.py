@@ -537,7 +537,7 @@ class MetaPanda(object):
             self._reset_meta()
             # compute cleaning.
             if self._with_clean:
-                self.compute(Pipe.clean(), inplace=True)
+                self.compute(Pipe.clean(with_drop=False), inplace=True)
             if "colnames" not in self._df.columns:
                 self._df.columns.name = "colnames"
             if "counter" not in self._df.columns:

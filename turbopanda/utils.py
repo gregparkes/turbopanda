@@ -31,7 +31,7 @@ __all__ = ("fself", "is_twotuple", "instance_check", "dictzip", "dictmap", "t_nu
            "join", "belongs", "is_possible_category",
            "standardize", "dict_to_tuple", "set_like", "union", "difference",
            "intersect", "interacting_set", "is_column_string", "remove_na",
-           "common_substring_match", "pairwise", "reformat")
+           "common_substring_match", "pairwise", "reformat", "pairwise_common_substring_matches")
 
 
 def c_float() -> Tuple[TypeVar, ...]:
@@ -669,7 +669,22 @@ def common_substring_match(a, b):
     if match.size != 0:
         return a[match.a:match.a + match.size]
     else:
-        raise ValueError("in 'common_substring_match', no match was found")
+        return ""
+
+
+def pairwise_common_substring_matches(array, filters=("_", " ")):
+    """
+    Given k strings, find the most frequent longest common substring.
+
+    Parameters
+    ----------
+    array : list, tuple, pd.Index
+        A list of strings
+    filters : list of str
+        Characters to ignore
+    """
+    pairs = pairwise(common_substring_match, array)
+    return pd.Series(pairs).value_counts()
 
 
 def reformat(s, df):

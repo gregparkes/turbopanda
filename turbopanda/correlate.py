@@ -61,6 +61,15 @@ def _row_to_matrix(rows: pd.DataFrame) -> pd.DataFrame:
     return square
 
 
+def _compute_residuals(C, x, y, Z):
+    """Given Z and x and y of continuous float, produce residuals e_x, e_y
+
+    TODO: Implement residual calculations for continuous and dichotonomous for partial correlation
+         For continuous, use least-squares residuals. For bool-like, use logistic regression?
+
+    """
+    return NotImplemented
+
 def bicorr(x: pd.Series,
            y: pd.Series,
            tail: str = 'two-sided',
@@ -242,7 +251,8 @@ def partial_bicorr(data: pd.DataFrame,
     x, y : str, list of str
         x and y. Must be names of columns in ``data``.
     covar : list of str
-        Covariate(s). Column names of the covariates.
+        Covariate(s). Column names of the covariates. covar must be made of continuous columns.
+        If x, y are not continuous, will perform logistic regression to generate residuals.
     tail : string
         Specify whether to return the 'one-sided' or 'two-sided' p-value.
     method : string
@@ -302,7 +312,7 @@ def partial_bicorr(data: pd.DataFrame,
 
     # Standardize (= no need for an intercept in least-square regression)
     C = (_data[col] - _data[col].mean(axis=0)) / _data[col].std(axis=0)
-    # PARTIAL CORRELATION
+    # PARTIAL CORRELATION - HANDLING SCENARIOS
     cvar = np.atleast_2d(C[covar].values)
     beta_x = np.linalg.lstsq(cvar, C[x].values, rcond=None)[0]
     beta_y = np.linalg.lstsq(cvar, C[y].values, rcond=None)[0]

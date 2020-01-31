@@ -14,7 +14,7 @@ from scipy import stats
 from sklearn.metrics import r2_score
 
 # locals
-from .utils import nearest_factors, belongs, fself, standardize
+from ._utils import nearest_factors, belongs, fself, standardize
 from .metaml import MetaML
 from ._pub_fig import save_figure
 
@@ -146,7 +146,7 @@ def plot_hist_grid(mdf, selector, arrange="square", savepath=None):
     mdf : turb.MetaPanda
         The dataset
     selector : str or list/tuple of str
-        Contains either custypes.py, meta column names, column names or regex-compliant strings
+        Contains either types, meta column names, column names or regex-compliant strings
     arrange : str
         Choose from ['square', 'row', 'column']. Square arranges the plot as square-like as possible. Row
         prioritises plots row-like, and column-wise for column.
@@ -188,7 +188,7 @@ def plot_scatter_grid(mdf, selector, target, arrange="square", savepath=None):
     mdf : turb.MetaPanda
         The dataset
     selector : str or list/tuple of str
-            Contains either custypes.py, meta column names, column names or regex-compliant strings
+            Contains either types, meta column names, column names or regex-compliant strings
     target : str
         The y-response variable to plot
     arrange : str

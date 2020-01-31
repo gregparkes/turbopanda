@@ -22,7 +22,7 @@ from pandas import DataFrame
 # locals
 from .fileio import read
 from .metapanda import MetaPanda
-from .utils import instance_check, belongs, intersect
+from ._utils import instance_check, belongs, intersect
 
 
 __all__ = ("cached", "cache")
@@ -33,7 +33,7 @@ def _set_index_def(df, values=('Unnamed:_0', 'Unnamed: 0', 'colnames', 'index'))
     _shared = intersect(df.columns.tolist(), values)
     # set these guys as the new index.
     if _shared.shape[0] > 0:
-        df = df.set_index(_shared.tolist())
+        df.set_index(_shared.tolist(), inplace=True)
 
 
 def cached(func: Callable,
@@ -106,7 +106,7 @@ def cached(func: Callable,
             return mpf
         elif isinstance(mpf, DataFrame):
             # save
-            mpf.to_csv(filename, index=None)
+            mpf.reset_index().to_csv(filename, index=None)
             # return as MetaPanda
             return MetaPanda(mpf)
         else:
@@ -159,6 +159,8 @@ def cache(filename: Optional[str] = "example1.json") -> Callable:
     instance_check(filename, str)
     # check that file ends with json or csv
     belongs(filename.rsplit(".")[-1], ("json", "csv"))
+    if not callable(func):
+        raise ValueError('function is not callable')
 
     # define decorator
     def decorator(func):

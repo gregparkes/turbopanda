@@ -15,7 +15,7 @@ from pandas import to_numeric, Index
 from sklearn import preprocessing
 
 # locals
-from .utils import boolean_to_integer, object_to_categorical, \
+from ._utils import boolean_to_integer, object_to_categorical, \
     is_n_value_column, instance_check
 from .custypes import PipeTypeRawElem, PipeTypeCleanElem
 

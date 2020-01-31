@@ -18,10 +18,10 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from .custypes import ArrayLike
 # locals
 from .metapanda import MetaPanda
-from .utils import c_float, intcat, instance_check, dictzip, union, remove_na, is_column_float, set_like, belongs
+from ._utils import c_float, c_cat, instance_check, dictzip, union, remove_na, \
+    is_column_float, set_like, belongs, difference
 
 # user define dataset type
 DataSetType = Union[pd.Series, pd.DataFrame, MetaPanda]
@@ -69,6 +69,7 @@ def _compute_residuals(C, x, y, Z):
 
     """
     return NotImplemented
+
 
 def bicorr(x: pd.Series,
            y: pd.Series,
@@ -195,7 +196,6 @@ def bicorr(x: pd.Series,
         raise TypeError(
             "columns '{}':{} to '{}':{} combination not accepted for `_bicorr`.".format(x.name, x.dtype, y.name,
                                                                                         y.dtype))
-
     assert not np.isnan(r), 'Correlation returned NaN. Check your data.'
 
     # Compute r2 and adj_r2
@@ -368,7 +368,9 @@ def _corr_matrix_singular(data: pd.DataFrame,
                            method=method)
                 )
     else:
-        _x = data.columns.symmetric_difference(set_like(covar))
+        # computes the symmetric difference
+        _x = difference(data.columns, covar)
+        # iterate and append
         for i in range(_x.shape[1]):
             for j in range(i, _x.shape[1]):
                 ac.append(

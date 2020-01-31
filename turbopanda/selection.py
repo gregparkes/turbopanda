@@ -13,7 +13,8 @@ from typing import Dict, Tuple, List
 from pandas import CategoricalDtype, concat, Index, Series, DataFrame
 
 # locals
-from .utils import boolean_series_check, intersect, union, t_numpy, dictmap, dictzip, join
+from ._utils import boolean_series_check, intersect, union, \
+    t_numpy, dictmap, dictzip, join, difference
 from .custypes import SelectorType
 
 
@@ -29,7 +30,7 @@ def selector_types() -> List:
     )
 
 
-def regex_column(selector: SelectorType, df: DataFrame, raise_error: bool = False):
+def regex_column(selector: str, df: DataFrame, raise_error: bool = False):
     """Use a selector to perform a regex search on the columns within df."""
     c_fetch = [c for c in df.columns if re.search(selector, c)]
     if len(c_fetch) > 0:
@@ -75,7 +76,7 @@ def _get_selector_item(df: DataFrame,
         # perform check
         boolean_series_check(ser)
         # check lengths
-        not_same = df.columns.symmetric_difference(ser.index)
+        not_same = difference(df.columns, ser.index)
         # if this exists, append these true cols on
         if not_same.shape[0] > 0:
             ns = concat([Series(True, index=not_same), ser], axis=0)

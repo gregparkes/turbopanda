@@ -24,9 +24,9 @@ from .fileio import *
 from .correlate import *
 from .cache import *
 from ._pub_fig import *
-from .merge import merge
+from ._merge import merge
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __name__ = "turbopanda"
 __doc__ = """turbopanda: Turbo-charging the Pandas library in an integrative, meta-orientated style.
 

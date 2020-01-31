@@ -26,7 +26,7 @@ from .custypes import SelectorType, PandaIndex, PipeTypeRawElem, PipeTypeCleanEl
 from .metadata import *
 from .pipe import Pipe, is_pipe_structure, PipeMetaPandaType
 from .selection import get_selector
-from .utils import *
+from ._utils import *
 from ._deprecator import deprecated
 
 
@@ -577,7 +577,9 @@ class MetaPanda(object):
     @property
     def memory_(self) -> str:
         """Fetch the memory consumption of the MetaPanda."""
-        return "{:0.3f}MB".format(calc_mem(self.df_) + calc_mem(self.meta_))
+        df_m = self.df_.memory_usage(deep=False).sum() / 1000000
+        meta_m = self.df_.memory_usage(deep=False).sum() / 1000000
+        return "{:0.3f}MB".format(df_m + meta_m)
 
     @property
     def name_(self) -> str:
@@ -1352,6 +1354,9 @@ class MetaPanda(object):
         See `pandas.eval` documentation for more details.
 
         TODO: Implement `eval()` function.
+            Allows "c = a + b" for single operations; by default keeps a, b; creates c inplace
+            Allows "a + b" to return pd.DataFrame of c, not inplace
+            Allows regex-style selection of columns to perform multiple evaluations.
 
         Parameters
         ----------

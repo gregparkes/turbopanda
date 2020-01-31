@@ -57,7 +57,7 @@ def is_n_value_column(ser: pd.Series, n: int = 1) -> bool:
 
 def is_unique_id(ser: pd.Series) -> bool:
     """Determine whether ser is unique."""
-    return ser.is_unique if is_column_string(ser) else False
+    return ser.is_unique if is_column_int(ser) else False
 
 
 def is_potential_id(ser: pd.Series,

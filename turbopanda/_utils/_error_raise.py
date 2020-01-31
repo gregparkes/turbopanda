@@ -17,7 +17,10 @@ def belongs(elem: Any, home: Union[List[Any], Tuple[Any, ...]]):
 
 def instance_check(a: object, i: TypeVar):
     """Check that a is an instance of type i."""
-    if not isinstance(a, i):
+    if isinstance(i, str):
+        if not hasattr(a, i):
+            raise AttributeError("object '{}' does not have attribute '{}'".format(a, i))
+    elif not isinstance(a, i):
         raise TypeError("object '{}' does not belong to type {}".format(a, i))
     elif isinstance(i, (list, tuple)):
         if None in i and a is not None:

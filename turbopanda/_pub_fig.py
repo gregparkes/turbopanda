@@ -6,7 +6,7 @@ import os
 import warnings
 from typing import Tuple
 # locals
-from .utils import instance_check, belongs
+from ._utils import instance_check, belongs
 import matplotlib.pyplot as plt
 
 

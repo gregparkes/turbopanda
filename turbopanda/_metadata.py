@@ -12,7 +12,7 @@ import pandas as pd
 from typing import Tuple, Callable, Dict
 
 # locals
-from ._utils import is_unique_id, is_possible_category, object_to_categorical, t_numpy
+from .utils import is_unique_id, is_possible_category, object_to_categorical, t_numpy
 
 __all__ = ("default_columns", "basic_construct", "categorize_meta", "add_metadata")
 

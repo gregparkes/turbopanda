@@ -12,22 +12,22 @@ import json
 import hashlib
 import sys
 import warnings
-from copy import deepcopy
-from functools import wraps
-from typing import Tuple, Dict, Callable, Union, Optional, List, Any
+from typing import Tuple, Dict, Callable, Union, Optional, List, Any, TypeVar
 
 import numpy as np
 import pandas as pd
-from pandas import CategoricalDtype
 from pandas.core.groupby.generic import DataFrameGroupBy
 
 # locals
-from .custypes import SelectorType, PandaIndex, PipeTypeRawElem, PipeTypeCleanElem
-from .metadata import *
+from ._metadata import *
 from .pipe import Pipe, is_pipe_structure, PipeMetaPandaType
 from .selection import get_selector
-from ._utils import *
+from .utils import *
 from ._deprecator import deprecated
+
+
+PandaIndex = Union[pd.Series, pd.Index]
+SelectorType = Optional[Union[TypeVar, str, pd.Index, Callable]]
 
 
 class MetaPanda(object):
@@ -117,6 +117,8 @@ class MetaPanda(object):
         Expands out a 'unstacked' id column to a shorter-form DataFrame
     split_categories(column, sep=",", renames=None)
         Splits a column into j categorical variables to be associated with `df_`
+    eval()
+        Evaluates an operation(s) using an expr
     compute(pipe=None, inplace=False, update_meta=False)
         Executes a pipeline on `df_`
     compute_k(pipes=None, inplace=False)
@@ -171,6 +173,7 @@ class MetaPanda(object):
     """ ############################ STATIC FUNCTIONS ######################################## """
 
     def _actionable(function: Callable) -> Callable:
+        from functools import wraps
         @wraps(function)
         def new_function(self, *args, **kwargs):
             """."""
@@ -784,6 +787,8 @@ class MetaPanda(object):
         --------
         copy.deepcopy(x) : Return a deep copy of x.
         """
+        from copy import deepcopy
+
         return deepcopy(self)
 
     @_actionable
@@ -994,7 +999,7 @@ class MetaPanda(object):
         selector = list(selector)
         # encode to string
         enc_map = {
-            **{object: "object", CategoricalDtype: "category"},
+            **{object: "object", pd.CategoricalDtype: "category"},
             **dictmap(t_numpy(), lambda n: n.__name__)
         }
         # encode the selector as a string ALWAYS.
@@ -1411,10 +1416,10 @@ class MetaPanda(object):
         else:
             raise TypeError("'selectors' must be of type {list, tuple}")
 
-        # igrid = intersection_grid(cnames)
-        igrid = interacting_set(cnames)
+        # calculate the pairwise intersection between all the cnames
+        igrid = union(*pairwise(intersect, cnames))
 
-        if igrid.shape[0] == 0:
+        if len(igrid) == 0:
             new_grid = pd.concat([pd.Series(n, index=val) for n, val in zip(selectors, cnames)], sort=False, axis=0)
             new_grid.name = name
         else:

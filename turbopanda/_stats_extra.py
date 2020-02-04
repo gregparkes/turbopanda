@@ -7,7 +7,6 @@ from scipy.stats import norm
 from scipy import stats
 from scipy.optimize import brenth
 
-
 __all__ = ("compute_esci", "power_corr")
 
 
@@ -99,8 +98,8 @@ def compute_esci(stat=None, nx=None, ny=None, paired=False, eftype='cohen',
     0.1537753990658328 [-0.68  0.99]
     """
     # Safety check
-    assert eftype.lower() in['r', 'pearson', 'spearman', 'cohen',
-                             'd', 'g', 'hedges']
+    assert eftype.lower() in ['r', 'pearson', 'spearman', 'cohen',
+                              'd', 'g', 'hedges']
     assert stat is not None and nx is not None
     assert isinstance(confidence, float)
     assert 0 < confidence < 1
@@ -120,10 +119,10 @@ def compute_esci(stat=None, nx=None, ny=None, paired=False, eftype='cohen',
     else:
         if ny == 1 or paired:
             # One sample or paired
-            se = np.sqrt(1 / nx + stat**2 / (2 * nx))
+            se = np.sqrt(1 / nx + stat ** 2 / (2 * nx))
         else:
             # Two-sample test
-            se = np.sqrt(((nx + ny) / (nx * ny)) + (stat**2) / (2 * (nx + ny)))
+            se = np.sqrt(((nx + ny) / (nx * ny)) + (stat ** 2) / (2 * (nx + ny)))
         ci = np.array([stat - crit * se, stat + crit * se])
     return np.round(ci, decimals)
 
@@ -200,35 +199,36 @@ def power_corr(r=None, n=None, power=None, alpha=0.05, tail='two-sided'):
             return np.nan
     # Define main function
     if tail == 'two-sided':
-        def func(r, n, power, alpha):
+        def func(_r, _n, _pow, _alpha):
             """Custom function."""
-            dof = n - 2
-            ttt = stats.t.ppf(1 - alpha / 2, dof)
-            rc = np.sqrt(ttt**2 / (ttt**2 + dof))
-            zr = np.arctanh(r) + r / (2 * (n - 1))
+            dof = _n - 2
+            ttt = stats.t.ppf(1 - _alpha / 2, dof)
+            rc = np.sqrt(ttt ** 2 / (ttt ** 2 + dof))
+            zr = np.arctanh(_r) + _r / (2 * (_n - 1))
             zrc = np.arctanh(rc)
-            power = stats.norm.cdf((zr - zrc) * np.sqrt(n - 3)) + \
-                stats.norm.cdf((-zr - zrc) * np.sqrt(n - 3))
-            return power
+            _pow = stats.norm.cdf((zr - zrc) * np.sqrt(_n - 3)) + \
+                   stats.norm.cdf((-zr - zrc) * np.sqrt(_n - 3))
+            return _pow
     else:
-        def func(r, n, power, alpha):
+        def func(_r, _n, _pow, _alpha):
             """Custom function option 2."""
-            dof = n - 2
-            ttt = stats.t.ppf(1 - alpha, dof)
-            rc = np.sqrt(ttt**2 / (ttt**2 + dof))
-            zr = np.arctanh(r) + r / (2 * (n - 1))
+            dof = _n - 2
+            ttt = stats.t.ppf(1 - _alpha, dof)
+            rc = np.sqrt(ttt ** 2 / (ttt ** 2 + dof))
+            zr = np.arctanh(_r) + _r / (2 * (_n - 1))
             zrc = np.arctanh(rc)
-            power = stats.norm.cdf((zr - zrc) * np.sqrt(n - 3))
-            return power
+            _pow = stats.norm.cdf((zr - zrc) * np.sqrt(_n - 3))
+            return _pow
 
     # Evaluate missing variable
     if power is None and n is not None and r is not None:
         # Compute achieved power given r, n and alpha
-        return func(r, n, power=None, alpha=alpha)
+        return func(r, n, _pow=None, _alpha=alpha)
     elif n is None and power is not None and r is not None:
         # Compute required sample size given r, power and alpha
-        def _eval_n(n, r, power, alpha):
-            return func(r, n, power, alpha) - power
+        def _eval_n(_n, _r, _pow, _alpha):
+            return func(_r, _n, _pow, _alpha) - _pow
+
         try:
             return brenth(_eval_n, 4 + 1e-10, 1e+09, args=(r, power, alpha))
         except ValueError:  # pragma: no cover
@@ -236,8 +236,9 @@ def power_corr(r=None, n=None, power=None, alpha=0.05, tail='two-sided'):
 
     elif r is None and power is not None and n is not None:
         # Compute achieved r given sample size, power and alpha level
-        def _eval_r(r, n, power, alpha):
-            return func(r, n, power, alpha) - power
+        def _eval_r(_r, _n, _pow, _alpha):
+            return func(_r, _n, _pow, _alpha) - _pow
+
         try:
             return brenth(_eval_r, 1e-10, 1 - 1e-10, args=(n, power, alpha))
         except ValueError:  # pragma: no cover
@@ -245,8 +246,9 @@ def power_corr(r=None, n=None, power=None, alpha=0.05, tail='two-sided'):
 
     else:
         # Compute achieved alpha (significance) level given r, n and power
-        def _eval_alpha(alpha, r, n, power):
-            return func(r, n, power, alpha) - power
+        def _eval_alpha(_alpha, _r, _n, _power):
+            return func(_r, _n, _power, _alpha) - _power
+
         try:
             return brenth(_eval_alpha, 1e-10, 1 - 1e-10, args=(r, n, power))
         except ValueError:  # pragma: no cover

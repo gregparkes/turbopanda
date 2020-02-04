@@ -7,17 +7,18 @@ from __future__ import division
 from __future__ import print_function
 
 # imports
-from copy import deepcopy
-from typing import Union, List, Tuple
+from typing import Union, List, Tuple, Dict, Callable, TypeVar
 
 import numpy as np
 from pandas import to_numeric, Index
 from sklearn import preprocessing
 
 # locals
-from ._utils import boolean_to_integer, object_to_categorical, \
+from .utils import boolean_to_integer, object_to_categorical, \
     is_n_value_column, instance_check
-from .custypes import PipeTypeRawElem, PipeTypeCleanElem
+
+PipeTypeRawElem = Tuple[str, Tuple, Dict]
+PipeTypeCleanElem = Tuple[Union[str, Callable, Dict, TypeVar], ...] = Tuple[Union[str, Callable, Dict, TypeVar], ...]
 
 
 def _is_float_cast(s: str):
@@ -96,7 +97,7 @@ class Pipe(object):
     Attributes
     ----------
     p_ : tuple of PipeTypeElems
-        The steps of each argument in the pipeline. See `custypes.py` for accepted PipeTypeElems.
+        The steps of each argument in the pipeline. See above for accepted PipeTypeElems.
 
     Methods
     -------
@@ -175,6 +176,8 @@ class Pipe(object):
     """ ############### PUBLIC METHODS ################################### """
 
     def copy(self):
+        """Provides a deep copy of this object."""
+        from copy import deepcopy
         """Copy this object into a new object."""
         return deepcopy(self)
 

@@ -6,12 +6,14 @@ import itertools as it
 from typing import Dict, Tuple, Iterable, Callable, Any, List, Union, Set, Optional
 from pandas import Index, Series
 
+from ._error_raise import instance_check
+
 
 SetLike = Union[type(None), str, Set, Index, List, Tuple, Series]
 
 
 __all__ = ("dict_to_tuple", "dictzip", "dictmap", "join", 'pairwise',
-           "set_like", "union", "intersect", "difference", 'interacting_set')
+           "set_like", "union", "intersect", "difference")
 
 
 """ DICTIONARY CONVENIENCE """
@@ -65,9 +67,10 @@ def dictmap(a: Iterable, b: Callable) -> Dict:
 def join(*pipes: Optional[Iterable[Any]]) -> List:
     """Perform it.chain.from_iterable on iterables."""
     # filter out None elements.
-    pipes = list(filter(None.__ne__, pipes))
+    _p = list(filter(None.__ne__, pipes))
+    _p = list(filter(lambda y: len(y) > 0, _p))
     # use itertools to chain together elements.
-    return list(it.chain.from_iterable(pipes))
+    return list(it.chain.from_iterable(_p))
 
 
 """ SET LIKE OPERATIONS """
@@ -88,20 +91,22 @@ def set_like(x: SetLike = None) -> Index:
     y : pd.Index
         Set-like result.
     """
+    acc_types = (type(None), str, list, tuple, Series, Index, set)
+
+    instance_check(x, acc_types)
+
     if x is None:
         return Index([])
     if isinstance(x, str):
         return Index([x])
     if isinstance(x, (list, tuple)):
-        return Index(set(x))
+        return Index(set(x)) if len(x) > 0 else Index([])
     elif isinstance(x, (Series, Index)):
-        return Index(x.dropna().unique(), name=x.name)
+        return Index(x.dropna().unique(), name=x.name) if x.shape[0] > 0 else Index([])
     elif isinstance(x, set):
         return Index(x)
     else:
-        raise TypeError(
-            "x must be in {}, not of type {}".format(
-                ['None', 'str', 'list', 'tuple', 'pd.Series', 'pd.Index', 'set'], type(x)))
+        raise TypeError("in `set_like`: `x` must be in {}, not of type {}".format(acc_types, type(x)))
 
 
 def union(*args: SetLike) -> Index:
@@ -176,22 +181,7 @@ def difference(a: SetLike, b: SetLike) -> Index:
     return set_like(a).symmetric_difference(set_like(b))
 
 
-def interacting_set(sets):
-    """
-    Given a list of pd.Index, calculates whether any of the values are shared
-    between any of the indexes.
-    """
-    union_l = []
-    # generate a list of potential interactions.
-    for i in range(len(sets)):
-        for j in range(i + 1, len(sets)):
-            interact = intersect(sets[i], sets[j])
-            union_l.append(interact)
-
-    return union(*union_l)
-
-
-def pairwise(f: Callable, x: List[Any]):
+def pairwise(f: Callable, x: List[Any]) -> List:
     """Conduct a pairwise operation on a list of elements, receiving them in pairs.
 
     e.g for list x = [1, 2, 3] we conduct:

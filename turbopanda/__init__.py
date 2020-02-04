@@ -19,12 +19,13 @@ del hard_dependencies, dependency, missing_dependencies
 from .metapanda import MetaPanda
 from .metaml import MetaML
 from .pipe import Pipe
-from .visualise import *
-from .fileio import *
-from .correlate import *
-from .cache import *
+from ._visualise import *
+from ._fileio import *
+from ._correlate import *
+from ._cache import *
 from ._pub_fig import *
 from ._merge import merge
+
 
 __version__ = "0.2.1"
 __name__ = "turbopanda"

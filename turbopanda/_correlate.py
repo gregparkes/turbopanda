@@ -20,13 +20,14 @@ import pandas as pd
 
 # locals
 from .metapanda import MetaPanda
-from ._utils import c_float, c_cat, instance_check, dictzip, union, remove_na, \
+from .utils import c_float, c_cat, instance_check, dictzip, union, remove_na, \
     is_column_float, set_like, belongs, difference
 
 # user define dataset type
 DataSetType = Union[pd.Series, pd.DataFrame, MetaPanda]
 
-__all__ = ['correlate', 'pcm', 'bicorr', 'partial_bicorr']
+
+__all__ = ('correlate', 'bicorr', 'partial_bicorr')
 
 
 def _boolean_like(x):

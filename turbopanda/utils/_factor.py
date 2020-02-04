@@ -6,8 +6,10 @@ import numpy as np
 from typing import Tuple, List
 from scipy.stats import norm
 
+from ._error_raise import belongs
 
-def _factor(n: int) -> List:
+
+def _factor(n: int) -> List[int]:
     """
     Collect a list of factors given an integer, excluding 1 and n
     """
@@ -35,7 +37,7 @@ def _factor(n: int) -> List:
     return r
 
 
-def _square_factors(n: int) -> Tuple:
+def _square_factors(n: int) -> Tuple[int, int]:
     """
     Given n size, calculate the 'most square' factors of that integer.
 
@@ -55,7 +57,7 @@ def _square_factors(n: int) -> Tuple:
     return arr[arr.shape[0] // 2], arr[-1] // arr[arr.shape[0] // 2]
 
 
-def _diag_factors(n: int) -> Tuple:
+def _diag_factors(n: int) -> Tuple[int, int]:
     """
     Given n size, calculate the 'most off-edge' factors of that integer.
 
@@ -79,7 +81,7 @@ def nearest_factors(n: int,
                     shape: str = "square",
                     cutoff: int = 6,
                     search_range: int = 5,
-                    w_var: float = 1.5) -> Tuple:
+                    w_var: float = 1.5) -> Tuple[int, int]:
     """Calculate the nearest best factors of a given integer.
 
 
@@ -90,14 +92,14 @@ def nearest_factors(n: int,
     Parameters
     -------
     n : int
-        An integer.
-    shape : str
+        An integer > 0.
+    shape : str, optional
         ['diag' or 'square'], by default uses square factors.
-    cutoff : int
+    cutoff : int, optional
         The distance between factors whereby any higher requires a search
-    search_range : int
+    search_range : int, optional
         The number of characters forward to search in
-    w_var : float
+    w_var : float, optional
         The variance applied to the normal distribution weighting
 
     Returns
@@ -105,21 +107,17 @@ def nearest_factors(n: int,
     F_t : tuple (2,)
         Two integers representing the most 'square' factors.
     """
-    if shape == "square":
-        f_ = _square_factors
-    elif shape == "diag":
-        f_ = _diag_factors
-    else:
-        raise ValueError("ftype must be {'diag', 'square'}")
+    belongs(shape, ('square', 'diag'))
+    _fmap = {'square': _square_factors, 'diag': _diag_factors}
 
-    a, b = f_(n)
+    a, b = _fmap[shape](n)
 
     # if our 'best' factors don't cut it...
     if abs(a - b) > cutoff:
         # create Range
         rng = np.arange(n, n + search_range, 1, dtype=np.int64)
         # calculate new scores - using function
-        nscores = np.asarray([f_(i) for i in rng])
+        nscores = np.asarray([_fmap[shape](i) for i in rng])
         # calculate distance
         dist = np.abs(nscores[:, 0] - nscores[:, 1])
         # weight our distances by a normal distribution -

@@ -10,7 +10,7 @@ from __future__ import print_function
 from typing import Optional, Dict, Union, List
 
 from .metapanda import MetaPanda
-from ._utils import instance_check
+from .utils import instance_check
 from ._deprecator import deprecated
 
 

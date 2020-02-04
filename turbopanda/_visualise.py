@@ -14,7 +14,7 @@ from scipy import stats
 from sklearn.metrics import r2_score
 
 # locals
-from ._utils import nearest_factors, belongs, fself, standardize
+from .utils import nearest_factors, belongs, fself, standardize
 from .metaml import MetaML
 from ._pub_fig import save_figure
 

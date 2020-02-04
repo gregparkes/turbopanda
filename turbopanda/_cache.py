@@ -20,9 +20,9 @@ from typing import Callable, Optional
 from pandas import DataFrame
 
 # locals
-from .fileio import read
+from ._fileio import read
 from .metapanda import MetaPanda
-from ._utils import instance_check, belongs, intersect
+from .utils import instance_check, belongs, intersect
 
 
 __all__ = ("cached", "cache")
@@ -159,8 +159,6 @@ def cache(filename: Optional[str] = "example1.json") -> Callable:
     instance_check(filename, str)
     # check that file ends with json or csv
     belongs(filename.rsplit(".")[-1], ("json", "csv"))
-    if not callable(func):
-        raise ValueError('function is not callable')
 
     # define decorator
     def decorator(func):

@@ -18,7 +18,7 @@ import pandas as pd
 from sklearn.cluster import FeatureAgglomeration
 
 # local imports
-from ._utils import union
+from .utils import union
 from .__distribution import Distribution
 
 

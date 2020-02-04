@@ -23,7 +23,7 @@ from sklearn.metrics import r2_score
 
 # locals
 from .pipe import Pipe
-from .models import *
+from .__models import *
 from .metapanda import MetaPanda
 
 __sklearn_model_packages__ = (tree, linear_model, ensemble, svm, gaussian_process, neighbors)

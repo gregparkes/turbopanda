@@ -2,12 +2,11 @@
 # -*- coding: utf-8 -*-
 """Operations for handling utility string operationss."""
 
-from typing import Union, Tuple
-from pandas import Series, Index
+from typing import Union, Tuple, List
+from pandas import Series, Index, DataFrame
 from ._sets import pairwise
 
-__all__ = ('string_replace', 'common_substring_match',
-           'pairwise_common_substring_matches', 'reformat')
+__all__ = ('string_replace', 'common_substring_match', 'pairwise_common_substring_matches', 'reformat')
 
 
 def string_replace(strings: Union[Series, Index], operations: Tuple[str, str]) -> Series:
@@ -17,7 +16,7 @@ def string_replace(strings: Union[Series, Index], operations: Tuple[str, str]) -
     return strings
 
 
-def common_substring_match(a, b):
+def common_substring_match(a: str, b: str) -> str:
     """Given two strings, find the longest common substring.
 
      Also known as the Longest Common Substring problem."""
@@ -30,7 +29,7 @@ def common_substring_match(a, b):
         return ""
 
 
-def pairwise_common_substring_matches(array):
+def pairwise_common_substring_matches(array: List[str]) -> Series:
     """
     Given k strings, find the most frequent longest common substring.
 
@@ -48,7 +47,7 @@ def pairwise_common_substring_matches(array):
     return Series(pairs).value_counts()
 
 
-def reformat(s, df):
+def reformat(s: str, df: DataFrame) -> Series:
     """Using DataFrame `df`, reformat a string column using pattern `s`.
 
     e.g reformat("{data_group}_{data_source}", df)

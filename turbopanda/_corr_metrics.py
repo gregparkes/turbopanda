@@ -4,8 +4,8 @@
 # imports
 import numpy as np
 from scipy.stats import pearsonr, spearmanr, chi2, t, kendalltau
+
 from ._dependency import is_sklearn_installed
-from sklearn.covariance import MinCovDet
 
 
 __all__ = ("skipped", "bsmahal", "shepherd", "percbend")
@@ -53,6 +53,7 @@ def skipped(x, y, method='spearman'):
     """
     # Check that sklearn is installed
     is_sklearn_installed(raise_error=True)
+    from sklearn.covariance import MinCovDet
 
     X = np.column_stack((x, y))
     nrows, ncols = X.shape
@@ -157,8 +158,6 @@ def shepherd(x, y, n_boot=200):
     with m >= 6 and finally calculates the correlation of the remaining data.
     Pi is Spearman's Rho after outlier removal.
     """
-    from scipy.stats import spearmanr
-
     X = np.column_stack((x, y))
 
     # Bootstrapping on Mahalanobis distance

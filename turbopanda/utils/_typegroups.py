@@ -3,13 +3,12 @@
 """Functions that define intuitive groupings of types."""
 
 import numpy as np
-from typing import TypeVar, Tuple
-
+from typing import TypeVar, Tuple, Any
 
 __all__ = ("c_float", "c_int", "t_numpy", "c_cat", 'fself')
 
 
-def fself(x):
+def fself(x: Any) -> Any:
     """Returns itself."""
     return x
 

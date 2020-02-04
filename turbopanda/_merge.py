@@ -16,7 +16,7 @@ import itertools as it
 
 # locals
 from .metapanda import MetaPanda, PipeMetaPandaType
-from ._utils import belongs, intersect, instance_check, check_list_type
+from .utils import belongs, intersect, instance_check, check_list_type
 
 # custom types
 DataSetType = Union[Series, DataFrame, MetaPanda]

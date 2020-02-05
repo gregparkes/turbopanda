@@ -15,7 +15,7 @@ from pandas import DataFrame, Series, concat
 import itertools as it
 
 # locals
-from .metapanda import MetaPanda, PipeMetaPandaType
+from ._metapanda import MetaPanda, PipeMetaPandaType
 from .utils import belongs, intersect, instance_check, check_list_type
 
 # custom types
@@ -135,8 +135,9 @@ def merge(mdfs: Tuple[DataSetType, ...],
 
     Parameters
     ---------
-    mdfs : list of pd.Series/pd.DataFrame/MetaPanda
+    mdfs : list of str/pd.Series/pd.DataFrame/MetaPanda
         An ordered set of DataFrames to merge together. Must be at least 2 elements.
+            If type is str, treats it as a filename and attempts to read in.
     name : str, optional
         A new name to give the merged dataset.
         If None, joins together the names of every dataset in `mdfs`.
@@ -162,7 +163,7 @@ def merge(mdfs: Tuple[DataSetType, ...],
         The fully merged Dataset
     """
     # check the element type of every mdf
-    check_list_type(mdfs, (Series, DataFrame, MetaPanda))
+    check_list_type(mdfs, (str, Series, DataFrame, MetaPanda))
     instance_check(name, (type(None), str))
     belongs(how, ['left', 'inner', 'outer'])
 

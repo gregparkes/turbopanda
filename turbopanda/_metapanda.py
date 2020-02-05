@@ -20,8 +20,8 @@ from pandas.core.groupby.generic import DataFrameGroupBy
 
 # locals
 from ._metadata import *
-from .pipe import Pipe, is_pipe_structure, PipeMetaPandaType
-from .selection import get_selector
+from ._pipe import Pipe, is_pipe_structure, PipeMetaPandaType
+from ._selection import get_selector
 from .utils import *
 from ._deprecator import deprecated
 
@@ -405,6 +405,8 @@ class MetaPanda(object):
             # see if name is cached away.
             if pipe in self.pipe_.keys():
                 pipe = self.pipe_[pipe]
+            elif pipe in ('ml_regression', 'clean', 'no_id'):
+                pipe = getattr(Pipe, pipe)()
             else:
                 raise ValueError("pipe name '{}' not found in .pipe attribute".format(pipe))
         if isinstance(pipe, Pipe):

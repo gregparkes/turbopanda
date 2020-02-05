@@ -16,9 +16,9 @@ del hard_dependencies, dependency, missing_dependencies
 """ Block ends """
 
 # import local objects
-from .metapanda import MetaPanda
-from .metaml import MetaML
-from .pipe import Pipe
+from ._metapanda import MetaPanda
+from ._metaml import MetaML
+from ._pipe import Pipe
 from ._visualise import *
 from ._fileio import *
 from ._correlate import *

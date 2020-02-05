@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Raising errors, by doing basic checks."""
+import numpy as np
 import pandas as pd
 from typing import List, Union, Any, Tuple, TypeVar
 

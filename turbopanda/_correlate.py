@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 
 # locals
-from .metapanda import MetaPanda
+from ._metapanda import MetaPanda
 from .utils import c_float, c_cat, instance_check, dictzip, union, remove_na, \
     is_column_float, set_like, belongs, difference
 

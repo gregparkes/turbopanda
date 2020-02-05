@@ -22,9 +22,9 @@ from sklearn.model_selection import cross_val_predict, GridSearchCV, cross_valid
 from sklearn.metrics import r2_score
 
 # locals
-from .pipe import Pipe
+from ._pipe import Pipe
 from .__models import *
-from .metapanda import MetaPanda
+from ._metapanda import MetaPanda
 
 __sklearn_model_packages__ = (tree, linear_model, ensemble, svm, gaussian_process, neighbors)
 

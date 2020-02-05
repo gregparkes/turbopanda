@@ -15,7 +15,7 @@ from sklearn.metrics import r2_score
 
 # locals
 from .utils import nearest_factors, belongs, fself, standardize
-from .metaml import MetaML
+from ._metaml import MetaML
 from ._pub_fig import save_figure
 
 __all__ = ("plot_scatter_grid", "plot_missing", "plot_hist_grid",

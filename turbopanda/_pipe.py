@@ -18,7 +18,7 @@ from .utils import boolean_to_integer, object_to_categorical, \
     is_n_value_column, instance_check
 
 PipeTypeRawElem = Tuple[str, Tuple, Dict]
-PipeTypeCleanElem = Tuple[Union[str, Callable, Dict, TypeVar], ...] = Tuple[Union[str, Callable, Dict, TypeVar], ...]
+PipeTypeCleanElem = Tuple[Union[str, Callable, Dict, TypeVar], ...]
 
 
 def _is_float_cast(s: str):
@@ -56,6 +56,11 @@ def is_pipe_structure(pipe: Tuple[PipeTypeRawElem, ...]) -> bool:
         instance_check(p[1], (list, tuple))
         instance_check(p[2], dict)
     return True
+
+
+def public():
+    """Defines the public Pipe functions to define a pipe."""
+    return 'no_id', 'ml_regression', 'clean'
 
 
 def _single_pipe(argument: PipeTypeCleanElem) -> Tuple:

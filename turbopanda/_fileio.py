@@ -9,7 +9,7 @@ from __future__ import print_function
 # locals
 from typing import Optional, Dict, Union, List
 
-from .metapanda import MetaPanda
+from ._metapanda import MetaPanda
 from .utils import instance_check
 from ._deprecator import deprecated
 

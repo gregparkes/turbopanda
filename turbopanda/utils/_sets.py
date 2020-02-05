@@ -3,6 +3,7 @@
 """Operations for handling dictionaries and sets."""
 
 import itertools as it
+import warnings
 from typing import Dict, Tuple, Iterable, Callable, Any, List, Union, Set, Optional
 from pandas import Index, Series
 
@@ -65,12 +66,37 @@ def dictmap(a: Iterable, b: Callable) -> Dict:
 
 
 def join(*pipes: Optional[Iterable[Any]]) -> List:
-    """Perform it.chain.from_iterable on iterables."""
+    """Perform it.chain.from_iterable on iterables.
+
+    Does not accept strings, and returns them as is. None arguments are ignored, as well as list components
+        with no arguments inside them.
+
+    Parameters
+    ----------
+    pipes : tuple, args
+        A list of arguments, jumbled together. deploys it.chain.from_iterable.
+
+    Warnings
+    --------
+    UserWarning
+        Raised when the number of arguments in pipes < 2
+
+    Returns
+    -------
+    l : list
+        Returns the joined list
+    """
     # filter out None elements.
+    if len(pipes) == 1 and isinstance(pipes[0], str):
+        return list(pipes)
+    elif len(pipes) <= 1:
+        warnings.warn("in `join`, length of arguments was < 2.", UserWarning)
+
     _p = list(filter(None.__ne__, pipes))
     _p = list(filter(lambda y: len(y) > 0, _p))
     # use itertools to chain together elements.
     return list(it.chain.from_iterable(_p))
+
 
 
 """ SET LIKE OPERATIONS """

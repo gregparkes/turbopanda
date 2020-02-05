@@ -9,7 +9,7 @@ from __future__ import print_function
 
 # imports
 import pandas as pd
-from typing import Tuple, Callable, Dict
+from typing import Tuple, Callable, Dict, TypeVar
 
 # locals
 from .utils import is_unique_id, is_possible_category, object_to_categorical, t_numpy
@@ -17,7 +17,7 @@ from .utils import is_unique_id, is_possible_category, object_to_categorical, t_
 __all__ = ("default_columns", "basic_construct", "categorize_meta", "add_metadata")
 
 
-def true_type(ser: pd.Series):
+def true_type(ser: pd.Series) -> TypeVar:
     """
     Given a pandas.Series, determine it's true datatype if it has missing values.
     """
@@ -37,7 +37,7 @@ def default_columns() -> Dict[str, Callable]:
     return {"true_type": true_type,
             "is_mixed_type": is_mixed_type,
             "is_unique_id": is_unique_id
-    }
+            }
 
 
 def basic_construct(df: pd.DataFrame) -> pd.DataFrame:
@@ -62,4 +62,9 @@ def add_metadata(df: pd.DataFrame):
     """ Constructs a pd.DataFrame from the raw data. Returns meta"""
     # step 1. construct a DataFrame based on the column names as an index.
     _func_mapping = default_columns()
-    return df.aggregate(list(_func_mapping.values())).T
+    _agg = df.aggregate(list(_func_mapping.values())).T
+    # cast bool-like columns to bool
+    _agg['is_mixed_type'] = _agg['is_mixed_type'].astype(bool)
+    _agg['is_unique_id'] = _agg['is_unique_id'].astype(bool)
+    # return
+    return _agg

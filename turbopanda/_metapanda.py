@@ -23,8 +23,7 @@ from ._metadata import *
 from ._pipe import Pipe, is_pipe_structure, PipeMetaPandaType
 from ._selection import get_selector
 from .utils import *
-from ._deprecator import deprecated
-
+from ._deprecator import deprecated, deprecated_param
 
 PandaIndex = Union[pd.Series, pd.Index]
 SelectorType = Optional[Union[TypeVar, str, pd.Index, Callable]]
@@ -127,6 +126,7 @@ class MetaPanda(object):
         Saves a MetaPanda to disk
     """
 
+    @deprecated_param("0.2.1", "mode", remove="0.2.4", reason="`delay` state no longer needed with compute()")
     def __init__(self,
                  dataset: pd.DataFrame,
                  name: Optional[str] = None,
@@ -137,6 +137,9 @@ class MetaPanda(object):
 
         Creates a Meta DataFrame with the raw data and parametrization of
         the DataFrame by its grouped columns.
+
+        .. deprecated: 0.2.1
+
 
         Parameters
         ----------
@@ -174,6 +177,7 @@ class MetaPanda(object):
 
     def _actionable(function: Callable) -> Callable:
         from functools import wraps
+
         @wraps(function)
         def new_function(self, *args, **kwargs):
             """."""
@@ -766,6 +770,9 @@ class MetaPanda(object):
         view : View a selection of columns in `df_`.
         search : View the intersection of search terms, for columns in `df_`.
         """
+        # unionise specific key word searches.
+        # sel_joined = union(*selector)
+        # get the selector.
         sel = get_selector(self.df_, self.meta_, self._select, selector, raise_error=False, select_join="OR")
         if (sel.shape[0] == 0) and self._with_warnings:
             warnings.warn("in view: '{}' was empty, no columns selected.".format(selector), UserWarning)
@@ -1085,7 +1092,7 @@ class MetaPanda(object):
         return self
 
     @deprecated("0.1.9", "0.2.2", instead="rename_axis",
-                reason="This function will be adapted to rename strings in df_ columns using regex/str.replace ops.")
+                reason="this function will be adapted to rename strings in df_ columns using regex/str.replace ops.")
     def rename(self,
                ops: Tuple[str, str],
                selector: Tuple[SelectorType, ...] = None,
@@ -1515,10 +1522,11 @@ class MetaPanda(object):
         --------
         shrink : Expands out a 'unstacked' id column to a shorter-form DataFrame.
         """
+        instance_check(column, str)
+        instance_check(sep, str)
+
         if column not in self.df_.columns:
             raise ValueError("column '{}' not found in df".format(column))
-        if not self.meta_.loc[column, "is_potential_stacker"]:
-            raise ValueError("column '{}' not found to be stackable".format(column))
 
         self._df = pd.merge(
             # expand out id column

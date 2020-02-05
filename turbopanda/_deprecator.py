@@ -8,6 +8,9 @@ from __future__ import print_function
 
 # imports
 import warnings
+import re
+
+__all__ = ('deprecated', 'deprecated_param')
 
 
 def deprecated(version: str, remove: str = None, instead: str = None, reason: str = None):
@@ -38,9 +41,39 @@ def deprecated(version: str, remove: str = None, instead: str = None, reason: st
             if reason is not None:
                 segments.append(", ({})".format(reason))
 
-            warnings.warn("".join(segments), DeprecationWarning)
+            warnings.warn("".join(segments), FutureWarning)
             return func(*args, **kwargs)
 
         return _caching_function
 
     return decorator
+
+
+def deprecated_param(version: str, deprecated_args: str, remove: str = None, reason: str = None):
+    """A method for handling deprecated arguments within a function.
+
+    deprecated_args can be separated by whitespace, ';', ',', or '|'
+
+    Usage
+    -----
+    @deprecated_param(version="0.2.3", reason="you may consider using *styles* instead.", deprecated_args='color background_color')
+    def paragraph(text, color=None, bg_color=None, styles=None):
+        pass
+    """
+
+    def _decorator(func):
+        def _caching_function(*args, **kwargs):
+            # splits arguments into words
+            dep_arg = re.findall(r"[\w'_]+", deprecated_args)
+            segments = ["Parameter(s) {} deprecated since version {}".format(dep_arg, version)]
+            if remove is not None:
+                segments.append(", to be removed in version {}".format(remove))
+            if reason is not None:
+                segments.append("; {}".format(reason))
+            # issue warning.
+            warnings.warn("".join(segments), FutureWarning)
+            return func(*args, **kwargs)
+
+        return _caching_function
+
+    return _decorator

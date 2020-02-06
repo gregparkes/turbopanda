@@ -10,12 +10,12 @@ from __future__ import print_function
 from typing import Union, List, Tuple, Dict, Callable, TypeVar
 
 import numpy as np
-from pandas import to_numeric, Index
+from pandas import to_numeric, Index, Series
 from sklearn import preprocessing
 
 # locals
 from .utils import boolean_to_integer, object_to_categorical, \
-    is_n_value_column, instance_check
+    is_n_value_column, instance_check, join
 
 PipeTypeRawElem = Tuple[str, Tuple, Dict]
 PipeTypeCleanElem = Tuple[Union[str, Callable, Dict, TypeVar], ...]
@@ -237,6 +237,7 @@ class Pipe(object):
     @classmethod
     def clean(cls,
               with_drop: bool = True,
+              with_boolint: bool = True,
               with_downcast: bool = True) -> "Pipe":
         """Pipeline to clean a pandas.DataFrame.
 
@@ -252,6 +253,8 @@ class Pipe(object):
         --------
         with_drop : bool, optional
             If True, drops columns containing only one data value.
+        with_boolint : bool, optional
+            If True, converts all boolean columns into np.uint8 integers.
         with_downcast : bool, optional
             If True, attempts to downcast all columns in df_ to a lower value.
 
@@ -260,18 +263,23 @@ class Pipe(object):
         pipe : Pipe
             The pipeline object
         """
+        # optional steps.
+        drop_step = [("drop", (lambda x: x.nunique() == 1,), {})] if with_drop else None
+        boolint_step = [
+            ('transform', (Series.astype,), {'selector': 'bool', 'dtype': np.uint8})
+        ] if with_boolint else None
+        numeric_step = [
+            ("transform", (to_numeric,),
+             {"selector": ("float64", "int64"), "errors": "ignore", "downcast": "unsigned"})
+        ] if with_downcast else None
 
-        drop_step = [("drop", (lambda x: x.nunique() == 1,), {})]
-        extras = [
-            # shrink down data types where possible.
-            ("transform", (to_numeric,), {"selector": ("float64", "int64"),
-                                          "errors": "ignore", "downcast": "unsigned"}),
-            # strip column names
-            ("apply_columns", ("strip",), {}),
-            # do some string stripping
-            ("rename_axis", ([(" ", "_"), ("\t", "_"), ("-", "")],), {})
-        ]
-        return cls.raw(tuple(drop_step + extras)) if with_drop else cls.raw(tuple(extras))
+        # compulsory steps.
+        strip_step = [('apply_columns', ('strip',), {})]
+        rename_step = [('rename_axis', ([(' ', '_'), ('\t', '_'), ('-', '')],), {})]
+
+        # join them together, dropping None where applicable.
+        order = join(drop_step, numeric_step, boolint_step, strip_step, rename_step)
+        return cls.raw(order)
 
     @classmethod
     def no_id(cls) -> "Pipe":

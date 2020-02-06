@@ -108,6 +108,8 @@ class MetaPanda(object):
         Maps a group of selectors with an identifier, in `mapper_`
     update_meta(None)
         Forces an update to reset the `meta_` attribute.
+    meta_split_category(cat)
+        Splits category into k boolean columns in `meta_` to use for selection.
     sort_columns(by="alphabet", ascending=True)
         Sorts `df_` using vast selection criteria
     expand(column, sep=",")
@@ -126,11 +128,10 @@ class MetaPanda(object):
         Saves a MetaPanda to disk
     """
 
-    @deprecated_param("0.2.1", "mode", remove="0.2.4", reason="`delay` state no longer needed with compute()")
     def __init__(self,
                  dataset: pd.DataFrame,
                  name: Optional[str] = None,
-                 mode: str = "instant",
+                 mode: str = None,
                  with_clean: bool = True,
                  with_warnings: bool = False):
         """Define a MetaPanda frame.
@@ -138,8 +139,7 @@ class MetaPanda(object):
         Creates a Meta DataFrame with the raw data and parametrization of
         the DataFrame by its grouped columns.
 
-        .. deprecated: 0.2.1
-
+        .. deprecated: 0.2.1: mode is now deprecated and will be removed in 0.2.3.
 
         Parameters
         ----------
@@ -159,8 +159,12 @@ class MetaPanda(object):
         """
         self._with_warnings = with_warnings
         self._with_clean = with_clean
+        # deprecation here.
+        if mode is not None:
+            self._mode = mode
+            warnings.warn("`mode` is deprecated in version 0.2.1, to be removed in 0.2.3, is now redundant from "
+                          "compute()", FutureWarning)
 
-        self.mode_ = mode
         # selectors saved
         self._select = {}
         # pipeline arguments
@@ -175,6 +179,7 @@ class MetaPanda(object):
 
     """ ############################ STATIC FUNCTIONS ######################################## """
 
+    @deprecated("0.2.1", "0.2.4", reason="state `delay` no longer necessary.")
     def _actionable(function: Callable) -> Callable:
         from functools import wraps
 
@@ -606,11 +611,13 @@ class MetaPanda(object):
             raise TypeError("'name_' must be of type str")
 
     @property
+    @deprecated("0.2.1", "0.2.3", reason="mode parameter is deprecated")
     def mode_(self) -> str:
         """Choose from {'instant', 'delay'}."""
         return self._mode
 
     @mode_.setter
+    @deprecated("0.2.1", "0.2.3", reason="mode parameter is deprecated")
     def mode_(self, mode: str):
         if mode in ("instant", "delay"):
             self._mode = mode
@@ -628,6 +635,8 @@ class MetaPanda(object):
         return self._mapper
 
     """ ################################ PUBLIC FUNCTIONS ################################################### """
+
+    """ MISCALLAENOUS """
 
     def head(self, k: int = 5) -> pd.DataFrame:
         """Look at the top k rows of the dataset.
@@ -666,6 +675,29 @@ class MetaPanda(object):
         """
         instance_check(grouped, bool)
         return self.meta_['true_type'].value_counts() if grouped else self.meta_['true_type']
+
+    def copy(self) -> "MetaPanda":
+        """Create a copy of this instance.
+
+        .. warning:: Not affected by `mode_` attribute.
+
+        Raises
+        ------
+        CopyException
+            Module specific errors with copy.deepcopy
+        Returns
+        -------
+        mdf2 : MetaPanda
+            A copy of this object
+        See Also
+        --------
+        copy.deepcopy(x) : Return a deep copy of x.
+        """
+        from copy import deepcopy
+
+        return deepcopy(self)
+
+    """ INSPECTING COLUMNS """
 
     def view(self, *selector: SelectorType) -> pd.Index:
         """View a selection of columns in `df_`.
@@ -779,26 +811,7 @@ class MetaPanda(object):
         # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
         return self.df_.columns.drop(sel)
 
-    def copy(self) -> "MetaPanda":
-        """Create a copy of this instance.
-
-        .. warning:: Not affected by `mode_` attribute.
-
-        Raises
-        ------
-        CopyException
-            Module specific errors with copy.deepcopy
-        Returns
-        -------
-        mdf2 : MetaPanda
-            A copy of this object
-        See Also
-        --------
-        copy.deepcopy(x) : Return a deep copy of x.
-        """
-        from copy import deepcopy
-
-        return deepcopy(self)
+    """ APPLY PANDAS OPERATIONS """
 
     @_actionable
     def apply(self, f_name: str, *f_args, **f_kwargs) -> "MetaPanda":
@@ -880,6 +893,8 @@ class MetaPanda(object):
         """
         self._apply_index_function(f_name, *f_args, **f_kwargs)
         return self
+
+    """ DROPPING COLUMNS/ROWS """
 
     @_actionable
     def drop(self, *selector: SelectorType) -> "MetaPanda":
@@ -972,6 +987,8 @@ class MetaPanda(object):
         self.df_ = self.df_.loc[bs, :]
         return self
 
+    """ CACHING INFORMATION FUNCTIONS """
+
     def cache(self, name: str, *selector: SelectorType) -> "MetaPanda":
         """Add a cache element to `selectors_`.
 
@@ -1003,7 +1020,7 @@ class MetaPanda(object):
         cache_pipe : Adds a pipe element to `pipe_`.
         """
         if name in self._select and self._with_warnings:
-            warnings.warn("cache name '{}' already exists in .cache, overriding".format(name), UserWarning)
+            warnings.warn("cache '{}' already exists in .cache, overriding".format(name), UserWarning)
         # convert selector over to list to make it mutable
         selector = list(selector)
         # encode to string
@@ -1011,10 +1028,8 @@ class MetaPanda(object):
             **{object: "object", pd.CategoricalDtype: "category"},
             **dictmap(t_numpy(), lambda n: n.__name__)
         }
-        # encode the selector as a string ALWAYS.
-        for i, s in enumerate(selector):
-            if s in enc_map:
-                selector[i] = enc_map[s]
+        # update to encode the selector as a string ALWAYS.
+        selector = [enc_map[s] if s in enc_map else s for s in selector]
         # store to select
         self._select[name] = selector
         return self
@@ -1083,7 +1098,7 @@ class MetaPanda(object):
         self
         """
         if name in self.pipe_.keys() and self._with_warnings:
-            warnings.warn("pipe name '{}' already exists in .pipe, overriding".format(name), UserWarning)
+            warnings.warn("pipe '{}' already exists in .pipe, overriding".format(name), UserWarning)
         if isinstance(pipeline, Pipe):
             # attempt to create a pipe from raw.
             self.pipe_[name] = pipeline.p
@@ -1091,127 +1106,7 @@ class MetaPanda(object):
             self.pipe_[name] = pipeline
         return self
 
-    @deprecated("0.1.9", "0.2.2", instead="rename_axis",
-                reason="this function will be adapted to rename strings in df_ columns using regex/str.replace ops.")
-    def rename(self,
-               ops: Tuple[str, str],
-               selector: Tuple[SelectorType, ...] = None,
-               axis: int = 1) -> "MetaPanda":
-        """Perform a chain of .str.replace operations on a given `df_` or `meta_` column.
-
-        .. deprecated:: `rename` will become `rename_axis` in version 0.2.2, use `rename_axis` instead.
-
-        TODO: convert this function as to allow it to 'rename' a given column(s) using pd.Series.str.replace ops.
-            Allow this to happen to either a column in df_ or meta_, as appropriate.
-            Parameters: ops, selector -> column, axis -> None, new_name = None (inplace if None, creates new col if not)
-
-        Parameters
-        -------
-        ops : list of tuple (2,)
-            Where the first value of each tuple is the string to find, with its replacement
-            At this stage we only accept *direct* replacements. No regex.
-            Operations are performed 'in order'.
-        selector : None, str, or tuple args, optional
-            Contains either types, meta column names, column names or regex-compliant strings
-            If None, all column names are subject to potential renaming
-        axis : int, optional
-            Choose from {1, 0} 1 = columns, 0 = index.
-
-        Returns
-        -------
-        self
-        """
-
-        # check ops is right format
-        is_twotuple(ops)
-        belongs(axis, [0, 1])
-
-        curr_cols = sel_cols = self._selector_group(selector, axis)
-        # performs the replacement operation inplace
-        curr_cols = string_replace(curr_cols, ops)
-        # rename using mapping
-        self._rename_axis(sel_cols, curr_cols, axis)
-        return self
-
-    @_actionable
-    def rename_axis(self,
-                    ops: Tuple[str, str],
-                    selector: Optional[Tuple[SelectorType, ...]] = None,
-                    axis: int = 1) -> "MetaPanda":
-        """Perform a chain of .str.replace operations on one of the axes.
-
-        .. note:: strings that are unchanged remain the same (are not NA'd).
-
-        Parameters
-        -------
-        ops : list of tuple (2,)
-            Where the first value of each tuple is the string to find, with its replacement
-            At this stage we only accept *direct* replacements. No regex.
-            Operations are performed 'in order'.
-        selector : None, str, or tuple args, optional
-            Contains either types, meta column names, column names or regex-compliant strings
-            If None, all column names are subject to potential renaming
-        axis : int, optional
-            Choose from {1, 0} 1 = columns, 0 = index.
-
-        Returns
-        -------
-        self
-        """
-        # check ops is right format
-        is_twotuple(ops)
-        belongs(axis, [0, 1])
-
-        curr_cols = sel_cols = self._selector_group(selector, axis)
-        # performs the replacement operation inplace
-        curr_cols = string_replace(curr_cols, ops)
-        # rename using mapping
-        self._rename_axis(sel_cols, curr_cols, axis)
-        return self
-
-    @_actionable
-    def add_prefix(self, pref: str,
-                   selector: Optional[Tuple[SelectorType, ...]] = None) -> "MetaPanda":
-        """Add a prefix to all of the columns or selected columns.
-
-        Parameters
-        -------
-        pref : str
-            The prefix to add
-        selector : None, str, or tuple args, optional
-            Contains either types, meta column names, column names or regex-compliant strings
-            Allows user to specify subset to rename
-
-        Returns
-        ------
-        self
-        """
-        sel_cols = self._selector_group(selector)
-        # set to df_ and meta_
-        self._rename_axis(sel_cols, sel_cols + pref, axis=1)
-        return self
-
-    @_actionable
-    def add_suffix(self, suf: str,
-                   selector: Optional[Tuple[SelectorType, ...]] = None) -> "MetaPanda":
-        """Add a suffix to all of the columns or selected columns.
-
-        Parameters
-        -------
-        suf : str
-            The prefix to add
-        selector : None, str, or tuple args, optional
-            Contains either types, meta column names, column names or regex-compliant strings
-            Allows user to specify subset to rename
-
-        Returns
-        ------
-        self
-        """
-        sel_cols = self._selector_group(selector)
-        # set to df_ and meta_
-        self._rename_axis(sel_cols, sel_cols + suf, axis=1)
-        return self
+    """ TRANSFORMATION FUNCTIONS """
 
     @_actionable
     def transform(self,
@@ -1386,6 +1281,8 @@ class MetaPanda(object):
         """
         return NotImplemented
 
+    """ CHANGES TO META INFORMATION """
+
     @_actionable
     def meta_map(self, name: str,
                  selectors: Tuple[SelectorType, ...]) -> "MetaPanda":
@@ -1450,9 +1347,46 @@ class MetaPanda(object):
         -------
         self
         """
+        # should include a call to define the meta maps.
         self._reset_meta()
-        self._define_metamaps()
         return self
+
+    def meta_split_category(self, cat: str) -> "MetaPanda":
+        """Splits category into k boolean columns in `meta_` to use for selection.
+
+        This enables a categorical column to contain multiple boolean selectors for
+        downstream use.
+
+        The categorical column is kept and not removed. New columns are concatenated on.
+
+        Parameters
+        ----------
+        cat : str
+            The name of the `meta_` column to split on.
+
+        Raises
+        ------
+        ValueError
+            If `cat` column is not found in `meta_`.
+            If resulting columns already exist in `meta_`.
+
+        Returns
+        -------
+        self
+        """
+        if cat in self.meta_:
+            # expand and add to meta.
+            try:
+                self._meta = pd.concat([
+                    self.meta_, dummy_categorical(self.meta_[cat])
+                    # integrity must be verified to make sure these columns do not already exist.
+                ], sort=False, axis=1, join="inner", copy=True, verify_integrity=True)
+            except ValueError:
+                warnings.warn("in `meta_split_category`: integrity of meta_ column challenged, no split has occurred.",
+                              UserWarning)
+            return self
+        else:
+            raise ValueError("cat column '{}' not found in `meta_`.".format(cat))
 
     @_actionable
     def sort_columns(self,
@@ -1493,6 +1427,130 @@ class MetaPanda(object):
                 self._df = self._df.reindex(self.meta_.index, axis=1)
         else:
             raise TypeError("'by' or 'ascending' is not of type {list}")
+        return self
+
+    """ STRING-BASED OPERATIONS """
+
+    @deprecated("0.1.9", "0.2.2", instead="rename_axis",
+                reason="this function will be adapted to rename strings in df_ columns using regex/str.replace ops.")
+    def rename(self,
+               ops: Tuple[str, str],
+               selector: Tuple[SelectorType, ...] = None,
+               axis: int = 1) -> "MetaPanda":
+        """Perform a chain of .str.replace operations on a given `df_` or `meta_` column.
+
+        .. deprecated:: `rename` will become `rename_axis` in version 0.2.2, use `rename_axis` instead.
+
+        TODO: convert this function as to allow it to 'rename' a given column(s) using pd.Series.str.replace ops.
+            Allow this to happen to either a column in df_ or meta_, as appropriate.
+            Parameters: ops, selector -> column, axis -> None, new_name = None (inplace if None, creates new col if not)
+
+        Parameters
+        -------
+        ops : list of tuple (2,)
+            Where the first value of each tuple is the string to find, with its replacement
+            At this stage we only accept *direct* replacements. No regex.
+            Operations are performed 'in order'.
+        selector : None, str, or tuple args, optional
+            Contains either types, meta column names, column names or regex-compliant strings
+            If None, all column names are subject to potential renaming
+        axis : int, optional
+            Choose from {1, 0} 1 = columns, 0 = index.
+
+        Returns
+        -------
+        self
+        """
+
+        # check ops is right format
+        is_twotuple(ops)
+        belongs(axis, [0, 1])
+
+        curr_cols = sel_cols = self._selector_group(selector, axis)
+        # performs the replacement operation inplace
+        curr_cols = string_replace(curr_cols, ops)
+        # rename using mapping
+        self._rename_axis(sel_cols, curr_cols, axis)
+        return self
+
+    @_actionable
+    def rename_axis(self,
+                    ops: Tuple[str, str],
+                    selector: Optional[Tuple[SelectorType, ...]] = None,
+                    axis: int = 1) -> "MetaPanda":
+        """Perform a chain of .str.replace operations on one of the axes.
+
+        .. note:: strings that are unchanged remain the same (are not NA'd).
+
+        Parameters
+        -------
+        ops : list of tuple (2,)
+            Where the first value of each tuple is the string to find, with its replacement
+            At this stage we only accept *direct* replacements. No regex.
+            Operations are performed 'in order'.
+        selector : None, str, or tuple args, optional
+            Contains either types, meta column names, column names or regex-compliant strings
+            If None, all column names are subject to potential renaming
+        axis : int, optional
+            Choose from {1, 0} 1 = columns, 0 = index.
+
+        Returns
+        -------
+        self
+        """
+        # check ops is right format
+        is_twotuple(ops)
+        belongs(axis, [0, 1])
+
+        curr_cols = sel_cols = self._selector_group(selector, axis)
+        # performs the replacement operation inplace
+        curr_cols = string_replace(curr_cols, ops)
+        # rename using mapping
+        self._rename_axis(sel_cols, curr_cols, axis)
+        return self
+
+    @_actionable
+    def add_prefix(self, pref: str,
+                   selector: Optional[Tuple[SelectorType, ...]] = None) -> "MetaPanda":
+        """Add a prefix to all of the columns or selected columns.
+
+        Parameters
+        -------
+        pref : str
+            The prefix to add
+        selector : None, str, or tuple args, optional
+            Contains either types, meta column names, column names or regex-compliant strings
+            Allows user to specify subset to rename
+
+        Returns
+        ------
+        self
+        """
+        sel_cols = self._selector_group(selector)
+        # set to df_ and meta_
+        self._rename_axis(sel_cols, sel_cols + pref, axis=1)
+        return self
+
+    @_actionable
+    def add_suffix(self, suf: str,
+                   selector: Optional[Tuple[SelectorType, ...]] = None) -> "MetaPanda":
+        """Add a suffix to all of the columns or selected columns.
+
+        Parameters
+        -------
+        suf : str
+            The prefix to add
+        selector : None, str, or tuple args, optional
+            Contains either types, meta column names, column names or regex-compliant strings
+            Allows user to specify subset to rename
+
+        Returns
+        ------
+        self
+        """
+        sel_cols = self._selector_group(selector)
+        # set to df_ and meta_
+        self._rename_axis(sel_cols, sel_cols + suf, axis=1)
         return self
 
     @_actionable
@@ -1619,6 +1677,8 @@ class MetaPanda(object):
         self._df.columns.name = "colnames"
         return self
 
+    """ COMPUTE PIPE OPERATIONS """
+
     def compute(self,
                 pipe: Optional[PipeMetaPandaType] = None,
                 inplace: bool = False,
@@ -1702,6 +1762,8 @@ class MetaPanda(object):
         """
         # join and execute
         return self.compute(join(pipes), inplace=inplace)
+
+    """ SAVING TO FILE """
 
     def write(self,
               filename: Optional[str] = None,

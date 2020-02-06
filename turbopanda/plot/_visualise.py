@@ -14,12 +14,13 @@ from scipy import stats
 from sklearn.metrics import r2_score
 
 # locals
-from .utils import nearest_factors, belongs, fself, standardize
-from ._metaml import MetaML
-from ._pub_fig import save_figure
+from turbopanda.utils import nearest_factors, belongs, fself, standardize
+from turbopanda._metaml import MetaML
+from turbopanda._pub_fig import save_figure
 
-__all__ = ("plot_scatter_grid", "plot_missing", "plot_hist_grid",
-           "plot_coefficients", "plot_actual_vs_predicted", "shape_multiplot")
+
+__all__ = ("scatter_grid", "missing", "hist_grid",
+           "coefficients", "actual_vs_predicted", "shape_multiplot")
 
 
 def _iqr(a):
@@ -109,7 +110,7 @@ def shape_multiplot(n_plots: int, arrange: str = "square", ax_size: int = 2):
             if arrange == 'square' else _generate_diag_like_grid(n_plots, arrange)
 
 
-def plot_missing(mdf):
+def missing(mdf):
     """
     Plots the missing data as a greyscale heatmap.
 
@@ -136,7 +137,7 @@ def plot_missing(mdf):
     ax.set_yticklabels(mdf.df_.columns)
 
 
-def plot_hist_grid(mdf, selector, arrange="square", savepath=None):
+def hist_grid(mdf, selector, arrange="square", savepath=None):
     """
     Plots a grid of histograms comparing the distributions in a MetaPanda
     selector.
@@ -178,7 +179,7 @@ def plot_hist_grid(mdf, selector, arrange="square", savepath=None):
             save_figure(fig, "hist", mdf.name_, fp=savepath)
 
 
-def plot_scatter_grid(mdf, selector, target, arrange="square", savepath=None):
+def scatter_grid(mdf, selector, target, arrange="square", savepath=None):
     """
     Plots a grid of scatter plots comparing each column for MetaPanda
     in selector to y target value.
@@ -221,7 +222,7 @@ def plot_scatter_grid(mdf, selector, target, arrange="square", savepath=None):
             save_figure(fig, "scatter", mdf.name_, fp=savepath)
 
 
-def plot_actual_vs_predicted(mml):
+def actual_vs_predicted(mml):
     """
     Plots the actual (regression) values against the predicted values. If there are multiple,
     creates a multiplot.
@@ -253,7 +254,7 @@ def plot_actual_vs_predicted(mml):
                 axes.set_title(mml.y_names)
 
 
-def plot_coefficients(mml, normalize=False, use_absolute=False, drop_intercept=True):
+def coefficients(mml, normalize=False, use_absolute=False, drop_intercept=True):
     """
     Plots the coefficients from a fitted machine learning model using MetaML.
 

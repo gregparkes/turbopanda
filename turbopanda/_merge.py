@@ -179,7 +179,8 @@ def merge(mdfs: Tuple[DataSetType, ...],
     # add on a meta_ column indicating the source of every feature.
     col_sources = concat([Series(ds.name_, index=ds.df_.columns.copy()) for ds in mdfs],
                          axis=0, sort=False)
-    nmdf.meta_["datasets"] = col_sources
+    # define new column as a categorical
+    nmdf.meta_["datasets"] = col_sources.astype("category")
 
     # override name if given
     if name is not None and isinstance(nmdf, MetaPanda):

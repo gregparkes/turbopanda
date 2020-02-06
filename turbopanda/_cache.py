@@ -116,17 +116,9 @@ def cached(func: Callable,
 
 
 def cache(filename: Optional[str] = "example1.json") -> Callable:
-    """Provides automatic {.json, .csv} caching for `turb.MetaPanda` or `pd.DataFrame`.
+    """Provides automatic {.json, .csv} caching for `turb.MetaPanda`, `pd.DataFrame` or `np.ndarray` formats.
 
     .. note:: this is a decorator function, not to be called directly.
-
-    For example, we call `cached` as a decorator to our custom function:
-    >>> import turbopanda as turb
-    >>> @cache('meta_file.json')
-    >>> def f(x):
-    ...     return turb.MetaPanda(x)
-
-    .. note:: custom function must return a `pd.DataFrame` or `turb.MetaPanda` object.
 
     Parameters
     --------
@@ -150,6 +142,16 @@ def cache(filename: Optional[str] = "example1.json") -> Callable:
     -------
     mp : turb.MetaPanda
         The MetaPanda object
+
+    .. note:: custom function must return a `pd.DataFrame` or `turb.MetaPanda` object.
+
+    Examples
+    --------
+    For example, we call as a decorator to our custom function:
+    >>> import turbopanda as turb
+    >>> @cache('meta_file.json')
+    >>> def f(x):
+    ...     return turb.MetaPanda(x)
 
     See Also
     --------

@@ -8,13 +8,15 @@ from __future__ import division
 from __future__ import print_function
 
 # imports
+import numpy as np
 import pandas as pd
 from typing import Tuple, Callable, Dict, TypeVar
 
 # locals
-from .utils import is_unique_id, is_possible_category, object_to_categorical, t_numpy
+from .utils import is_unique_id, is_possible_category, object_to_categorical, t_numpy, instance_check
 
-__all__ = ("default_columns", "basic_construct", "categorize_meta", "add_metadata")
+__all__ = ("default_columns", "basic_construct",
+           "categorize_meta", "add_metadata", "dummy_categorical")
 
 
 def true_type(ser: pd.Series) -> TypeVar:
@@ -56,6 +58,15 @@ def categorize_meta(meta: pd.DataFrame):
     for column in meta.columns:
         if is_possible_category(meta[column]):
             meta[column] = object_to_categorical(meta[column])
+
+
+def dummy_categorical(cat: pd.Series) -> pd.DataFrame:
+    """Given pd.Series of type 'category', return boolean dummies as matrix."""
+    instance_check(cat, pd.Series)
+    if cat.dtype == 'category':
+        return pd.get_dummies(cat).add_prefix("is_").astype(np.bool)
+    else:
+        raise TypeError("'cat' Series is {}, not of type 'category'".format(cat.dtype))
 
 
 def add_metadata(df: pd.DataFrame):

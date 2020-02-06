@@ -27,6 +27,9 @@ def read(filename: str,
     necessarily the order in the file directory. If a list of `name` is passed, this is
     sorted so as to match the filename ordering returned.
 
+    TODO:
+        Write an extension to allow for .hdf files.
+
     Parameters
     ----------
     filename : str
@@ -96,7 +99,7 @@ def read(filename: str,
         return ds if len(ds) > 1 else ds[0]
 
 
-@deprecated("0.1.9", "0.2.2", "read")
+@deprecated("0.1.9", "0.2.2", instead="read")
 def read_raw_json(filename: str) -> Dict:
     """
     Reads in a raw JSON file.

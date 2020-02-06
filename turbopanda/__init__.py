@@ -19,12 +19,14 @@ del hard_dependencies, dependency, missing_dependencies
 from ._metapanda import MetaPanda
 from ._metaml import MetaML
 from ._pipe import Pipe
-from ._visualise import *
 from ._fileio import *
 from ._correlate import *
 from ._cache import *
 from ._pub_fig import *
 from ._merge import merge
+# folder extensions.
+from . import utils
+from . import plot
 
 
 __version__ = "0.2.1"

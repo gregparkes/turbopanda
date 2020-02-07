@@ -521,7 +521,7 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
     df = data.df_ if isinstance(data, MetaPanda) else data
     # downcast if list/tuple/pd.index is of length 1
     x = x[0] if (isinstance(x, (tuple, list, pd.Index)) and len(x) == 1) else x
-    y = y[0] if (isinstance(x, (tuple, list, pd.Index)) and len(y) == 1) else y
+    y = y[0] if (isinstance(y, (tuple, list, pd.Index)) and len(y) == 1) else y
 
     if x is None and y is None:
         return _corr_matrix_singular(df, covar=covar, method=method)

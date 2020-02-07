@@ -24,6 +24,7 @@ from ._correlate import *
 from ._cache import *
 from ._pub_fig import *
 from ._merge import merge
+from ._mutual_info import mutual_info
 # folder extensions.
 from . import utils
 from . import plot

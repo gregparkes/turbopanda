@@ -10,8 +10,8 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 
-from ._metapanda import MetaPanda
-from .utils import intersect, instance_check
+from turbopanda._metapanda import MetaPanda
+from turbopanda.utils import intersect, instance_check
 
 
 __all__ = ['mutual_info']

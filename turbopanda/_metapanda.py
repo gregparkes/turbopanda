@@ -25,6 +25,7 @@ from ._selection import get_selector
 from .utils import *
 from ._deprecator import deprecated, deprecated_param
 
+
 PandaIndex = Union[pd.Series, pd.Index]
 SelectorType = Optional[Union[TypeVar, str, pd.Index, Callable]]
 
@@ -160,7 +161,7 @@ class MetaPanda(object):
         self._with_warnings = with_warnings
         self._with_clean = with_clean
         # deprecation here.
-        if mode is not None:
+        if mode is not None and with_warnings:
             self._mode = mode
             warnings.warn("`mode` is deprecated in version 0.2.1, to be removed in 0.2.3, is now redundant from "
                           "compute()", FutureWarning)

@@ -62,7 +62,7 @@ def cached(func: Callable,
     *args : list, optional
         Arguments to pass to function(...)
     **kwargs : dict, optional
-        Keyword arguments to pass to function (...)
+        Keyword arguments to pass to function(...)
 
     Warnings
     --------

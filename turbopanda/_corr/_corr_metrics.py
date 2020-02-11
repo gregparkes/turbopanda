@@ -5,7 +5,7 @@
 import numpy as np
 from scipy.stats import pearsonr, spearmanr, chi2, t, kendalltau
 
-from ._dependency import is_sklearn_installed
+from turbopanda._dependency import is_sklearn_installed
 
 
 __all__ = ("skipped", "bsmahal", "shepherd", "percbend")

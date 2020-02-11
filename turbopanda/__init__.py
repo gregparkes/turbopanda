@@ -20,15 +20,13 @@ from ._metapanda import MetaPanda
 from ._metaml import MetaML
 from ._pipe import Pipe
 from ._fileio import *
-from ._correlate import *
 from ._cache import *
 from ._pub_fig import *
 from ._merge import merge
-from ._mutual_info import mutual_info
 # folder extensions.
 from . import utils
 from . import plot
-
+from ._corr import *
 
 __version__ = "0.2.1"
 __name__ = "turbopanda"

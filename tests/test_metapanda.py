@@ -60,7 +60,7 @@ def test_dtypes():
     # has downcasted to np.uint8
     assert mdf.df_['a'].dtype == np.uint8
     assert mdf.df_['b'].dtype in (object, pd.CategoricalDtype)
-    assert mdf.df_['c'].dtype == np.bool
+    assert mdf.df_['c'].dtype == np.uint8
     assert mdf.df_['d'].dtype == np.float64
     # check dtypes function
     assert hasattr(mdf, "dtypes")
@@ -99,13 +99,11 @@ def test_view():
 
     # try type objects
     assert len(mdf.view(float)) == 1
-    assert len(mdf.view(bool)) == 1
-    assert len(mdf.view(np.bool)) == 1
+    assert len(mdf.view(np.uint8)) == 2
     assert len(mdf.view(object)) == 1
-    assert len(mdf.view(np.uint8)) == 1
     assert len(mdf.view(np.float64)) == 1
     assert len(mdf.view("object")) == 1
-    assert len(mdf.view("uint8")) == 1
+    assert len(mdf.view("uint8")) == 2
     assert len(mdf.view("float64")) == 1
 
     # try strings

@@ -21,8 +21,10 @@ __all__ = ["missing"]
 def mean_test(cv_results):
     return cv_results[cv_results.columns[cv_results.columns.str.contains("^split[0-9]+_test_score$")]]
 
+
 def mean_train(cv_results):
     return cv_results[cv_results.columns[cv_results.columns.str.contains("^split[0-9]+_train_score$")]]
+
 
 def best_param(cv_results, param_name, as_min=True):
     mt = mean_test(cv_results)
@@ -31,6 +33,7 @@ def best_param(cv_results, param_name, as_min=True):
         return p[mt.mean(axis=1).idxmin()]
     else:
         return p[mt.mean(axis=1).idxmax()]
+
 
 def best_error(cv_results, as_min=True):
     mt = mean_test(cv_results)

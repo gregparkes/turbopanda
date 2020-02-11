@@ -19,8 +19,8 @@ import numpy as np
 import pandas as pd
 
 # locals
-from ._metapanda import MetaPanda
-from .utils import c_float, c_cat, instance_check, dictzip, union, remove_na, \
+from turbopanda._metapanda import MetaPanda
+from turbopanda.utils import c_float, c_cat, instance_check, dictzip, union, remove_na, \
     is_column_float, set_like, belongs, difference
 
 # user define dataset type

@@ -23,7 +23,7 @@ SelectorType = Optional[Union[TypeVar, str, Index, Callable]]
 __all__ = ("regex_column", "get_selector", "selector_types")
 
 
-def selector_types() -> List:
+def selector_types() -> Iterable:
     """Returns the acceptable selector data types that are searched for."""
     return join(
         t_numpy(),

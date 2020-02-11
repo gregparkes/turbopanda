@@ -9,13 +9,10 @@ from pandas import Index, Series
 
 from ._error_raise import instance_check
 
-
 SetLike = Union[type(None), str, Set, Index, List, Tuple, Series]
-
 
 __all__ = ("dict_to_tuple", "dictzip", "dictmap", "join", 'pairwise',
            "set_like", "union", "intersect", "difference")
-
 
 """ DICTIONARY CONVENIENCE """
 
@@ -65,7 +62,7 @@ def dictmap(a: Iterable, b: Callable) -> Dict:
     return dict(it.zip_longest(a, map(b, a)))
 
 
-def join(*pipes: Optional[Iterable[Any]]) -> List:
+def join(*pipes) -> List:
     """Perform it.chain.from_iterable on iterables.
 
     Does not accept strings, and returns them as is. None arguments are ignored, as well as list components
@@ -96,7 +93,6 @@ def join(*pipes: Optional[Iterable[Any]]) -> List:
     _p = list(filter(lambda y: len(y) > 0, _p))
     # use itertools to chain together elements.
     return list(it.chain.from_iterable(_p))
-
 
 
 """ SET LIKE OPERATIONS """
@@ -207,7 +203,7 @@ def difference(a: SetLike, b: SetLike) -> Index:
     return set_like(a).symmetric_difference(set_like(b))
 
 
-def pairwise(f: Callable, x: List[Any]) -> List:
+def pairwise(f: Callable, x: SetLike) -> List:
     """Conduct a pairwise operation on a list of elements, receiving them in pairs.
 
     e.g for list x = [1, 2, 3] we conduct:

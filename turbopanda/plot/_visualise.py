@@ -106,8 +106,8 @@ def shape_multiplot(n_plots: int, arrange: str = "square", ax_size: int = 2):
     if n_plots == 1:
         return plt.subplots(figsize=(ax_size, ax_size))
     else:
-        return _generate_square_like_grid(n_plots) \
-            if arrange == 'square' else _generate_diag_like_grid(n_plots, arrange)
+        return _generate_square_like_grid(n_plots, ax_size=ax_size) \
+            if arrange == 'square' else _generate_diag_like_grid(n_plots, arrange, ax_size=ax_size)
 
 
 def missing(mdf):

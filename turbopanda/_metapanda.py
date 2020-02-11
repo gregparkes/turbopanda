@@ -50,8 +50,6 @@ class MetaPanda(object):
         The number of columns in `df_`
     memory_ : str
         String-formatted representation of memory consumption in megabytes
-    mode_ : str
-        Determines how 'delay' methods are executed
     selectors_ : dict
         Maps unique name (key) to cached selected groups of columns (value)
     mapper_ : dict
@@ -132,7 +130,6 @@ class MetaPanda(object):
     def __init__(self,
                  dataset: pd.DataFrame,
                  name: Optional[str] = None,
-                 mode: str = None,
                  with_clean: bool = True,
                  with_warnings: bool = False):
         """Define a MetaPanda frame.
@@ -140,19 +137,12 @@ class MetaPanda(object):
         Creates a Meta DataFrame with the raw data and parametrization of
         the DataFrame by its grouped columns.
 
-        .. deprecated: 0.2.1: mode is now deprecated and will be removed in 0.2.3.
-
         Parameters
         ----------
         dataset : pd.DataFrame
             The raw data set to create as a MetaDataFrame.
         name : str, optional
             Gives the MetaDataFrame a name, which comes into play with merging, for instance
-        mode : str, optional
-            Choose from {'instant', 'delay'}
-            If 'instant', executes all functions immediately inplace
-            If 'delay', builds a task graph in 'pipe_'
-                and then executes inplace when 'compute' is called
         with_clean : bool, optional
             If True, uses Pipe.clean() to perform minor preprocessing on `dataset`
         with_warnings : bool, optional
@@ -160,11 +150,6 @@ class MetaPanda(object):
         """
         self._with_warnings = with_warnings
         self._with_clean = with_clean
-        # deprecation here.
-        if mode is not None and with_warnings:
-            self._mode = mode
-            warnings.warn("`mode` is deprecated in version 0.2.1, to be removed in 0.2.3, is now redundant from "
-                          "compute()", FutureWarning)
 
         # selectors saved
         self._select = {}
@@ -179,20 +164,6 @@ class MetaPanda(object):
         self.name_ = name if name is not None else 'DataSet'
 
     """ ############################ STATIC FUNCTIONS ######################################## """
-
-    @deprecated("0.2.1", "0.2.4", reason="state `delay` no longer necessary.")
-    def _actionable(function: Callable) -> Callable:
-        from functools import wraps
-
-        @wraps(function)
-        def new_function(self, *args, **kwargs):
-            """."""
-            if self.mode_ == "delay":
-                self._pipe["current"].append((function.__name__, args, kwargs))
-            else:
-                return function(self, *args, **kwargs)
-
-        return new_function
 
     @classmethod
     def from_pandas(cls, filename: str, name: str = None, *args, **kwargs):
@@ -612,20 +583,6 @@ class MetaPanda(object):
             raise TypeError("'name_' must be of type str")
 
     @property
-    @deprecated("0.2.1", "0.2.3", reason="mode parameter is deprecated")
-    def mode_(self) -> str:
-        """Choose from {'instant', 'delay'}."""
-        return self._mode
-
-    @mode_.setter
-    @deprecated("0.2.1", "0.2.3", reason="mode parameter is deprecated")
-    def mode_(self, mode: str):
-        if mode in ("instant", "delay"):
-            self._mode = mode
-        else:
-            raise ValueError("'mode' must be of ('instant', 'delay'), not '{}'".format(mode))
-
-    @property
     def pipe_(self) -> Dict[str, Any]:
         """Fetch the cached pipelines."""
         return self._pipe
@@ -644,8 +601,6 @@ class MetaPanda(object):
 
         See `pd.DataFrame.head` documentation for details.
 
-        .. warning:: Not affected by `mode_` attribute.
-
         Parameters
         --------
         k : int, optional
@@ -662,8 +617,6 @@ class MetaPanda(object):
     def dtypes(self, grouped: bool = True) -> Union[pd.Series, pd.DataFrame]:
         """Determine the grouped data types in the dataset.
 
-        .. warning:: Not affected by `mode_` attribute.
-
         Parameters
         --------
         grouped : bool, optional
@@ -679,8 +632,6 @@ class MetaPanda(object):
 
     def copy(self) -> "MetaPanda":
         """Create a copy of this instance.
-
-        .. warning:: Not affected by `mode_` attribute.
 
         Raises
         ------
@@ -710,8 +661,6 @@ class MetaPanda(object):
             pd.Index
             str [regex, df.column name, cached name, meta.column name (that references a boolean column)]
             list/tuple of the above
-
-        .. warning:: Not affected by `mode_` attribute.
 
         .. note:: `view` *preserves* the order in which columns appear within the DataFrame.
         Parameters
@@ -744,8 +693,6 @@ class MetaPanda(object):
             pd.Index
             str [regex, df.column name, cached name, meta.column name (that references a boolean column)]
             list/tuple of the above
-
-        .. warning:: Not affected by `mode_` attribute.
 
         .. note:: `view` *preserves* the order in which columns appear within the DataFrame.
         Parameters
@@ -783,8 +730,6 @@ class MetaPanda(object):
             str [regex, df.column name, cached name, meta.column name (that references a boolean column)]
             list/tuple of the above
 
-        .. warning:: Not affected by `mode_` attribute.
-
         .. note:: `view_not` *preserves* the order in which columns appear within the DataFrame.
         Parameters
         ----------
@@ -814,7 +759,6 @@ class MetaPanda(object):
 
     """ APPLY PANDAS OPERATIONS """
 
-    @_actionable
     def apply(self, f_name: str, *f_args, **f_kwargs) -> "MetaPanda":
         """Apply a `pd.DataFrame` function to `df_`.
 
@@ -839,7 +783,6 @@ class MetaPanda(object):
         self._apply_function(f_name, *f_args, **f_kwargs)
         return self
 
-    @_actionable
     def apply_columns(self, f_name: str, *f_args, **f_kwargs) -> "MetaPanda":
         """Apply a `pd.Index` function to `df_.columns`.
 
@@ -867,7 +810,6 @@ class MetaPanda(object):
         self._apply_column_function(f_name, *f_args, **f_kwargs)
         return self
 
-    @_actionable
     def apply_index(self, f_name: str, *f_args, **f_kwargs) -> "MetaPanda":
         """Apply a `pd.Index` function to `df_.index`.
 
@@ -897,7 +839,6 @@ class MetaPanda(object):
 
     """ DROPPING COLUMNS/ROWS """
 
-    @_actionable
     def drop(self, *selector: SelectorType) -> "MetaPanda":
         """Drop the selected columns from `df_`.
 
@@ -923,7 +864,6 @@ class MetaPanda(object):
         self._drop_columns(self.view(*selector))
         return self
 
-    @_actionable
     def keep(self, *selector: SelectorType) -> "MetaPanda":
         """Keep the selected columns from `df_` only.
 
@@ -948,7 +888,6 @@ class MetaPanda(object):
         self._drop_columns(self.view_not(*selector))
         return self
 
-    @_actionable
     def filter_rows(self,
                     func: Callable,
                     selector: Tuple[SelectorType, ...] = None,
@@ -997,8 +936,6 @@ class MetaPanda(object):
         wish to keep track of changes, or if you want to quickly reference a selector
         using a name rather than a group of selections.
 
-        .. warning:: Not affected by `mode_` attribute.
-
         Parameters
         -------
         name : str
@@ -1042,8 +979,6 @@ class MetaPanda(object):
         if you wish to keep track of changes, or if you want to quickly reference a selector
         using a name rather than a group of selections.
 
-        .. warning:: Not affected by `mode_` attribute.
-
         Parameters
         --------
         caches : dict (k, w)
@@ -1078,8 +1013,6 @@ class MetaPanda(object):
         Saves a pipeline to use at a later date. Calls to `compute` can reference the name
         of the pipeline.
 
-        .. warning:: Not affected by `mode_` attribute.
-
         Parameters
         ----------
         name : str
@@ -1109,7 +1042,6 @@ class MetaPanda(object):
 
     """ TRANSFORMATION FUNCTIONS """
 
-    @_actionable
     def transform(self,
                   func: Callable,
                   selector: Optional[Tuple[SelectorType, ...]] = None,
@@ -1165,7 +1097,6 @@ class MetaPanda(object):
                 self.df_.loc[:, selection] = getattr(self.df_.loc[:, selection], method)(func, *args, **kwargs)
         return self
 
-    @_actionable
     def transform_k(self, ops: Tuple[Callable, SelectorType]) -> "MetaPanda":
         """Perform multiple inplace transformations to a group of columns within `df_`.
 
@@ -1197,7 +1128,6 @@ class MetaPanda(object):
             self.transform(op[0], op[1])
         return self
 
-    @_actionable
     def aggregate(self,
                   func: Union[Callable, str],
                   name: Optional[str] = None,
@@ -1284,7 +1214,6 @@ class MetaPanda(object):
 
     """ CHANGES TO META INFORMATION """
 
-    @_actionable
     def meta_map(self, name: str,
                  selectors: Tuple[SelectorType, ...]) -> "MetaPanda":
         """Map a group of selectors with an identifier, in `mapper_`.
@@ -1389,7 +1318,6 @@ class MetaPanda(object):
         else:
             raise ValueError("cat column '{}' not found in `meta_`.".format(cat))
 
-    @_actionable
     def sort_columns(self,
                      by: Union[str, List[str]] = "colnames",
                      ascending: Union[bool, List[bool]] = True) -> "MetaPanda":
@@ -1432,7 +1360,7 @@ class MetaPanda(object):
 
     """ STRING-BASED OPERATIONS """
 
-    @deprecated("0.1.9", "0.2.2", instead="rename_axis",
+    @deprecated("0.1.9", "0.2.3", instead="rename_axis",
                 reason="this function will be adapted to rename strings in df_ columns using regex/str.replace ops.")
     def rename(self,
                ops: Tuple[str, str],
@@ -1440,7 +1368,7 @@ class MetaPanda(object):
                axis: int = 1) -> "MetaPanda":
         """Perform a chain of .str.replace operations on a given `df_` or `meta_` column.
 
-        .. deprecated:: `rename` will become `rename_axis` in version 0.2.2, use `rename_axis` instead.
+        .. deprecated:: `rename` will become `rename_axis` in version 0.2.3, use `rename_axis` instead.
 
         TODO: convert this function as to allow it to 'rename' a given column(s) using pd.Series.str.replace ops.
             Allow this to happen to either a column in df_ or meta_, as appropriate.
@@ -1474,7 +1402,6 @@ class MetaPanda(object):
         self._rename_axis(sel_cols, curr_cols, axis)
         return self
 
-    @_actionable
     def rename_axis(self,
                     ops: Tuple[str, str],
                     selector: Optional[Tuple[SelectorType, ...]] = None,
@@ -1510,7 +1437,6 @@ class MetaPanda(object):
         self._rename_axis(sel_cols, curr_cols, axis)
         return self
 
-    @_actionable
     def add_prefix(self, pref: str,
                    selector: Optional[Tuple[SelectorType, ...]] = None) -> "MetaPanda":
         """Add a prefix to all of the columns or selected columns.
@@ -1529,10 +1455,9 @@ class MetaPanda(object):
         """
         sel_cols = self._selector_group(selector)
         # set to df_ and meta_
-        self._rename_axis(sel_cols, sel_cols + pref, axis=1)
+        self._rename_axis(sel_cols, pref + sel_cols, axis=1)
         return self
 
-    @_actionable
     def add_suffix(self, suf: str,
                    selector: Optional[Tuple[SelectorType, ...]] = None) -> "MetaPanda":
         """Add a suffix to all of the columns or selected columns.
@@ -1554,7 +1479,6 @@ class MetaPanda(object):
         self._rename_axis(sel_cols, sel_cols + suf, axis=1)
         return self
 
-    @_actionable
     def expand(self, column: str, sep: str = ",") -> "MetaPanda":
         """Expand out a 'stacked' id column to a longer-form DataFrame.
 
@@ -1596,7 +1520,6 @@ class MetaPanda(object):
         self._df.columns.name = "colnames"
         return self
 
-    @_actionable
     def shrink(self, column: str, sep: str = ",") -> "MetaPanda":
         """Expand out a 'unstacked' id column to a shorter-form DataFrame.
 
@@ -1637,7 +1560,6 @@ class MetaPanda(object):
         self._df.columns.name = "colnames"
         return self
 
-    @_actionable
     def split_categories(self,
                          column: str,
                          sep: str = ",",
@@ -1691,8 +1613,6 @@ class MetaPanda(object):
 
         .. note:: the `meta_` attribute is **refreshed** after a call to `compute`, if `update_meta`
 
-        .. warning:: Not affected by `mode_` attribute.
-
         Parameters
         -------
         pipe : str, Pipe, list of 3-tuple, (function name, *args, **kwargs), optional
@@ -1721,7 +1641,6 @@ class MetaPanda(object):
             self.pipe_["current"] = []
         if inplace:
             # computes inplace
-            self.mode_ = "instant"
             self._apply_pipe(pipe)
             # reset meta here
             if update_meta:
@@ -1742,8 +1661,6 @@ class MetaPanda(object):
         Computes multiple pipelines to the MetaPanda object, including cached types such as `.current`
 
         .. note:: the `meta_` attribute is **refreshed** after a call to `compute_k`.
-
-        .. warning:: Not affected by `mode_` attribute.
 
         Parameters
         --------
@@ -1772,8 +1689,6 @@ class MetaPanda(object):
               *args,
               **kwargs) -> "MetaPanda":
         """Save a MetaPanda to disk.
-
-        .. warning:: Not affected by `mode_` attribute.
 
         Parameters
         -------
@@ -1806,5 +1721,3 @@ class MetaPanda(object):
         else:
             raise IOError("Doesn't recognize filename or type: '{}', must end in [csv, json]".format(filename))
         return self
-
-    _actionable = staticmethod(_actionable)

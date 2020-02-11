@@ -28,7 +28,7 @@ from . import utils
 from . import plot
 from ._corr import *
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __name__ = "turbopanda"
 __doc__ = """turbopanda: Turbo-charging the Pandas library in an integrative, meta-orientated style.
 

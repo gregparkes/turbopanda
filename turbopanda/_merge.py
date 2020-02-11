@@ -66,13 +66,18 @@ def _single_merge(sdf1: DataSetType,
                   how: str = 'inner') -> Union[DataFrame, MetaPanda]:
     """
     Check different use cases and merge d1 and d2 together.
+
+    Parameters
+    ----------
+    how : str
+        How to join on concat or merge between sdf1, sdf2.
     """
     # both are series.
     if isinstance(sdf1, Series) and isinstance(sdf2, Series):
         # perform pd.concat on the indexes.
         return concat((sdf1, sdf2), join=how, axis=1, sort=False, copy=True)
     elif (isinstance(sdf1, DataFrame) and isinstance(sdf2, Series)) \
-            or (isinstance(sdf1, Series) and isinstance(sdf2, DataFrame)):
+            or (not (not isinstance(sdf1, Series) or not isinstance(sdf2, DataFrame))):
         # join on index. TODO: This if case may produce weird behavior.
         return concat((sdf1, sdf2), join=how, axis=1, sort=False, copy=True)
     else:
@@ -99,7 +104,8 @@ def _single_merge(sdf1: DataSetType,
 
             # handling whether we have a shared param or not.
             merge_extra = dict(how=how, suffixes=('_x', '_y'))
-            merge_shared = dict(on=shared_param) if shared_param is not None else dict(left_on=pair[0], right_on=pair[1])
+            merge_shared = dict(on=shared_param) if shared_param is not None else \
+                dict(left_on=pair[0], right_on=pair[1])
 
             # merge pandas.DataFrames together
             df_m = pmerge(d1, d2, **merge_extra, **merge_shared)

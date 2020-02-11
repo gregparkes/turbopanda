@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""Handles basic import functions."""
 
 # future imports
 from __future__ import absolute_import
@@ -97,33 +98,3 @@ def read(filename: str,
             ds = [fetch_db(f) for f in glob_name]
         # if we have more than one element, return the list, else just return ds
         return ds if len(ds) > 1 else ds[0]
-
-
-@deprecated("0.1.9", "0.2.2", instead="read")
-def read_raw_json(filename: str) -> Dict:
-    """
-    Reads in a raw JSON file.
-
-    .. deprecated:: 0.1.9
-        `read_raw_json` will be removed in 0.2.2, use `read` instead.
-
-    TODO: deprecate 'read_raw_json' in version 0.2.2
-
-    Parameters
-    ----------
-    filename : str
-        A relative/absolute link to the file, with .json optionally provided.
-
-    Returns
-    -------
-    d : dict
-        The JSON object found in the file.
-    """
-    instance_check(filename, str)
-
-    import json
-
-    with open(filename, "r") as f:
-        mp = json.load(f)
-        f.close()
-    return mp

@@ -124,9 +124,8 @@ def _get_coefficient_matrix_multioutput(fitted_multi, X, y, cv):
         t_X = pd.concat([
             pd.DataFrame([
                 e.coef_ for e in m.estimators_
-            ], columns=X.columns, index=y.columns).T \
-            for m in fitted_multi],
-            axis=1
+            ], columns=X.columns, index=y.columns).T
+            for m in fitted_multi], axis=1
         )
         # assign multiindex
         z_t = zip(
@@ -221,6 +220,7 @@ class MetaML(object):
 
     @property
     def cv(self) -> int:
+        """The number of cross-validations."""
         return self._cv
 
     @cv.setter
@@ -232,6 +232,7 @@ class MetaML(object):
 
     @property
     def X(self) -> pd.DataFrame:
+        """The input matrix into the ML model."""
         return self._X
 
     @X.setter
@@ -243,6 +244,7 @@ class MetaML(object):
 
     @property
     def y(self):
+        """The target vector of the ML model."""
         return self._y
 
     @y.setter
@@ -254,6 +256,7 @@ class MetaML(object):
 
     @property
     def model_str(self) -> str:
+        """The string representation of the sklearn model."""
         return self._model_str
 
     @model_str.setter
@@ -262,28 +265,34 @@ class MetaML(object):
 
     @property
     def x_names(self):
+        """The x column names."""
         return self.X.columns if self.X.ndim > 1 else [self.X.name]
 
     @property
     def _x_numpy(self):
+        """The numpy representation of input x."""
         return self.X.values.reshape(-1, 1) if self.X.ndim == 1 else self.X.values
 
     @property
     def y_names(self):
+        """The y column names."""
         return self.y.columns if self.multioutput else self.y.name
 
     @property
     def multioutput(self) -> bool:
+        """Whether the data is multioutput or not."""
         return self.y.ndim > 1
 
     @property
     def score_r2(self) -> float:
+        """The score of the resulting model as R^2."""
         if not self.is_fit:
             raise ValueError("model not fitted! no r2")
         return r2_score(self.y, self.yp)
 
     @property
     def coef_mat(self) -> pd.DataFrame:
+        """The coefficient matrix if possible."""
         if not self.is_fit:
             raise ValueError("model not fitted! no coef_mat")
         if self.multioutput:

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""This file handles the basic pipe class and related methods."""
 
 # future imports
 from __future__ import absolute_import
@@ -241,8 +242,8 @@ class Pipe(object):
               with_downcast: bool = True) -> "Pipe":
         """Pipeline to clean a pandas.DataFrame.
 
-        Pipe that cleans the pandas.DataFrame. Applies a number of transformations which (attempt to) reduce the datatype,
-        cleaning column names. Transformations include:
+        Pipe that cleans the pandas.DataFrame. Applies a number of transformations which (attempt to) reduce the
+        datatype, cleaning column names. Transformations include:
 
         * Dropping columns with only one unique value type.
         * Converting columns to numeric where possible

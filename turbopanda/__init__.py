@@ -17,7 +17,7 @@ del hard_dependencies, dependency, missing_dependencies
 
 # import local objects
 # from turbopanda._metapanda import MetaPanda
-from .__metapanda import MetaPanda
+from ._metapanda import MetaPanda
 from ._metaml import MetaML
 from ._pipe import Pipe
 from ._fileio import read
@@ -29,7 +29,7 @@ from . import utils
 from . import plot
 from ._corr import *
 
-__version__ = "0.2.2.5"
+__version__ = "0.2.2"
 __name__ = "turbopanda"
 __doc__ = """turbopanda: Turbo-charging the Pandas library in an integrative, meta-orientated style.
 

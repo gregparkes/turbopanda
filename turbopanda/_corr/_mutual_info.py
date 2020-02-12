@@ -10,7 +10,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 
-from turbopanda._metapanda import MetaPanda
+from .__metapanda import MetaPanda
 from turbopanda.utils import intersect, instance_check
 
 

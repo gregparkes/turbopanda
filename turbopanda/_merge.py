@@ -15,7 +15,7 @@ from pandas import DataFrame, Series, concat
 import itertools as it
 
 # locals
-from .__metapanda import MetaPanda
+from ._metapanda import MetaPanda
 from ._pipe import PipeMetaPandaType
 from .utils import belongs, intersect, instance_check, check_list_type
 

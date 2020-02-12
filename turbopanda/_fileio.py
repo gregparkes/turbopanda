@@ -10,7 +10,7 @@ from __future__ import print_function
 # locals
 from typing import Optional, Union, List
 
-from .__metapanda import MetaPanda
+from ._metapanda import MetaPanda
 from .utils import instance_check
 
 

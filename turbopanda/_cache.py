@@ -21,7 +21,7 @@ from pandas import DataFrame
 
 # locals
 from ._fileio import read
-from ._metapanda import MetaPanda
+from .__metapanda import MetaPanda
 from .utils import instance_check, belongs, intersect
 
 

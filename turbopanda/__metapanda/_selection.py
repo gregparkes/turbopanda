@@ -9,15 +9,14 @@ from __future__ import print_function
 
 # imports
 import re
-from typing import Dict, Tuple, List, Union, Callable, TypeVar, Optional
+from typing import Dict, Tuple, List, Union, Callable, TypeVar, Optional, Iterable
 from pandas import CategoricalDtype, concat, Index, Series, DataFrame
 
 # locals
-from .utils import boolean_series_check, intersect, union, \
+from turbopanda.utils import boolean_series_check, intersect, union, \
     t_numpy, dictmap, dictzip, join, difference
 
-
-SelectorType = Optional[Union[TypeVar, str, Index, Callable]]
+from ._types import SelectorType
 
 
 __all__ = ("regex_column", "get_selector", "selector_types")

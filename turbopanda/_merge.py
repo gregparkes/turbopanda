@@ -15,7 +15,8 @@ from pandas import DataFrame, Series, concat
 import itertools as it
 
 # locals
-from ._metapanda import MetaPanda, PipeMetaPandaType
+from .__metapanda import MetaPanda
+from ._pipe import PipeMetaPandaType
 from .utils import belongs, intersect, instance_check, check_list_type
 
 # custom types
@@ -118,8 +119,9 @@ def _single_merge(sdf1: DataSetType,
             # rename
             df_m.rename(columns=dict(zip(df_m.columns.tolist(), d1.columns.tolist())), inplace=True)
 
-        # HANDLE METAPANDA stuff
-        mpf = MetaPanda(df_m, name=new_name)
+        # create a copy metapanda, and set new attributes.
+
+        mpf = MetaPanda(df_m, name=new_name, with_clean=False, with_warnings=False)
         # tack on extras
         mpf._select = {**s1, **s2}
         mpf._mapper = {**m1, **m2}
@@ -169,7 +171,7 @@ def merge(mdfs: Tuple[DataSetType, ...],
         The fully merged Dataset
     """
     # check the element type of every mdf
-    check_list_type(mdfs, (str, Series, DataFrame, MetaPanda))
+    check_list_type(mdfs, (Series, DataFrame, MetaPanda))
     instance_check(name, (type(None), str))
     belongs(how, ['left', 'inner', 'outer'])
 
@@ -181,6 +183,9 @@ def merge(mdfs: Tuple[DataSetType, ...],
         nmdf = mdfs[0]
         for ds in mdfs[1:]:
             nmdf = _single_merge(nmdf, ds, how=how)
+
+    # remove duplicated columns
+    nmdf._df = nmdf.df_.loc[:, ~nmdf.columns.duplicated()]
 
     # add on a meta_ column indicating the source of every feature.
     col_sources = concat([Series(ds.name_, index=ds.df_.columns.copy()) for ds in mdfs],

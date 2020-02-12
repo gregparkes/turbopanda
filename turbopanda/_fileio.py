@@ -8,14 +8,10 @@ from __future__ import division
 from __future__ import print_function
 
 # locals
-from typing import Optional, Dict, Union, List
+from typing import Optional, Union, List
 
-from ._metapanda import MetaPanda
+from .__metapanda import MetaPanda
 from .utils import instance_check
-from ._deprecator import deprecated
-
-
-__all__ = ("read", 'read_raw_json')
 
 
 def read(filename: str,

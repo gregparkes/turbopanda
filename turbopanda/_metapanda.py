@@ -10,7 +10,6 @@ from __future__ import print_function
 # imports
 import json
 import hashlib
-import sys
 import warnings
 from typing import Tuple, Dict, Callable, Union, Optional, List, Any, TypeVar
 
@@ -19,12 +18,11 @@ import pandas as pd
 from pandas.core.groupby.generic import DataFrameGroupBy
 
 # locals
-from ._metadata import *
-from ._pipe import Pipe, is_pipe_structure, PipeMetaPandaType
-from ._selection import get_selector
-from .utils import *
-from ._deprecator import deprecated, deprecated_param
-
+from turbopanda._metadata import *
+from turbopanda._pipe import Pipe, is_pipe_structure, PipeMetaPandaType
+from turbopanda.__metapanda._selection import get_selector
+from turbopanda.utils import *
+from turbopanda._deprecator import deprecated
 
 PandaIndex = Union[pd.Series, pd.Index]
 SelectorType = Optional[Union[TypeVar, str, pd.Index, Callable]]
@@ -129,7 +127,7 @@ class MetaPanda(object):
 
     def __init__(self,
                  dataset: pd.DataFrame,
-                 name: Optional[str] = None,
+                 name: str = None,
                  with_clean: bool = True,
                  with_warnings: bool = False):
         """Define a MetaPanda frame.

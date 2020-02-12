@@ -36,7 +36,6 @@ def test_init():
     assert hasattr(mdf, "pipe_")
     assert hasattr(mdf, "columns")
     assert hasattr(mdf, "mapper_")
-    assert hasattr(mdf, "mode_")
     # type checks
     assert isinstance(mdf, turb.MetaPanda)
     assert isinstance(mdf.name_, str)
@@ -47,7 +46,6 @@ def test_init():
     assert isinstance(mdf.columns, pd.Index)
     assert isinstance(mdf.selectors_, dict)
     assert isinstance(mdf.mapper_, dict)
-    assert isinstance(mdf.mode_, str)
     # check size
     assert mdf.n_ == 3
     assert mdf.p_ == 4
@@ -105,6 +103,8 @@ def test_view():
     assert len(mdf.view("object")) == 1
     assert len(mdf.view("uint8")) == 2
     assert len(mdf.view("float64")) == 1
+
+    print(mdf.view('a'))
 
     # try strings
     assert len(mdf.view("a")) == 1

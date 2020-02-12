@@ -12,16 +12,15 @@ from __future__ import print_function
 
 import itertools as it
 # imports
-from typing import Union, List, Tuple, Optional, Dict
+from typing import Union, List, Tuple, Optional
 
-import warnings
 import numpy as np
 import pandas as pd
 
 # locals
 from turbopanda._metapanda import MetaPanda
-from turbopanda.utils import c_float, c_cat, instance_check, dictzip, union, remove_na, \
-    is_column_float, set_like, belongs, difference
+from turbopanda.utils import instance_check, union, remove_na, \
+    is_column_float, belongs, difference
 
 # user define dataset type
 DataSetType = Union[pd.Series, pd.DataFrame, MetaPanda]

@@ -75,8 +75,6 @@ class MetaPanda(object):
            Adds k cache elements to `selectors_`
        cache_pipe(name, pipe)
            Adds a pipe element to `pipe_`
-       rename(ops, selector=None, axis=1)
-           Perform a chain of .str.replace operations on a given `df_` or `meta_` column.
        rename_axis(ops, selector=None, axis=1)
            Performs a chain of .str.replace operations on `df_.columns`
        add_prefix(pref, selector=None)
@@ -169,7 +167,7 @@ class MetaPanda(object):
     # reshaping operations with strings
     from ._string_reshape import expand, shrink, split_categories
     # renaming columns
-    from ._name_axis import rename_axis, rename, add_suffix, add_prefix
+    from ._name_axis import rename_axis, add_suffix, add_prefix
     # metadata operations
     from ._metadata import sort_columns, meta_split_category, meta_map, update_meta
     # transformation operations
@@ -300,7 +298,7 @@ class MetaPanda(object):
     def __copy__(self):
         warnings.warn("the copy constructor in 'MetaPanda' has no functionality.", RuntimeWarning)
 
-    def __getitem__(self, selector: Union[SelectorType, Tuple[SelectorType, ...], List[SelectorType]]):
+    def __getitem__(self, *selector: SelectorType):
         """Fetch a subset determined by the selector."""
         # we take the columns that are NOT this selection, then drop to keep order.
         sel = inspect(self.df_, self.meta_, self.selectors_, selector, join_t='OR')

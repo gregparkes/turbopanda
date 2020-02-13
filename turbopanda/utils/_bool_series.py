@@ -35,7 +35,7 @@ def is_column_float(ser: pd.Series) -> bool:
 def is_column_string(ser: pd.Series) -> bool:
     """Determines whether the column can operate on strings."""
     try:
-        ser.dropna().str.contains("TestString_Hello")
+        ser.dropna().str.contains("xx")
         return True
     except AttributeError:
         return False
@@ -58,7 +58,7 @@ def is_missing_values(ser: pd.Series) -> bool:
 
 def is_n_value_column(ser: pd.Series, n: int = 1) -> bool:
     """Determine whether the number of unique values equals some value n."""
-    return _nunique(ser) == n
+    return nunique(ser) == n
 
 
 def is_unique_id(ser: pd.Series) -> bool:

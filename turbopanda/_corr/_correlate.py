@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 # locals
-from .__metapanda import MetaPanda
+from turbopanda._metapanda import MetaPanda
 from turbopanda.utils import instance_check, union, remove_na, \
     is_column_float, belongs, difference
 

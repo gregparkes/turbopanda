@@ -8,7 +8,7 @@ from typing import Optional, List
 from turbopanda._pipe import Pipe, is_pipe_structure, PipeMetaPandaType
 
 
-__all__ = ('compute', 'compute_k')
+__all__ = ('compute', 'compute_k' '_apply_pipe')
 
 
 def _apply_pipe(self, pipe):

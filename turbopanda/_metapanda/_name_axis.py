@@ -10,7 +10,7 @@ from turbopanda._deprecator import deprecated
 from turbopanda.utils import is_twotuple, string_replace, belongs
 
 
-__all__ = ('rename', 'rename_axis', 'add_prefix', 'add_suffix')
+__all__ = ('rename_axis', 'add_prefix', 'add_suffix')
 
 
 def _rename_axis(df: pd.DataFrame, meta: pd.DataFrame, old: PandaIndex, new: PandaIndex, axis: int = 1):
@@ -21,49 +21,6 @@ def _rename_axis(df: pd.DataFrame, meta: pd.DataFrame, old: PandaIndex, new: Pan
         df.rename(index=dict(zip(old, new)), inplace=True)
     else:
         raise ValueError("axis '{}' not recognized".format(axis))
-
-
-@deprecated("0.1.9", "0.2.3", instead="rename_axis",
-            reason="this function will be adapted to rename strings in df_ columns using regex/str.replace ops.")
-def rename(self,
-           ops: Tuple[str, str],
-           selector: Tuple[SelectorType, ...] = None,
-           axis: int = 1) -> "MetaPanda":
-    """Perform a chain of .str.replace operations on a given `df_` or `meta_` column.
-
-    .. deprecated:: `rename` will become `rename_axis` in version 0.2.3, use `rename_axis` instead.
-
-    TODO: convert this function as to allow it to 'rename' a given column(s) using pd.Series.str.replace ops.
-        Allow this to happen to either a column in df_ or meta_, as appropriate.
-        Parameters: ops, selector -> column, axis -> None, new_name = None (inplace if None, creates new col if not)
-
-    Parameters
-    -------
-    ops : list of tuple (2,)
-        Where the first value of each tuple is the string to find, with its replacement
-        At this stage we only accept *direct* replacements. No regex.
-        Operations are performed 'in order'.
-    selector : None, str, or tuple args, optional
-        Contains either types, meta column names, column names or regex-compliant strings
-        If None, all column names are subject to potential renaming
-    axis : int, optional
-        Choose from {1, 0} 1 = columns, 0 = index.
-
-    Returns
-    -------
-    self
-    """
-
-    # check ops is right format
-    is_twotuple(ops)
-    belongs(axis, [0, 1])
-
-    curr_cols = sel_cols = inspect(self.df_, self.meta_, self.selectors_, selector, axis=axis, mode='view')
-    # performs the replacement operation inplace
-    curr_cols = string_replace(curr_cols, ops)
-    # rename using mapping
-    _rename_axis(self.df_, self.meta_, sel_cols, curr_cols, axis=axis)
-    return self
 
 
 def rename_axis(self,
@@ -79,7 +36,7 @@ def rename_axis(self,
     ops : list of tuple (2,)
         Where the first value of each tuple is the string to find, with its replacement
         At this stage we only accept *direct* replacements. No regex.
-        Operations are performed 'in order'.
+        Operations are performed 'in order'
     selector : None, str, or tuple args, optional
         Contains either types, meta column names, column names or regex-compliant strings
         If None, all column names are subject to potential renaming

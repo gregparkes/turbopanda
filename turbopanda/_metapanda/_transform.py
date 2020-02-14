@@ -51,11 +51,21 @@ def transform(self,
     -------
     self
 
+    Raises
+    ------
+    ValueException
+        `method` must be one of {'apply', 'transform', 'applymap'}
+    TypeException
+        `whole` is not of type bool
+
     See Also
     --------
     transform_k : Performs multiple inplace transformations to a group of columns within `df_`.
+    aggregate : Perform inplace column-wise aggregations to multiple selectors.
     """
     belongs(method, ['apply', 'transform', 'applymap'])
+    instance_check(whole, bool)
+    instance_check(func, "__callable__")
     # perform inplace
 
     selection = inspect(self.df_, self.meta_, self.selectors_, selector, axis=1, mode='view')
@@ -93,6 +103,7 @@ def transform_k(self, ops: Tuple[Callable, SelectorType]) -> "MetaPanda":
     See Also
     --------
     transform : Performs an inplace transformation to a group of columns within the `df_` attribute.
+    aggregate : Perform inplace column-wise aggregations to multiple selectors.
     """
     is_twotuple(ops)
     for op in ops:
@@ -126,6 +137,18 @@ def aggregate(self,
     Returns
     -------
     self
+
+    Raises
+    ------
+    TypeException
+        `name` not of type str or None
+        `func` not of callable or str
+        `keep` not of type bool
+
+    See Also
+    --------
+    transform : Performs an inplace transformation to a group of columns within the `df_` attribute.
+    transform_k : Perform multiple inplace transformations to a group of columns within `df_`.
 
     Examples
     --------
@@ -176,6 +199,10 @@ def eval(self, expr: str):
     expr : str
         The expression to evaluate. This string cannot contain any Python statements, only Python expressions.
         We allow cached 'selectors' to emulate group-like evaluations.
+
+    Returns
+    -------
+    self
 
     Examples
     --------

@@ -9,6 +9,7 @@ from __future__ import print_function
 
 # imports
 import re
+import itertools as it
 from typing import Dict, Tuple, List, Union, Callable, TypeVar, Optional, Iterable
 from pandas import CategoricalDtype, concat, Index, Series, DataFrame
 
@@ -18,8 +19,7 @@ from turbopanda.utils import boolean_series_check, intersect, union, \
 
 from ._types import SelectorType
 
-
-__all__ = ("regex_column", "get_selector", "selector_types")
+__all__ = ("regex_column", "get_selector", "selector_types", 'selector_options')
 
 
 def selector_types() -> Iterable:
@@ -29,6 +29,13 @@ def selector_types() -> Iterable:
         tuple(map(lambda n: n.__name__, t_numpy())),
         (float, int, bool, object, CategoricalDtype, "object", "category")
     )
+
+
+def selector_options():
+    """Gets all possible selector_item options."""
+    return list(it.chain.from_iterable([type(None), Index, "__callable__", t_numpy(),
+                                        str, float, int, bool, object, CategoricalDtype,
+                                        list, tuple]))
 
 
 def regex_column(selector: str, df: DataFrame, raise_error: bool = False):

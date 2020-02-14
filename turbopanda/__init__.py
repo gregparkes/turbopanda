@@ -21,13 +21,16 @@ from ._metapanda import MetaPanda
 from ._metaml import MetaML
 from ._pipe import Pipe
 from ._fileio import read
-from ._cache import *
+# import these functions so to not lose functionality...
+from turbopanda.dev._cache import cache, cached
 from ._pub_fig import *
 from ._merge import merge
+from ._corr import *
 # folder extensions.
 from . import utils
 from . import plot
-from ._corr import *
+from . import dev
+
 
 __version__ = "0.2.2"
 __name__ = "turbopanda"

@@ -20,9 +20,9 @@ from typing import Callable, Optional
 from pandas import DataFrame
 
 # locals
-from ._fileio import read
-from ._metapanda import MetaPanda
-from .utils import instance_check, belongs, intersect
+from turbopanda._fileio import read
+from turbopanda._metapanda import MetaPanda
+from turbopanda.utils import instance_check, belongs, intersect
 
 
 __all__ = ("cached", "cache")

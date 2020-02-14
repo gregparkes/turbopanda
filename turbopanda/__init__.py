@@ -25,11 +25,12 @@ from ._fileio import read
 from turbopanda.dev._cache import cache, cached
 from ._pub_fig import *
 from ._merge import merge
-from ._corr import *
+from .corr import correlate
 # folder extensions.
 from . import utils
 from . import plot
 from . import dev
+from . import corr
 
 
 __version__ = "0.2.2"

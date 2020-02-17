@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 """Provides an interface to transformation operations in Metapanda."""
 
+import itertools as it
 import pandas as pd
 from typing import Callable, Optional, Tuple, Union, List
 
-from turbopanda.utils import belongs, instance_check, pairwise, common_substring_match, is_twotuple
+from turbopanda.utils import belongs, instance_check, pairwise, common_substring_match, is_twotuple, listify
 from ._types import SelectorType
 from ._drop_values import drop_columns
 from ._inspect import inspect
@@ -65,7 +66,7 @@ def transform(self,
     """
     belongs(method, ['apply', 'transform', 'applymap'])
     instance_check(whole, bool)
-    instance_check(func, "__callable__")
+    instance_check(func, "__call__")
     # perform inplace
 
     selection = inspect(self.df_, self.meta_, self.selectors_, selector, axis=1, mode='view')
@@ -116,7 +117,7 @@ def aggregate(self,
               name: Optional[str] = None,
               selector: Optional[List[SelectorType]] = None,
               keep: bool = False) -> "MetaPanda":
-    """Perform inplace column-wise aggregations to multiple selectors.
+    """Perform inplace column-wise aggregations using a selector.
 
     ..note:: Uses the cached selector names to rename if they are used.
 
@@ -148,7 +149,8 @@ def aggregate(self,
     See Also
     --------
     transform : Performs an inplace transformation to a group of columns within the `df_` attribute.
-    transform_k : Perform multiple inplace transformations to a group of columns within `df_`.
+    transform_k : Perform multiple inplace transformations to a group of columns within `df_`.#
+    aggregate_k : Perform multiple inplace column-wise aggregations to multiple selectors
 
     Examples
     --------
@@ -158,7 +160,7 @@ def aggregate(self,
         >>> aggregate("sum", name="C", selector="c[1-3]")
     """
     instance_check(name, (type(None), str))
-    instance_check(func, (str, "__callable__"))
+    instance_check(func, (str, "__call__"))
     instance_check(keep, bool)
 
     _selection = inspect(self.df_, self.meta_, self.selectors_, selector, axis=1, mode='view')
@@ -181,6 +183,66 @@ def aggregate(self,
         drop_columns(self.df_, self.meta_, _selection)
     # append data to df
     self.df_[_name] = _agg
+    return self
+
+
+def aggregate_k(self,
+                func: Union[Callable, str],
+                names: Optional[List[str]] = None,
+                selectors: List[SelectorType] = None,
+                keep: bool = False) -> "MetaPanda":
+    """Perform multiple inplace column-wise aggregations to multiple selectors.
+
+    ..note:: Uses the cached selector names to rename if they are used.
+
+    Parameters
+    ----------
+    func : str or function
+      If function: takes a pd.DataFrame x and returns pd.Series y, for each selection.
+      If str: choose from {'mean', 'sum', 'min', 'max', 'std', 'count'}.
+    names : str, optional
+      A name for the aggregated column.
+      If None, will attempt to extract common pattern subset out of columns.
+    selectors : (list of) str or tuple args
+      Contains either types, meta column names, column names or regex-compliant strings.
+    keep : bool, optional
+      If False, drops the rows from which the calculation was made.
+      If True, drops the rows from which the calculation was made.
+
+    Returns
+    -------
+    self
+
+    Raises
+    ------
+    TypeException
+      `name` not of type str or None
+      `func` not of callable or str
+      `keep` not of type bool
+
+    See Also
+    --------
+    transform : Performs an inplace transformation to a group of columns within the `df_` attribute.
+    transform_k : Perform multiple inplace transformations to a group of columns within `df_`.
+    aggregate : Perform inplace column-wise aggregations using a selector.
+
+    Examples
+    --------
+    For example if we have a DataFrame such as:
+      DF(...,['c1', 'c2', 'c3', 'd1', 'd2', 'd3', 'e1', 'e2', 'e3'])
+      We aggregate such that columns ['c1', 'c2', 'c3'] -> c, ['d1', 'd2', 'd3'] -> d, ['e1', 'e2', 'e3'] -> e:
+      >>> aggregate_k("sum", names=("C","D","E"), selectors=("c[1-3]","d[1-3]","e[1-3]"))
+    """
+    # checks
+    instance_check(names, (type(None), list, tuple))
+    instance_check(selectors, (type(None), list, tuple))
+
+    names = listify(names)
+    selectors = listify(selectors)
+
+    for n, s in it.zip_longest(names, selectors):
+        # call aggregate on each name, selector pair.
+        self.aggregate(func, name=n, selector=s, keep=keep)
     return self
 
 

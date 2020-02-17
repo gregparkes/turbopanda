@@ -11,7 +11,15 @@ from ._bool_series import is_n_value_column, is_column_int, \
 ArrayLike = Union[np.ndarray, pd.Series, pd.DataFrame]
 
 
-__all__ = ('integer_to_boolean', 'object_to_categorical', 'boolean_to_integer', 'standardize')
+__all__ = ('listify', 'integer_to_boolean', 'object_to_categorical', 'boolean_to_integer', 'standardize')
+
+
+def listify(a):
+    """Converts 1-length elements or variables into 1-length lists."""
+    if isinstance(a, (list, tuple, pd.Index)) and len(a) > 1:
+        return a
+    else:
+        return [a]
 
 
 def integer_to_boolean(ser: pd.Series) -> pd.Series:

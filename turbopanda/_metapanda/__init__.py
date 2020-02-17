@@ -19,97 +19,99 @@ from ._drop_values import drop_columns
 class MetaPanda(object):
     """A meta-object for a pandas.DataFrame with extra information.
 
-       The aim of this object is to extend the functionality of the `pandas` library package,
-       which is extensively used for data munging, manipulation and visualization of large datasets.
+    The aim of this object is to extend the functionality of the `pandas` library package,
+    which is extensively used for data munging, manipulation and visualization of large datasets.
 
-       Attributes
-       ----------
-       df_ : pd.DataFrame
-           The underlying (n, p)-shaped dataset
-       meta_ : pd.DataFrame
-           Meta information (p, k)-shaped describing column data
-       name_ : str
-           The name of the dataset
-       n_ : int
-           The number of rows in `df_`
-       p_ : int
-           The number of columns in `df_`
-       memory_ : str
-           String-formatted representation of memory consumption in megabytes
-       selectors_ : dict
-           Maps unique name (key) to cached selected groups of columns (value)
-       mapper_ : dict
-           Maps unique name (key) to key of cached selected column groups (value)
-       pipe_ : dict
-           Maps unique name (key) to cached Pipe objects
+    Attributes
+    ----------
+    df_ : pd.DataFrame
+        The underlying (n, p)-shaped dataset
+    meta_ : pd.DataFrame
+        Meta information (p, k)-shaped describing column data
+    name_ : str
+        The name of the dataset
+    n_ : int
+        The number of rows in `df_`
+    p_ : int
+        The number of columns in `df_`
+    memory_ : str
+        String-formatted representation of memory consumption in megabytes
+    selectors_ : dict
+        Maps unique name (key) to cached selected groups of columns (value)
+    mapper_ : dict
+        Maps unique name (key) to key of cached selected column groups (value)
+    pipe_ : dict
+        Maps unique name (key) to cached Pipe objects
 
-       Methods
-       -------
-       head(k=5)
-            A wrapper for pandas.DataFrame.head()
-       dtypes(grouped=True)
-           Determines the data type of each column in `df_`
-       view(selector)
-           Views a selection of columns in `df_`
-       search(selector)
-           View the intersection of search terms, for columns in `df_`.
-       view_not(selector)
-           Views the non-selected columns in `df_`
-       copy(None)
-           Creates a copy of this instance
-       apply(f_name, f_args, f_kwargs)
-           Applies a pandas.DataFrame function to `df_`
-       apply_index(f_name, f_args, f_kwargs)
-           Applies a pandas.Index function to `df_.index`
-       apply_columns(f_name, f_args, f_kwargs)
-           Applies a pandas.Index function to `df_.columns`
-       drop(selector)
-           Drops the selected columns from `df_`
-       keep(selector)
-           Keeps the selected columns from `df_` only
-       filter_rows(func, selector=None, args)
-           Filters j rows using boolean-index returned from `function`
-       cache(name, selector)
-           Adds a cache element to `selectors_`
-       cache_k(selectors)
-           Adds k cache elements to `selectors_`
-       cache_pipe(name, pipe)
-           Adds a pipe element to `pipe_`
-       rename_axis(ops, selector=None, axis=1)
-           Performs a chain of .str.replace operations on `df_.columns`
-       add_prefix(pref, selector=None)
-           Adds a string prefix to selected columns
-       add_suffix(suf, selector=None)
-           Adds a string suffix to selected columns
-       transform(func, selector=None,  method='transform', whole=False, args, kwargs)
-           Performs an inplace transformation to a group of columns within `df_`.
-       transform_k(ops)
-           Performs multiple inplace transformations to a group of columns within `df_`
-       aggregate(func, selectors, keep=False)
-           Perform inplace column-wise aggregations to multiple selectors.
-       meta_map(name, selectors)
-           Maps a group of selectors with an identifier, in `mapper_`
-       update_meta(None)
-           Forces an update to reset the `meta_` attribute.
-       meta_split_category(cat)
-           Splits category into k boolean columns in `meta_` to use for selection.
-       sort_columns(by="alphabet", ascending=True)
-           Sorts `df_` using vast selection criteria
-       expand(column, sep=",")
-           Expands out a 'stacked' id column to a longer-form DataFrame
-       shrink(column, sep=",")
-           Expands out a 'unstacked' id column to a shorter-form DataFrame
-       split_categories(column, sep=",", renames=None)
-           Splits a column into j categorical variables to be associated with `df_`
-       eval()
-           Evaluates an operation(s) using an expr
-       compute(pipe=None, inplace=False, update_meta=False)
-           Executes a pipeline on `df_`
-       compute_k(pipes=None, inplace=False)
-           Executes `k` pipelines on `df_`, in order
-       write(filename=None)
-           Saves a MetaPanda to disk
-       """
+    Methods
+    -------
+    head(k=5)
+        A wrapper for pandas.DataFrame.head()
+    dtypes(grouped=True)
+        Determines the data type of each column in `df_`
+    view(selector)
+        Views a selection of columns in `df_`
+    search(selector)
+        View the intersection of search terms, for columns in `df_`.
+    view_not(selector)
+        Views the non-selected columns in `df_`
+    copy(None)
+        Creates a copy of this instance
+    apply(f_name, f_args, f_kwargs)
+        Applies a pandas.DataFrame function to `df_`
+    apply_index(f_name, f_args, f_kwargs)
+        Applies a pandas.Index function to `df_.index`
+    apply_columns(f_name, f_args, f_kwargs)
+        Applies a pandas.Index function to `df_.columns`
+    drop(selector)
+        Drops the selected columns from `df_`
+    keep(selector)
+        Keeps the selected columns from `df_` only
+    filter_rows(func, selector=None, args)
+        Filters j rows using boolean-index returned from `function`
+    cache(name, selector)
+        Adds a cache element to `selectors_`
+    cache_k(selectors)
+        Adds k cache elements to `selectors_`
+    cache_pipe(name, pipe)
+        Adds a pipe element to `pipe_`
+    rename_axis(ops, selector=None, axis=1)
+        Performs a chain of .str.replace operations on `df_.columns`
+    add_prefix(pref, selector=None)
+        Adds a string prefix to selected columns
+    add_suffix(suf, selector=None)
+        Adds a string suffix to selected columns
+    transform(func, selector=None,  method='transform', whole=False, args, kwargs)
+        Performs an inplace transformation to a group of columns within `df_`.
+    transform_k(ops)
+        Performs multiple inplace transformations to a group of columns within `df_`
+    aggregate(func, name=None, selector=None, keep=False)
+        Perform inplace column-wise aggregations to multiple selectors.
+    aggregate_k(func, names=None, selectors=None, keep=False)
+
+    meta_map(name, selectors)
+        Maps a group of selectors with an identifier, in `mapper_`
+    update_meta(None)
+        Forces an update to reset the `meta_` attribute.
+    meta_split_category(cat)
+        Splits category into k boolean columns in `meta_` to use for selection.
+    sort_columns(by="alphabet", ascending=True)
+        Sorts `df_` using vast selection criteria
+    expand(column, sep=",")
+        Expands out a 'stacked' id column to a longer-form DataFrame
+    shrink(column, sep=",")
+        Expands out a 'unstacked' id column to a shorter-form DataFrame
+    split_categories(column, sep=",", renames=None)
+        Splits a column into j categorical variables to be associated with `df_`
+    eval()
+        Evaluates an operation(s) using an expr
+    compute(pipe=None, inplace=False, update_meta=False)
+        Executes a pipeline on `df_`
+    compute_k(pipes=None, inplace=False)
+        Executes `k` pipelines on `df_`, in order
+    write(filename=None)
+        Saves a MetaPanda to disk
+    """
 
     def __init__(self,
                  dataset: pd.DataFrame,
@@ -171,7 +173,7 @@ class MetaPanda(object):
     # metadata operations
     from ._metadata import sort_columns, meta_split_category, meta_map, update_meta
     # transformation operations
-    from ._transform import transform, transform_k, aggregate, eval
+    from ._transform import transform, transform_k, aggregate, aggregate_k, eval
 
     """ ############################ STATIC FUNCTIONS ######################################## """
 

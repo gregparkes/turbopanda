@@ -99,16 +99,6 @@ def _get_notepack():
     return {**dict(zip(note_range_flat, hz)), **dict(zip(note_range_sharp, hz))}
 
 
-def _save_notepack():
-    from pandas import Series
-    # range from C_0 to B_8
-    hz = _get_note_progression(n=np.arange(-57, 51, 1))
-    note_range = list(
-        it.chain.from_iterable([list(map(lambda x: x + '_%s' % str(i), _get_notes_flat())) for i in range(9)]))
-    note_map = pd.Series(hz, index=note_range).to_csv("../data/notes_hz.csv")
-    return note_map
-
-
 def _produce_audio(notes: List[str], seconds=2, fs=44100):
     """Given a list of notes, produce a musical audio of evenly spaced notes.
 
@@ -137,7 +127,6 @@ def _play_audio(audio, fs=44100):
 def _play_arpeggio(note='C', key="major"):
     # plays the arpeggio given a note and key
     arp = _get_arpeggio(note=note, key=key)
-    print(arp)
     # get audio
     aud = _produce_audio(arp)
     # play
@@ -166,7 +155,7 @@ def bleep(note='C') -> Callable:
     Examples
     --------
     >>> from turbopanda import dev
-    >>> @dev.bleep
+    >>> @dev.bleep()
     >>> def f(x):
     ...     # compute some long function here
     ...     pass
@@ -179,12 +168,12 @@ def bleep(note='C') -> Callable:
             try:
                 result = func(*args, **kwargs)
                 # make positive noise
-                _play_arpeggio(note.upper(), "major")
+                _play_arpeggio(note.upper(), key="major")
                 # return
                 return result
             except Exception as e:
                 # make negative noise
-                _play_arpeggio(note.upper(), "minor")
+                _play_arpeggio(note.upper(), key="minor")
                 print(e.args)
 
         return _bleep_function

@@ -19,8 +19,7 @@ from turbopanda._metaml import MetaML
 from turbopanda._pub_fig import save_figure
 
 
-__all__ = ("scatter_grid", "missing", "hist_grid",
-           "coefficients", "actual_vs_predicted", "shape_multiplot")
+__all__ = ("scatter_grid", "missing", "hist_grid", "actual_vs_predicted", "shape_multiplot")
 
 
 def _iqr(a):
@@ -162,9 +161,7 @@ def hist_grid(mdf, selector, arrange="square", savepath=None):
     # get selector
     selection = mdf.view(selector)
     if selection.size > 0:
-        # gets grid-like coordinates for our selector length.
-        fig, axes = _generate_square_like_grid(len(selection)) \
-            if arrange == 'square' else _generate_diag_like_grid(len(selection), arrange)
+        fig, axes = shape_multiplot(len(selection), arrange)
 
         for i, x in enumerate(selection):
             # calculate the bins
@@ -206,8 +203,7 @@ def scatter_grid(mdf, selector, target, arrange="square", savepath=None):
     # get selector
     selection = mdf.view(selector)
     if selection.size > 0:
-        fig, axes = _generate_square_like_grid(len(selection)) \
-            if arrange == 'square' else _generate_diag_like_grid(len(selection), arrange)
+        fig, axes = shape_multiplot(len(selection), arrange)
 
         for i, x in enumerate(selection):
             axes[i].scatter(mdf.df_[x], mdf.df_[target], alpha=.5)
@@ -252,66 +248,3 @@ def actual_vs_predicted(mml):
                 axes.scatter(mml.y, mml.yp, alpha=.3, marker="x", label=r"$r={:0.3f}$".format(mml.score_r2))
                 axes.plot([min_y, max_y], [min_y, max_y], 'k-')
                 axes.set_title(mml.y_names)
-
-
-def coefficients(mml, normalize=False, use_absolute=False, drop_intercept=True):
-    """
-    Plots the coefficients from a fitted machine learning model using MetaML.
-
-    Parameters
-    --------
-    mml : MetaML or list of MetaML
-        The fitted machine learning model(s). If a list, each MetaML must have
-        the same data (columns)
-    normalize : bool
-        Use standardization on the values if True
-    use_absolute : bool
-        If True, uses absolute value of coefficients instead.
-    drop_intercept : bool
-        If True, drops the intercept row from mml.coef_mat
-
-    Returns
-    -------
-    None
-    """
-    # assumes the coef_mat variable is present
-
-    f_apply = np.abs if use_absolute else fself
-    norm_apply = standardize if normalize else fself
-
-    def _plot_single_box(model, ax, index):
-        if isinstance(model, MetaML):
-            if model.is_fit and hasattr(model, "coef_mat"):
-                # new order
-                transformed = model.coef_mat.apply(f_apply).apply(norm_apply)
-                if drop_intercept and ("intercept" in transformed.index):
-                    # intercept should be on index
-                    transformed.drop("intercept", axis=0, inplace=True)
-                no = transformed.mean(axis=1).sort_values().index
-                buf = len(model.coef_mat) / 20
-                # perform transformations and get data
-                data = transformed.reindex(no)
-                if index == 0:
-                    ax.boxplot(data, vert=False, labels=no)
-                else:
-                    ax.boxplot(data, vert=False)
-                    ax.set_yticks([])
-                    ax.set_yticklabels([])
-                ax.set_ylim(-buf, len(model.coef_mat) + buf)
-                ax.vlines([0], ymin=0, ymax=len(model.coef_mat), linestyle="--", color="red")
-                ax.set_xlabel("Coefficients")
-                ax.set_title("Model: {}".format(model.model_str))
-                ax.margins(y=0)
-
-    if isinstance(mml, MetaML):
-        fig, axes = plt.subplots(figsize=(5, _data_polynomial_length(mml.coef_mat.shape[0])))
-        _plot_single_box(mml, axes, 0)
-    elif isinstance(mml, (list, tuple)):
-        fig, axes = plt.subplots(ncols=len(mml),
-                                 figsize=(4 * len(mml), _data_polynomial_length(mml[0].coef_mat.shape[0])))
-        for i, (m, a) in enumerate(zip(mml, axes)):
-            _plot_single_box(m, a, i)
-    else:
-        raise TypeError("mml type '{}' not recognised".format(type(mml)))
-    fig.tight_layout()
-    plt.show()

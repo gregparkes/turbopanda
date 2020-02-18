@@ -51,7 +51,7 @@ def _boolbool(x, y):
 
 def _row_to_matrix(rows: pd.DataFrame) -> pd.DataFrame:
     """Takes the verbose row output and converts to lighter matrix format."""
-    square = rows.pivot("column1", "column2", "r")
+    square = rows.pivot_table(index="x", columns="y", values="r")
     # fillna
     square.fillna(0.0, inplace=True)
     # ready for transpose

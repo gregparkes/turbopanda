@@ -113,5 +113,5 @@ def filter_rows(self,
         raise ValueError("parameter '{}' not callable".format(func))
     # check that bs is boolean series
     boolean_series_check(bs)
-    self.df_ = self.df_.loc[bs, :]
+    self._df = self.df_.loc[bs, :]
     return self

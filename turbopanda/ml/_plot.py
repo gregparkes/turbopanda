@@ -11,10 +11,13 @@ from scipy import stats
 from turbopanda.corr import correlate
 from turbopanda.corr._correlate import _row_to_matrix
 from turbopanda.plot import shape_multiplot
-from turbopanda.utils import union, remove_na
+from turbopanda.utils import union
 
-from ._fit import cleaned_subset
-from ._stats import vif, cook_distance
+from ._clean import cleaned_subset
+from turbopanda.stats import vif, cook_distance
+
+
+__all__ = ('coefficient', 'overview_plot')
 
 
 def _fitted_vs_residual(plot, y, yp):
@@ -30,7 +33,7 @@ def _boxplot_scores(plot, cv):
     plot.set_ylabel(r"$r^2$")
     plot.tick_params('x', rotation=45)
     plot.set_xticks(range(1, 3))
-    plot.set_xticklabels(['train', 'test'])
+    plot.set_xticklabels(['test', 'train'])
 
 
 def _actual_vs_predicted(plot, y, yp, kde=True):
@@ -38,25 +41,43 @@ def _actual_vs_predicted(plot, y, yp, kde=True):
     if kde:
         sns.kdeplot(y, yp, color='b', ax=plot, n_levels=10)
     else:
-        plot.scatter(y, yp, color='b', alpha=.7)
+        plot.scatter(y, yp, color='b', alpha=.5)
+
+    plot.plot([np.min(y), np.max(y)], [np.min(y), np.max(y)], 'k-')
     # sns.distplot(yp, color='k', ax=ax[0, 2], norm_hist=True)
     plot.set_xlabel("Actual Values")
     plot.set_ylabel("Fitted Values")
 
 
-def _boxplot_ml_coefficients(plot, cv):
+def coefficient(plot, cv):
+    """Plots the coefficients from a cv results."""
     coef = cv['w__']
     plot.boxplot(coef.values)
     plot.set_xlabel("Coefficient")
-    plot.set_xticks(range(1, len(coef.columns) + 1))
-    plot.set_xticklabels(coef.columns.str[3:])
+
+    # if we have too many labels, randomly select some
+    if len(coef.columns) > 10:
+        # subset
+        xtick_locs = np.random.choice(len(coef.columns), 10, replace=False)
+        plot.set_xticks(xtick_locs)
+        plot.set_xticklabels(coef.iloc[:, xtick_locs].columns.str[3:])
+    else:
+        plot.set_xticks(range(1, len(coef.columns) + 1))
+        plot.set_xticklabels(coef.columns.str[3:])
+
     plot.tick_params("x", rotation=45)
 
 
 def _basic_correlation_matrix(plot, df, x, y):
     cols = union(df.view(x), y)
     corr = correlate(df[cols].dropna())
-    sns.heatmap(_row_to_matrix(corr), ax=plot, cmap="seismic", vmin=-1., vmax=1., square=True, center=0, cbar=None)
+    _cmatrix = _row_to_matrix(corr)
+    sns.heatmap(_cmatrix, ax=plot, cmap="seismic", vmin=-1., vmax=1., square=True, center=0, cbar=None)
+    # if we have too many labels, randomly choose some
+    if _cmatrix.shape[0] > 10:
+        tick_locs = np.random.choice(_cmatrix.shape[0], 10, replace=False)
+        plot.set_xticks(tick_locs)
+        plot.set_xticklabels(_cmatrix.iloc[:, tick_locs].columns)
 
 
 def _plot_vif(plot, _vif):
@@ -64,8 +85,15 @@ def _plot_vif(plot, _vif):
         plot.bar(range(1, len(_vif) + 1), _vif.values, width=.7, color='r')
         plot.set_xlabel("Feature")
         plot.set_ylabel("VIF")
-        plot.set_xticks(range(1, len(_vif) + 1))
-        plot.set_xticklabels(_vif.index.values)
+        if len(_vif) > 10:
+            tick_locs = np.random.choice(len(_vif), 10, replace=False)
+            plot.set_xticks(tick_locs)
+            plot.set_xticklabels(_vif.iloc[tick_locs].index.values)
+        else:
+            plot.set_xticks(range(1, len(_vif) + 1))
+            plot.set_xticklabels(_vif.index.values)
+
+        plot.tick_params('x', rotation=45)
 
 
 def _cooks(plot, df, x, y, yp):
@@ -84,13 +112,13 @@ def overview_plot(df, x, y, cv, yp):
     x : selector
     y : str
     cv : MetaPanda
-    yp : np.ndarray
+    yp : pd.Series
 
     Returns
     -------
     a bunch of plots. No Return.
     """
-    fig, ax = shape_multiplot(8)
+    fig, ax = shape_multiplot(8, ax_size=3)
 
     # pair them and remove NA
     _df = cleaned_subset(df, x, y)
@@ -100,9 +128,9 @@ def overview_plot(df, x, y, cv, yp):
     # plot 2. boxplot for scores
     _boxplot_scores(ax[1], cv)
     # plot 3. KDE plot estimation between y and yhat
-    _actual_vs_predicted(ax[2], _df[y], yp)
+    _actual_vs_predicted(ax[2], _df[y], yp, kde=False)
     # plot 4. coefficient plot
-    _boxplot_ml_coefficients(ax[3], cv)
+    coefficient(ax[3], cv)
     # plot 5. correlation matrix
     _basic_correlation_matrix(ax[4], df, x, y)
     # plot 6. variance inflation factor for each explanatory variable

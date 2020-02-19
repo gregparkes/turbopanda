@@ -19,7 +19,7 @@ from turbopanda._metaml import MetaML
 from turbopanda._pub_fig import save_figure
 
 
-__all__ = ("scatter_grid", "missing", "hist_grid", "actual_vs_predicted", "shape_multiplot")
+__all__ = ("scatter_grid", "missing", "hist_grid", "shape_multiplot")
 
 
 def _iqr(a):
@@ -216,35 +216,3 @@ def scatter_grid(mdf, selector, target, arrange="square", savepath=None):
             save_figure(fig, "scatter", mdf.name_)
         elif isinstance(savepath, str):
             save_figure(fig, "scatter", mdf.name_, fp=savepath)
-
-
-def actual_vs_predicted(mml):
-    """
-    Plots the actual (regression) values against the predicted values. If there are multiple,
-    creates a multiplot.
-
-    Parameters
-    --------
-    mml : MetaML
-        The fitted machine learning model(s).
-
-    Returns
-    -------
-    None
-    """
-    if isinstance(mml, MetaML):
-        if mml.is_fit:
-            if mml.multioutput:
-                fig, axes = plt.subplots(ncols=mml.y.shape[1], figsize=(3 * mml.y.shape[1], 4))
-                for a, col in zip(axes, mml.y_names):
-                    min_y, max_y = mml.y[col].min(), mml.y[col].max()
-                    a.scatter(mml.y[col], mml.yp[col], alpha=.3, marker="x",
-                              label=r"$r={:0.3f}$".format(r2_score(mml.y[col], mml.yp[col])))
-                    a.plot([min_y, max_y], [min_y, max_y], 'k-')
-                    a.set_title(col)
-            else:
-                fig, axes = plt.subplots(figsize=(8, 4))
-                min_y, max_y = mml.y.min(), mml.y.max()
-                axes.scatter(mml.y, mml.yp, alpha=.3, marker="x", label=r"$r={:0.3f}$".format(mml.score_r2))
-                axes.plot([min_y, max_y], [min_y, max_y], 'k-')
-                axes.set_title(mml.y_names)

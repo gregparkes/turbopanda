@@ -4,6 +4,7 @@
 
 import numpy as np
 import pandas as pd
+from typing import Optional, List
 
 import sklearn
 from sklearn.linear_model import LinearRegression
@@ -12,24 +13,81 @@ from sklearn.base import is_classifier, is_regressor
 
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.utils import listify, union, standardize, instance_check
+from ._plot import overview_plot
+from ._clean import ml_ready
 
 
-def cleaned_subset(df, x, y):
-    """Determines an optimal subset with no missing values.
+def _save_cache_basic_fit(cache_name: str,
+                          df: MetaPanda,
+                          x: List,
+                          y: str,
+                          k: int,
+                          model: str,
+                          cv: MetaPanda,
+                          yp: pd.Series):
+    """Given the information from basic_fit, cache the data into a resultfile.
 
-    Parameters
-    ----------
-    df : MetaPanda
-    x : selector
-    y : str
-
-    Returns
-    -------
-
+    Parameters in JSON:
+        type: basic
+        version: sklearn: 0.2.1, numpy: x, pandas: y, metapanda: z...
+        model: `LinearRegression`
+        package: `sklearn.linear_model`
+        x: <list of column names>
+        y: <column name>
+        n: number of samples
+        cv: results matrix
+        yp: fitted values
+        source: dataframe source containing x, y, as filename absolute path
     """
-    _x = df.view(x)
-    cols = union(_x, [y])
-    return df[cols].dropna()
+    import os
+    import sklearn
+    import turbopanda as turb
+    import hashlib
+    package = _find_sklearn_package(model)
+
+    # calculate a checksum based on model:source:x:y:n:k:cv
+    cv_digest = hashlib.sha256(cv.df_.to_json().encode()).hexdigest()
+    model_digest = hashlib.sha256(model.encode()).hexdigest()
+    source_digest = hashlib.sha256(source.encode()).hexdigest()
+    x_digest = hashlib.sha256(json.dumps(df.view(x).tolist()).encode()).hexdigest()
+    y_digest = hashlib.sha256(y.encode()).hexdigest()
+    n_digest = hashlib.sha256(str(yp.shape[0]).encode()).hexdigest()
+    k_digest = hashlib.sha256(str(k).encode()).hexdigest()
+    # create length check sum string
+    chk = model_digest + source_digest + x_digest + y_digest + n_digest + k_digest + cv_digest
+
+    js = json.dumps({
+        'type': 'basic',
+        'version': {
+            'numpy': np.__version__, 'pandas': pd.__version__,
+            'sklearn': sklearn.__version__, 'turbopanda': turb.__version__
+        },
+        'model': model,
+        'package': package,
+        'source': df.source_,
+        'x': df.view(x).tolist(),
+        'y': y,
+        'n': yp.shape[0],
+        'k': str(k),
+        'cv': cv.df_.to_dict(),
+        'yp': yp.to_dict(),
+        'chk': chk
+    })
+
+    if cache_name:
+        with open(cache_name, "w") as f:
+            json.dump(js, f)
+
+
+def _find_sklearn_package(name):
+    if isinstance(name, str):
+        packages = [
+            sklearn.linear_model, sklearn.tree, sklearn.neighbors
+        ]
+        for pkg in packages:
+            if hasattr(pkg, name):
+                return pkg.__name__
+    raise TypeError("model '{}' not recognized as scikit-learn model.".format(name))
 
 
 def _find_sklearn_model(name):
@@ -74,7 +132,9 @@ def fit_basic(df: MetaPanda,
               y: str,
               k: int = 5,
               repeats: int = 100,
-              model: str = "LinearRegression"):
+              model: str = "LinearRegression",
+              cache: Optional[str] = None,
+              plot: bool = False):
     """Performs a rudimentary fit model with no parameter searching.
 
     Parameters
@@ -91,6 +151,10 @@ def fit_basic(df: MetaPanda,
         We use RepeatedKFold, so specifying some repeats
     model : str, sklearn model
         The name of a scikit-learn model, or the model object itself.
+    cache : str, optional
+        If not None, stores the resulting model parts in JSON and reloads if present.
+    plot : bool, optional
+        If True, produces `overview_plot` inplace.
 
     Returns
     -------
@@ -105,26 +169,38 @@ def fit_basic(df: MetaPanda,
     instance_check(y, str)
     instance_check(k, int)
     instance_check(repeats, int)
+    instance_check(cache, (type(None), str))
+
+    import os
+
+    if cache is not None:
+        # see if file is present, and if so, load.
+        if os.path.isfile(cache):
+            # load
+            pass
 
     # define sk model.
     rep = RepeatedKFold(n_splits=k, n_repeats=repeats)
     lm, pkg_name = _find_sklearn_model(model)
+
     # use view to select x columns.
     xcols = df.view(x)
-    # join together and fetch subset to drop
-    cols = union(xcols, y)
-    _df = df[cols].dropna()
-
-    # split into x and y
-    _x = np.asarray(_df[xcols]).reshape(-1, 1) if len(x) == 1 else np.asarray(_df[xcols])
-    _y = np.asarray(_df[y])
-
-    # standardize
-    _x = standardize(_x)
+    # get ml ready versions
+    _df, _x, _y = ml_ready(df, x, y)
 
     # cross validate and predict values.
-    cv = cross_validate(lm, _x, _y, cv=rep, return_estimator=True, return_train_score=True)
+    cv = cross_validate(lm, _x, _y, cv=rep, return_estimator=True, return_train_score=True, n_jobs=-2)
     yp = cross_val_predict(lm, _x, _y, cv=k)
+
+    # compute direct methods if they exist
+    """
+    if model == "LinearRegression":
+        _beta = _direct_ols(_x, _y)
+    elif model == 'GeneralizedLeastSquares':
+        _beta = _direct_weighted_ols(_x, _y)
+    elif model == 'Ridge':
+        _beta = _direct_ridge(_x, _y, 1.)
+    """
 
     # extract coefficients.
     coef = _extract_coefficients_from_model(cv, xcols, pkg_name)
@@ -139,5 +215,11 @@ def fit_basic(df: MetaPanda,
     # drop 'estimator' objects.
     results.drop('estimator', axis=1, inplace=True)
 
+    _cv = MetaPanda(results)
+    _yp = pd.Series(yp, index=_df.index)
+
+    if plot:
+        overview_plot(df, x, y, _cv, _yp)
+
     # make it a metapanda for ease.
-    return MetaPanda(results), yp
+    return _cv, _yp

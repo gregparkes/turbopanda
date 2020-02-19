@@ -8,11 +8,13 @@ from typing import Tuple
 # locals
 from .utils import instance_check, belongs
 import matplotlib.pyplot as plt
+from turbopanda._deprecator import deprecated
 
 
 __all__ = ['save_figure']
 
 
+@deprecated('0.2.2', '0.2.5', instead="plot.save", reason="function being moved into `plot` subdirectory.")
 def save_figure(fig_obj: plt.Figure,
                 plot_type: str,
                 name: str = "example1",
@@ -24,6 +26,8 @@ def save_figure(fig_obj: plt.Figure,
 
     Given a matplotlib.Figure object, save appropriate numbers of Figures to the respective
     folders.
+
+    TODO: deprecate from version 0.2.5.
 
     Parameters
     ----------

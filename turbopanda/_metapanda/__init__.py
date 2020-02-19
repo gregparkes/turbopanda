@@ -145,6 +145,7 @@ class MetaPanda(object):
         self._mapper = {}
         # set empty meta
         self._meta = None
+        self._source = ""
         # set using property
         self.df_ = dataset
         self.name_ = name if name is not None else 'DataSet'
@@ -211,6 +212,8 @@ class MetaPanda(object):
         df = file_ext_map[ext](filename, *args, **kwargs)
         # create MetaPanda
         mp = cls(df, name=name) if name is not None else cls(df, name=jname)
+        # set the source
+        mp.source_ = filename
         # return
         return mp
 
@@ -268,6 +271,8 @@ class MetaPanda(object):
             raise IOError("checksum stored: %s doesn't match %s" % (obj['checksum'], chk))
         # apply additional metadata columns
         mpf.update_meta()
+        # set the source
+        mpf.source_ = filename
         # return
         return mpf
 
@@ -337,6 +342,16 @@ class MetaPanda(object):
     """ ############################### PROPERTIES ############################################## """
 
     """ DataFrame attributes """
+
+    @property
+    def source_(self) -> str:
+        """Returns the source file associated with this dataset."""
+        return self._source
+
+    @source_.setter
+    def source_(self, source):
+        if isinstance(source, str):
+            self._source = source
 
     @property
     def df_(self) -> pd.DataFrame:

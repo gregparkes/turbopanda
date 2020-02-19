@@ -18,6 +18,7 @@ from sklearn import preprocessing
 from .utils import boolean_to_integer, object_to_categorical, \
     is_n_value_column, instance_check, join
 
+
 PipeTypeRawElem = Tuple[str, Tuple, Dict]
 PipeTypeCleanElem = Tuple[Union[str, Callable, Dict, TypeVar], ...]
 

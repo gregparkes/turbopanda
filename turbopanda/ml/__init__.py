@@ -5,6 +5,6 @@
 The most basic beginning support we provide is automatic JSON caching of ML models.
 """
 
-from ._fit import fit_basic
-from ._plot import overview_plot, coefficient
+from ._fit import fit_basic, fit_grid
+from ._plot import *
 from ._clean import ml_ready

@@ -103,7 +103,9 @@ def shape_multiplot(n_plots: int, arrange: str = "square", ax_size: int = 2):
         A list of axes to use.
     """
     if n_plots == 1:
-        return plt.subplots(figsize=(ax_size, ax_size))
+        fig, ax = plt.subplots(figsize=(ax_size, ax_size))#
+        # wrap ax as a list to iterate over.
+        return fig, [ax]
     else:
         return _generate_square_like_grid(n_plots, ax_size=ax_size) \
             if arrange == 'square' else _generate_diag_like_grid(n_plots, arrange, ax_size=ax_size)

@@ -157,7 +157,7 @@ class MetaPanda(object):
     # dropping rows
     from ._drop_values import drop, keep, filter_rows
     # shadowed columns
-    from ._shadow import head, dtypes, copy
+    from ._shadow import head, dtypes, copy, info
     # saving files
     from ._write import write, _write_csv, _write_hdf, _write_json
     # application to pandas.api functions

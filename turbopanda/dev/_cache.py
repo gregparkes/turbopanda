@@ -38,6 +38,7 @@ def _set_index_def(df, values=('Unnamed:_0', 'Unnamed: 0', 'colnames', 'index'))
 
 def cached(func: Callable,
            filename: Optional[str] = 'example1.json',
+           verbose: int = 0,
            *args,
            **kwargs) -> MetaPanda:
     """Provides automatic {.json, .csv} caching for `turb.MetaPanda` or `pd.DataFrame`.
@@ -59,6 +60,8 @@ def cached(func: Callable,
     filename : str, optional
         The name of the file to cache to, or read from. This is fixed.
         Accepts {'json', 'csv'} formats.
+    verbose : int, optional
+        If > 0, prints out useful information
     *args : list, optional
         Arguments to pass to function(...)
     **kwargs : dict, optional
@@ -93,11 +96,15 @@ def cached(func: Callable,
     belongs(filename.rsplit(".", 1)[-1], ("json", "csv"))
 
     if os.path.isfile(filename):
+        if verbose > 0:
+            print("reading in cached file: {}".format(filename))
         # read it in
         mdf = read(filename)
         _set_index_def(mdf.df_)
         return mdf
     else:
+        if verbose > 0:
+            print("running function '{}' for cache".format(func.__name__))
         # returns MetaPanda or pandas.DataFrame
         mpf = func(*args, **kwargs)
         if isinstance(mpf, MetaPanda):
@@ -105,9 +112,8 @@ def cached(func: Callable,
             mpf.write(filename)
             return mpf
         elif isinstance(mpf, DataFrame):
-            # save
+            # save - bumping index into the file.
             mpf.reset_index().to_csv(filename, index=None)
-            # return as MetaPanda
             return MetaPanda(mpf)
         else:
             warnings.warn("returned object from cache not of type [pd.DataFrame, turb.MetaPanda], not cached",

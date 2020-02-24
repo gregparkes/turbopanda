@@ -7,17 +7,18 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
+import warnings
 
 from turbopanda.corr import correlate
 from turbopanda.corr._correlate import _row_to_matrix
 from turbopanda.plot import shape_multiplot
-from turbopanda.utils import union
+from turbopanda.utils import union, intersect
 
 from ._clean import cleaned_subset
+from ._default import model_types
 from turbopanda.stats import vif, cook_distance
 
-
-__all__ = ('coefficient', 'overview_plot')
+__all__ = ('coefficient', 'overview_plot', 'model_selection')
 
 
 def _fitted_vs_residual(plot, y, yp):
@@ -52,6 +53,9 @@ def _actual_vs_predicted(plot, y, yp, kde=True):
 def coefficient(plot, cv):
     """Plots the coefficients from a cv results."""
     coef = cv['w__']
+    # sort the coefficients by size
+    coef = coef.reindex(cv['w__'].mean(axis=0).sort_values().index, axis=1)
+    # plot
     plot.boxplot(coef.values)
     plot.set_xlabel("Coefficient")
 
@@ -143,4 +147,59 @@ def overview_plot(df, x, y, cv, yp):
     _cooks(ax[7], df, x, y, yp)
 
     fig.tight_layout()
+    plt.show()
+
+
+def _model_selection_parameters(cv_results, plot=None, title="", yax="test_score", model_prefix="est"):
+    # definition of accepted models.
+    _mt = model_types()
+    params = cv_results['param_']
+
+    unique_parameters = {col: cv_results[col].unique().tolist() for col in cv_results['param_']}
+    log_params = ["alpha", "C"]
+    # get primary parameter based on the model.
+    if title == "" and cv_results.view("model").shape[0] == 1:
+        title = cv_results['model'].unique()[0]
+    # model should be unique
+    prim_param = _mt.loc[title, "Primary Parameter"]
+    if prim_param == np.nan:
+        raise ValueError("primary parameter not valid in model '{}'".format(title))
+    # check that parameter exists in cv_results
+    
+
+    # if the score is a negative-scoring method (-mse, -rmse), convert to positive.
+    if test_m.mean() < 0.:
+        test_m *= -1.
+
+    if plot is None:
+        fig, plot = plt.subplots(figsize=(6, 4))
+
+    if pname in log_params:
+        plot.set_xscale("log")
+
+    if title == "":
+        if "model" in cv_results.columns:
+            title = cv_results['model'].iloc[0]
+
+    plot.plot(parameter, test_m, 'x-')
+    plot.fill_between(parameter, test_m + test_err, test_m - test_err, alpha=.2)
+
+    plot.set_xlabel(pname)
+    plot.set_ylabel("score")
+    plot.set_title(title)
+
+
+def model_selection(cv_results):
+    """Iterates over every model type in `cv_results` and plots the best parameter. cv_results is MetaPanda"""
+    # determine the models found within.
+    if "model" in cv_results.columns:
+        # get unique models
+        models = cv_results['model'].astype(str).unique()
+        # create figures
+        fig, axes = shape_multiplot(len(models), ax_size=5)
+        for i, m in enumerate(models):
+            _model_selection_parameters(cv_results, axes[i], title=m)
+        fig.tight_layout()
+    else:
+        _model_selection_parameters(cv_results)
     plt.show()

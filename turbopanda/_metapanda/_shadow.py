@@ -6,7 +6,7 @@ import pandas as pd
 from typing import Union
 from turbopanda.utils import instance_check
 
-__all__ = ('head', 'dtypes', 'copy')
+__all__ = ('head', 'dtypes', 'copy', 'info')
 
 
 def head(self, k: int = 5) -> pd.DataFrame:
@@ -23,6 +23,10 @@ def head(self, k: int = 5) -> pd.DataFrame:
     -------
     ndf : pandas.DataFrame
         First k rows of df_
+
+    See Also
+    --------
+    pandas.DataFrame.head : Return the first n rows.
     """
     instance_check(k, int)
     return self.df_.head(k)
@@ -52,14 +56,28 @@ def copy(self) -> "MetaPanda":
     ------
     CopyException
         Module specific errors with copy.deepcopy
+
     Returns
     -------
     mdf2 : MetaPanda
         A copy of this object
+
     See Also
     --------
     copy.deepcopy(x) : Return a deep copy of x.
     """
     from copy import deepcopy
-
     return deepcopy(self)
+
+
+def info(self) -> "MetaPanda":
+    """Displays the aggregate information on the Dataframe.
+
+    Directly copies from pandas.DataFrame.info. Prints to standard output.
+
+    Returns
+    -------
+    self
+    """
+    self.df_.info()
+    return self

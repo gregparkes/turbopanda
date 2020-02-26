@@ -245,7 +245,8 @@ def fit_grid(df: MetaPanda,
              repeats: int = 10,
              cache: Optional[str] = None,
              plot: bool = False,
-             verbose: int = 0) -> "MetaPanda":
+             verbose: int = 0,
+             grid_kws: Dict = {}) -> "MetaPanda":
     """Performs exhaustive grid search analysis on the models selected.
 
     By default, fit tunes using the root mean squared error (RMSE).
@@ -271,6 +272,8 @@ def fit_grid(df: MetaPanda,
         If True, produces appropriate plot determining for each parameter.
     verbose : int, optional
         If > 0, prints out statements depending on level.
+    grid_kws : dict, optional
+        Additional keywords to assign to GridSearchCV.
 
     Returns
     -------
@@ -296,12 +299,15 @@ def fit_grid(df: MetaPanda,
         pipe = Pipeline([(header, LinearRegression())])
         # get paramgrid - the magic happens here!
         pgrid = _make_parameter_grid(models, header=header)
+        # join default grid parameters to given grid_kws
+        def_grid_params = {'scoring': 'neg_root_mean_squared_error',
+                           'n_jobs': -2, 'verbose': 2, 'return_train_score': True}
+        def_grid_params.update(grid_kws)
         # create gridsearch
-        gs = GridSearchCV(pipe, param_grid=pgrid, cv=rep, return_train_score=True,
-                          scoring="neg_root_mean_squared_error", n_jobs=-2, verbose=2)
+        gs = GridSearchCV(pipe, param_grid=pgrid, cv=rep, **def_grid_params)
         # make ml ready
         _df, _xnp, _y = ml_ready(df, x, y)
-        # fit the grid
+        # fit the grid - expensive.
         gs.fit(_xnp, _y)
         # generate result
         _result = pd.DataFrame(gs.cv_results_)

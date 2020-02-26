@@ -5,20 +5,19 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 from scipy import stats
 import warnings
 
 from turbopanda.corr import correlate
 from turbopanda.corr._correlate import _row_to_matrix
 from turbopanda.plot import shape_multiplot
-from turbopanda.utils import union, intersect
+from turbopanda.utils import union, intersect, difference
 
 from ._clean import cleaned_subset
-from ._default import model_types
+from ._default import model_types, param_types
 from turbopanda.stats import vif, cook_distance
 
-__all__ = ('coefficient', 'overview_plot', 'model_selection')
+__all__ = ('coefficient', 'overview_plot', 'parameter_tune_plot')
 
 
 def _fitted_vs_residual(plot, y, yp):
@@ -37,15 +36,10 @@ def _boxplot_scores(plot, cv):
     plot.set_xticklabels(['test', 'train'])
 
 
-def _actual_vs_predicted(plot, y, yp, kde=True):
+def _actual_vs_predicted(plot, y, yp):
     # KDE plot estimation between y and yhat
-    if kde:
-        sns.kdeplot(y, yp, color='b', ax=plot, n_levels=10)
-    else:
-        plot.scatter(y, yp, color='b', alpha=.5)
-
+    plot.scatter(y, yp, color='b', alpha=.5)
     plot.plot([np.min(y), np.max(y)], [np.min(y), np.max(y)], 'k-')
-    # sns.distplot(yp, color='k', ax=ax[0, 2], norm_hist=True)
     plot.set_xlabel("Actual Values")
     plot.set_ylabel("Fitted Values")
 
@@ -73,15 +67,22 @@ def coefficient(plot, cv):
 
 
 def _basic_correlation_matrix(plot, df, x, y):
+    # determine columns
     cols = union(df.view(x), y)
+    # perform correlation
     corr = correlate(df[cols].dropna())
+    # convert to matrix
     _cmatrix = _row_to_matrix(corr)
-    sns.heatmap(_cmatrix, ax=plot, cmap="seismic", vmin=-1., vmax=1., square=True, center=0, cbar=None)
+    # plot heatmap
+    plot.pcolormesh(_cmatrix, vmin=-1., vmax=1., cmap="seismic")
     # if we have too many labels, randomly choose some
     if _cmatrix.shape[0] > 10:
         tick_locs = np.random.choice(_cmatrix.shape[0], 10, replace=False)
         plot.set_xticks(tick_locs)
         plot.set_xticklabels(_cmatrix.iloc[:, tick_locs].columns)
+        plot.set_yticks(tick_locs)
+        plot.set_yticklabels(_cmatrix.iloc[:, tick_locs].columns)
+        plot.tick_params('x', rotation=45)
 
 
 def _plot_vif(plot, _vif):
@@ -123,7 +124,8 @@ def overview_plot(df, x, y, cv, yp):
     a bunch of plots. No Return.
     """
     fig, ax = shape_multiplot(8, ax_size=3)
-
+    # set yp as series
+    yp = yp[y].squeeze()
     # pair them and remove NA
     _df = cleaned_subset(df, x, y)
 
@@ -132,7 +134,7 @@ def overview_plot(df, x, y, cv, yp):
     # plot 2. boxplot for scores
     _boxplot_scores(ax[1], cv)
     # plot 3. KDE plot estimation between y and yhat
-    _actual_vs_predicted(ax[2], _df[y], yp, kde=False)
+    _actual_vs_predicted(ax[2], _df[y], yp)
     # plot 4. coefficient plot
     coefficient(ax[3], cv)
     # plot 5. correlation matrix
@@ -150,47 +152,70 @@ def overview_plot(df, x, y, cv, yp):
     plt.show()
 
 
-def _model_selection_parameters(cv_results, plot=None, title="", yax="test_score", model_prefix="est"):
+def _model_selection_parameters(cv_results, model_name, params, plot=None, prefix="param_model__", score="RMSE"):
     # definition of accepted models.
     _mt = model_types()
-    params = cv_results['param_']
-
-    unique_parameters = {col: cv_results[col].unique().tolist() for col in cv_results['param_']}
+    _pt = param_types()
     log_params = ["alpha", "C"]
     # get primary parameter based on the model.
-    if title == "" and cv_results.view("model").shape[0] == 1:
-        title = cv_results['model'].unique()[0]
+    plot.set_title(model_name)
     # model should be unique
-    prim_param = _mt.loc[title, "Primary Parameter"]
+    prim_param = _mt.loc[model_name, "Primary Parameter"]
     if prim_param == np.nan:
-        raise ValueError("primary parameter not valid in model '{}'".format(title))
-    # check that parameter exists in cv_results
-    
-
+        raise ValueError("primary parameter not valid in model '{}'".format(model_name))
     # if the score is a negative-scoring method (-mse, -rmse), convert to positive.
-    if test_m.mean() < 0.:
-        test_m *= -1.
-
+    if cv_results['mean_test_score'].mean() < 0.:
+        cv_results.transform(np.abs, "mean_test_score")
     if plot is None:
         fig, plot = plt.subplots(figsize=(6, 4))
-
-    if pname in log_params:
+    if prim_param in log_params:
         plot.set_xscale("log")
+    # check that prim_param is in params
+    if len(intersect([prefix+prim_param], params)) <= 0:
+        raise ValueError("primary param: '{}' not found in parameter list: {}".format(prim_param, params))
 
-    if title == "":
-        if "model" in cv_results.columns:
-            title = cv_results['model'].iloc[0]
+    if len(params) == 1:
+        # generate subset from a query of the model type.
+        subset = cv_results.df_.query("model == @model_name")
+        # mean, sd
+        test_m = subset['mean_test_score']
+        test_sd = subset['std_test_score']
+        _p = subset[params[0]]
+        # plotting
+        plot.plot(_p, test_m, 'x-')
+        plot.fill_between(_p, test_m + test_sd, test_m - test_sd, alpha=.3)
+    elif len(params) == 2:
+        subset = cv_results.df_.query("model == @model_name")
+        non_prim = difference([prefix+prim_param], params)[0]
+        non_prim_uniq = subset[non_prim].unique()
+        # fetch non-primary column.
+        for line in non_prim_uniq:
+            # mean, sd
+            _p = subset.loc[subset[non_prim] == line, prefix + prim_param]
+            test_m = subset.loc[subset[non_prim] == line, 'mean_test_score']
+            test_sd = subset.loc[subset[non_prim] == line, 'std_test_score']
+            plot.plot(_p, test_m, 'x-', label="{}={}".format(non_prim.split("__")[-1], line))
+            plot.fill_between(_p, test_m + test_sd, test_m - test_sd, alpha=.3)
+        plot.legend(loc="best")
 
-    plot.plot(parameter, test_m, 'x-')
-    plot.fill_between(parameter, test_m + test_err, test_m - test_err, alpha=.2)
-
-    plot.set_xlabel(pname)
-    plot.set_ylabel("score")
-    plot.set_title(title)
+    plot.set_xlabel(prim_param)
+    plot.set_ylabel(score)
 
 
-def model_selection(cv_results):
-    """Iterates over every model type in `cv_results` and plots the best parameter. cv_results is MetaPanda"""
+def parameter_tune_plot(cv_results):
+    """Iterates over every model type in `cv_results` and plots the best parameter. cv_results is MetaPanda
+
+    Generates a series of plots for each model type, plotting the parameters.
+
+    Parameters
+    ----------
+    cv_results : MetaPanda
+        The results from a call to `fit_grid`.
+
+    Returns
+    -------
+    None
+    """
     # determine the models found within.
     if "model" in cv_results.columns:
         # get unique models
@@ -198,8 +223,13 @@ def model_selection(cv_results):
         # create figures
         fig, axes = shape_multiplot(len(models), ax_size=5)
         for i, m in enumerate(models):
-            _model_selection_parameters(cv_results, axes[i], title=m)
+            # determine parameter names from results.
+            _P = [p for p in cv_results.view("param_model__") if
+                  cv_results.df_.loc[cv_results['model'] == m, p].dropna().shape[0] > 0]
+            # call function to plot model parameters.
+            print(_P)
+            _model_selection_parameters(cv_results, m, _P, axes[i])
         fig.tight_layout()
     else:
-        _model_selection_parameters(cv_results)
+        raise ValueError("column 'model' not found in `cv_results`.")
     plt.show()

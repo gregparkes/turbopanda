@@ -28,7 +28,7 @@ from turbopanda.utils import instance_check, belongs, intersect
 __all__ = ("cached", "cache")
 
 
-def _set_index_def(df, values=('Unnamed:_0', 'Unnamed: 0', 'colnames', 'index')):
+def _set_index_def(df, values=('Unnamed:_0', 'Unnamed: 0', 'colnames', 'index', 'counter')):
     # determine intersection between desired values and columns in df.
     _shared = intersect(df.columns.tolist(), values)
     # set these guys as the new index.
@@ -116,8 +116,8 @@ def cached(func: Callable,
             mpf.reset_index().to_csv(filename, index=None)
             return MetaPanda(mpf)
         else:
-            warnings.warn("returned object from cache not of type [pd.DataFrame, turb.MetaPanda], not cached",
-                          ImportWarning)
+            if verbose > 0:
+                print("returned object from cache not of type [DataFrame, MetaPanda], not cached")
             return mpf
 
 

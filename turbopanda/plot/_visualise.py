@@ -12,12 +12,12 @@ import matplotlib.pyplot as plt
 import itertools as it
 from scipy import stats
 from sklearn.metrics import r2_score
+from typing import Tuple
+
+from ._save_fig import save
 
 # locals
 from turbopanda.utils import nearest_factors, belongs, fself, standardize
-from turbopanda._metaml import MetaML
-from turbopanda._pub_fig import save_figure
-
 
 __all__ = ("scatter_grid", "missing", "hist_grid", "shape_multiplot")
 
@@ -103,7 +103,7 @@ def shape_multiplot(n_plots: int, arrange: str = "square", ax_size: int = 2):
         A list of axes to use.
     """
     if n_plots == 1:
-        fig, ax = plt.subplots(figsize=(ax_size, ax_size))#
+        fig, ax = plt.subplots(figsize=(ax_size, ax_size))  #
         # wrap ax as a list to iterate over.
         return fig, [ax]
     else:
@@ -173,9 +173,9 @@ def hist_grid(mdf, selector, arrange="square", savepath=None):
         fig.tight_layout()
 
         if isinstance(savepath, bool):
-            save_figure(fig, "hist", mdf.name_)
+            save(fig, "hist", mdf.name_)
         elif isinstance(savepath, str):
-            save_figure(fig, "hist", mdf.name_, fp=savepath)
+            save(fig, "hist", mdf.name_, fp=savepath)
 
 
 def scatter_grid(mdf, selector, target, arrange="square", savepath=None):
@@ -215,6 +215,6 @@ def scatter_grid(mdf, selector, target, arrange="square", savepath=None):
         fig.tight_layout()
 
         if isinstance(savepath, bool):
-            save_figure(fig, "scatter", mdf.name_)
+            save(fig, "scatter", mdf.name_)
         elif isinstance(savepath, str):
-            save_figure(fig, "scatter", mdf.name_, fp=savepath)
+            save(fig, "scatter", mdf.name_, fp=savepath)

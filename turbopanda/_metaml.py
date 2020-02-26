@@ -15,7 +15,7 @@ from __future__ import print_function
 # imports
 import numpy as np
 import pandas as pd
-from sklearn import linear_model, ensemble, gaussian_process, neighbors
+from sklearn import linear_model, ensemble, gaussian_process, neighbors, tree, svm
 from sklearn.base import is_classifier, is_regressor, BaseEstimator
 from sklearn.multioutput import MultiOutputRegressor, MultiOutputClassifier
 from sklearn.model_selection import cross_val_predict, GridSearchCV, cross_validate
@@ -23,8 +23,9 @@ from sklearn.metrics import r2_score
 
 # locals
 from ._pipe import Pipe
-from .__models import *
+from .ml._default import param_types, model_types
 from ._metapanda import MetaPanda
+
 
 __sklearn_model_packages__ = (tree, linear_model, ensemble, svm, gaussian_process, neighbors)
 

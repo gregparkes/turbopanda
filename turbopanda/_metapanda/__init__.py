@@ -372,11 +372,8 @@ class MetaPanda(object):
                 self._df.columns.name = "colnames"
             if "counter" not in self._df.columns:
                 self._df.index.name = "counter"
-        elif isinstance(df, DataFrameGroupBy):
-            # again, we'll just pretend the user knows what they're doing...
-            self._df = df
         else:
-            raise TypeError("'df' must be of type [pd.DataFrame, pd.DataFrameGroupBy]")
+            raise TypeError("'df' must be of type [pd.DataFrame]")
 
     @property
     def meta_(self) -> pd.DataFrame:

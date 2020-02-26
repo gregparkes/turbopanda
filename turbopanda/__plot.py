@@ -15,9 +15,6 @@ from scipy.stats import spearmanr
 from sklearn.model_selection import learning_curve
 
 
-__all__ = ["missing"]
-
-
 def mean_test(cv_results):
     return cv_results[cv_results.columns[cv_results.columns.str.contains("^split[0-9]+_test_score$")]]
 
@@ -65,20 +62,6 @@ def plot_parameter(cv_results, ax=None, param_name="alpha",
     ax.set_ylabel(score)
     ax.set_title(title)
     ax.legend()
-    return fig
-
-
-def plot_predicted_vs_actual(y, ypred):
-    fig, ax = plt.subplots()
-    sq = (y-ypred)**2
-
-    ymin, ymax = y.min(), y.max()
-
-    ax.scatter(y, ypred, c=sq)
-    ax.plot([ymin, ymax], [ymin, ymax], 'g--')
-    ax.set_xlabel("True")
-    ax.set_ylabel("Predicted")
-    ax.set_title(r"$r_s$=%.3f" % (spearmanr(y,ypred)[0]))
     return fig
 
 

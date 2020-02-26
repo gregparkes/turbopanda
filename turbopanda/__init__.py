@@ -15,16 +15,14 @@ if missing_dependencies:
 del hard_dependencies, dependency, missing_dependencies
 """ Block ends """
 
-# import local objects
-# from turbopanda._metapanda import MetaPanda
+# import Objects and critical global functions
 from ._metapanda import MetaPanda
 from ._metaml import MetaML
 from ._pipe import Pipe
 from ._fileio import read
-# import these functions so to not lose functionality...
-from turbopanda.dev._cache import cache, cached
-from ._pub_fig import *
 from ._merge import merge
+# import these functions so to not lose functionality...
+from .dev import cache, cached
 from .corr import correlate
 # folder extensions.
 from . import utils

@@ -4,3 +4,4 @@
 
 # import statements here
 from ._visualise import *
+from ._save_fig import save

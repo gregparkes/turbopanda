@@ -13,7 +13,7 @@ from sklearn.base import is_classifier, is_regressor
 from sklearn.pipeline import Pipeline
 
 from turbopanda._metapanda import MetaPanda, SelectorType
-from turbopanda.utils import listify, union, standardize, instance_check
+from turbopanda.utils import listify, union, standardize, instance_check, insert_suffix
 from turbopanda.dev import cached
 from ._plot import overview_plot
 from ._clean import ml_ready
@@ -70,16 +70,19 @@ def _extract_coefficients_from_model(cv, x, pkg_name):
         return []
 
 
-def _get_default_params(model, param=None, ret="list", with_est=True,
-                        header="model"):
-    """Given model m, gets the list of primary parameter values."""
+def _get_default_param_name(model):
+    """Given model m, get default parameter name."""
     _mt = model_types()
-    _pt = param_types()
-    # is the model within mt
     if model in _mt.index:
-        _param = _mt.loc[model, "Primary Parameter"] if param is None else param
+        return _mt.loc[model, "Primary Parameter"]
     else:
         raise ValueError("model '{}' not found in selection".format(model))
+
+
+def _get_default_params(model, param=None, ret="list"):
+    """Given model m, gets the list of primary parameter values."""
+    _pt = param_types()
+    _param = _get_default_param_name(model) if param is None else param
     # is parameter available?
     if _param not in _pt.index:
         raise ValueError("parameter '{}' not found as valid option: {}".format(_param, _pt.index.tolist()))
@@ -93,40 +96,37 @@ def _get_default_params(model, param=None, ret="list", with_est=True,
                         _pt.loc[_param, 'Range Max'],
                         int(_pt.loc[_param, 'Suggested N']))
     else:
-        return _pt.loc["loss", 'Options'].split(", ")
+        return _pt.loc[_param, 'Options'].split(", ")
 
     if _pt.loc[_param, "DataType"] == "int":
         x = x.astype(np.int)
 
     if ret == "list":
         x = x.tolist()
-
-    if with_est:
-        return {header: listify(_find_sklearn_model(model)[0]), header + "__" + _param: x}
-    else:
-        return {header + "__" + param: x}
+    # don't return model, just get the data.
+    return x
 
 
 def _make_parameter_grid(models, header="model"):
     """
     models can be one of:
         tuple: list of model names, uses default parameters
-        dict: key (model name), value tuple (parameter names) / dict: key (parameter name), value (list of values)
+        dict: key (model name), value tuple/list (parameter names) / dict: key (parameter name), value (list of values)
     """
     if isinstance(models, (list, tuple)):
-        return [_get_default_params(model, header=header) for model in models]
+        _p = [{header: [_find_sklearn_model(model)[0]],
+               header+"__"+_get_default_param_name(model): _get_default_params(model)} \
+              for model in models]
+        return _p
     elif isinstance(models, dict):
         def _handle_single_model(name, _val):
             if isinstance(_val, (list, tuple)):
                 # if the values are list/tuple, they are parameter names, use defaults
-                args = [_get_default_params(name, _v, header=header) for _v in _val]
-                if len(args) == 1:
-                    return args[0]
-                else:
-                    return args
+                _p = {header + "__" + _v: _get_default_params(name, _v) for _v in _val}
+                _p[header] = listify(_find_sklearn_model(name)[0])
+                return _p
             elif isinstance(_val, dict):
                 _p = {header + "__" + k: v for k, v in _val.items()}
-                # make as list
                 _p[header] = listify(_find_sklearn_model(name)[0])
                 return _p
 
@@ -145,7 +145,8 @@ def fit_basic(df: MetaPanda,
               model: str = "LinearRegression",
               cache: Optional[str] = None,
               plot: bool = False,
-              verbose: int = 0):
+              verbose: int = 0,
+              model_kws: Dict = {}):
     """Performs a rudimentary fit model with no parameter searching.
 
     Parameters
@@ -168,12 +169,14 @@ def fit_basic(df: MetaPanda,
         If True, produces `overview_plot` inplace.
     verbose : int, optional
         If > 0, prints out statements depending on level.
+    model_kws : dict, optional
+        Keywords to pass to the sklearn model which are not parameterized.
 
     Returns
     -------
-    cv : pd.DataFrame
+    cv : MetaPanda
         A dataframe result of cross-validated repeats. Can include w_ coefficients.
-    yp : np.ndarray
+    yp : pd.Series
         The predictions for each of y
     """
     # checks
@@ -184,47 +187,54 @@ def fit_basic(df: MetaPanda,
     instance_check(repeats, int)
     instance_check(cache, (type(None), str))
     instance_check(plot, bool)
+    instance_check(model_kws, dict)
 
-    def _perform_fit(df: MetaPanda, x, y, k: int, repeats: int, model):
-        # define sk model.
-        rep = RepeatedKFold(n_splits=k, n_repeats=repeats)
-        lm, pkg_name = _find_sklearn_model(model)
+    lm, pkg_name = _find_sklearn_model(model)
+    # assign keywords to lm
+    lm.set_params(**model_kws)
+    # make data set machine learning ready.
+    _df, _x, _y = ml_ready(df, x, y)
+    xcols = df.view(x)
 
-        # use view to select x columns.
-        xcols = df.view(x)
-        # get ml ready versions
-        _df, _x, _y = ml_ready(df, x, y)
-
-        # cross validate and predict values.
-        cv = cross_validate(lm, _x, _y, cv=rep, return_estimator=True, return_train_score=True, n_jobs=-2)
-        yp = cross_val_predict(lm, _x, _y, cv=k)
-
-        # extract coefficients.
-        coef = _extract_coefficients_from_model(cv, xcols, pkg_name)
-
-        results = pd.DataFrame(cv)
-        # add extra columns for utility.
-        results['k'] = np.repeat(np.arange(k), repeats)
-        # integrate coefficients into cv if present.
+    # function 1: performing cross-validated fit.
+    def _perform_cv_fit(_x, _xcols, _y, _k, _repeats, _lm, package_name):
+        # generate repeatedkfold.
+        rep = RepeatedKFold(n_splits=_k, n_repeats=_repeats)
+        # cv cross-validate and wrap.
+        cv = pd.DataFrame(cross_validate(_lm, _x, _y, cv=rep, return_estimator=True, return_train_score=True, n_jobs=-2))
+        # append results to cv
+        cv['k'] = np.repeat(np.arange(_k), _repeats)
+        # extract coefficients
+        coef = _extract_coefficients_from_model(cv, _xcols, package_name)
+        # integrate coefficients
         if not isinstance(coef, (list, tuple)):
-            # join on coefficients, prefixing with 'w__' for weights.
-            results = results.join(coef.add_prefix("w__"))
-        # drop 'estimator' objects.
-        results.drop('estimator', axis=1, inplace=True)
+            cv = cv.join(coef.add_prefix("w__"))
+        # drop estimator
+        cv.drop("estimator", axis=1, inplace=True)
+        # wrap as metapanda and return
+        return MetaPanda(cv)
 
-        _cv = MetaPanda(results)
-        _yp = pd.Series(yp, index=_df.index)
-
-        if plot:
-            overview_plot(df, x, y, _cv, _yp)
-
-        # make it a metapanda for ease.
-        return _cv, _yp
+    # function 2: performing cross-validated predictions.
+    def _perform_prediction_fit(_df, _x, _y, _yn, _k, _lm):
+        return pd.Series(cross_val_predict(_lm, _x, _y, cv=_k), index=_df.index).to_frame(_yn)
 
     if cache is not None:
-        return cached(_perform_fit, cache, df=df, x=x, y=y, k=k, repeats=repeats, model=model)
+        cache_cv = insert_suffix(cache, "_cv")
+        cache_yp = insert_suffix(cache, "_yp")
+        _cv = cached(
+            _perform_cv_fit, cache_cv, verbose, _x=_x, _xcols=xcols, _y=_y, _k=k, _repeats=repeats, _lm=lm, package_name=pkg_name
+        )
+        _yp = cached(
+            _perform_prediction_fit, cache_yp, verbose, _df=_df, _x=_x, _y=_y, _yn=y, _k=k, _lm=lm
+        )
     else:
-        return _perform_fit(df=df, x=x, y=y, k=k, repeats=repeats, model=model)
+        _cv = _perform_cv_fit(_x, xcols, _y, k, repeats, lm, pkg_name)
+        _yp = _perform_prediction_fit(_df, _x, _y, y, k, lm)
+
+    if plot:
+        overview_plot(df, x, y, _cv, _yp)
+    # return both.
+    return _cv, _yp
 
 
 def fit_grid(df: MetaPanda,
@@ -237,6 +247,8 @@ def fit_grid(df: MetaPanda,
              plot: bool = False,
              verbose: int = 0) -> "MetaPanda":
     """Performs exhaustive grid search analysis on the models selected.
+
+    By default, fit tunes using the root mean squared error (RMSE).
 
     Parameters
     ----------
@@ -295,7 +307,11 @@ def fit_grid(df: MetaPanda,
         _result = pd.DataFrame(gs.cv_results_)
         # associate model column to respective results
         _result['model'] = _result['param_model'].apply(lambda f: str(f).split("(")[0])
-        return MetaPanda(_result)
+        # set as MetaPanda
+        _met_result = MetaPanda(_result)
+        # cast down parameter columns to appropriate type
+        _met_result.transform(pd.to_numeric, "object", errors="ignore")
+        return _met_result
 
     if cache is not None:
         return cached(_perform_fit, cache, verbose, df=df, x=x, y=y, k=k, repeats=repeats, models=models)

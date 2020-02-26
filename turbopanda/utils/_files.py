@@ -5,7 +5,7 @@
 from typing import Any, List
 
 
-__all__ = ("list_dir", "split_file_directory")
+__all__ = ("list_dir", "split_file_directory", 'insert_prefix', 'insert_suffix')
 
 
 def list_dir(obj: Any) -> List:
@@ -41,3 +41,41 @@ def split_file_directory(filename: str):
     # just the name without the extension
     jname, ext = fname.split(".", 1)
     return directory, jname, ext
+
+
+def insert_prefix(filename: str, ins: str) -> str:
+    """Inserts a string to the start of a file name.
+
+    Parameters
+    ----------
+    filename : str
+        The filename full string
+    ins : str
+        The insertable string
+
+    Returns
+    -------
+    new_filename : str
+        The new filename full string
+    """
+    _f = split_file_directory(filename)
+    return "/".join([_f[0], ins + _f[1]]) + "." + _f[-1]
+
+
+def insert_suffix(filename: str, ins: str) -> str:
+    """Inserts a string to the end of a file name.
+
+    Parameters
+    ----------
+    filename : str
+        The filename full string
+    ins : str
+        The insertable string
+
+    Returns
+    -------
+    new_filename : str
+        The new filename full string
+    """
+    _f = split_file_directory(filename)
+    return "/".join([_f[0], _f[1] + ins]) + "." + _f[-1]

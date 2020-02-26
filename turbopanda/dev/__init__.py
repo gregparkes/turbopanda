@@ -3,6 +3,6 @@
 """Provides access to development-like functions and support."""
 
 # caching decorator
-from ._cache import *
+from ._cache import cache, cached
 # sound decorator
 from ._sounds import bleep

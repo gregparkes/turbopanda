@@ -275,16 +275,16 @@ def best_model_plot(cv_results, minimize=True, score="RMSE"):
             indices = cv_results.df_.groupby("model")['mean_test_score'].idxmin()
         else:
             indices = cv_results.df_.groupby("model")['mean_test_score'].idxmax()
-
+        # transform.
+        if cv_results['mean_test_score'].mean() < 0.:
+            cv_results.transform(np.abs, "mean_test_score")
         # arrange data
         result_p = cv_results.df_.loc[indices, cv_results.view("split[0-9]+_test_score")]
         # plot
         ax.boxplot(result_p)
         ax.set_xlabel("Model")
         ax.set_ylabel(score)
-        
-
-
+        ax.set_xticklabels(models.values)
         plt.show()
     else:
         raise ValueError("column 'model' not found in `cv_results`.")

@@ -14,7 +14,7 @@ from turbopanda._metapanda import MetaPanda
 from turbopanda.utils import intersect, instance_check
 from turbopanda._deprecator import deprecated
 
-from pyitlib import discrete_random_variable as drv
+
 
 __all__ = ['mutual_info', 'entropy', 'conditional_entropy', 'continuous_mutual_info']
 
@@ -157,6 +157,7 @@ def mutual_info(data, x, y, z=None, **kws):
     MI : np.ndarray
         mutual information matrix, (same dimensions as |x|, |y|, |z| input).
     """
+    from pyitlib import discrete_random_variable as drv
 
     instance_check(data, MetaPanda)
     instance_check(x, (str, list, tuple, pd.Index))

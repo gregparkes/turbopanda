@@ -10,7 +10,6 @@ from __future__ import print_function
 from typing import List, Callable
 import itertools as it
 import numpy as np
-import simpleaudio as sa
 
 from turbopanda.utils import instance_check, belongs
 
@@ -119,6 +118,7 @@ def _produce_audio(notes: List[str], seconds=2, fs=44100):
 
 
 def _play_audio(audio, fs=44100):
+    import simpleaudio as sa
     play_obj = sa.play_buffer(audio, 1, 2, fs)
     # wait for playback to finish
     play_obj.wait_done()

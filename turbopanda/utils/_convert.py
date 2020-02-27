@@ -11,7 +11,7 @@ from ._bool_series import is_n_value_column, is_column_int, \
 ArrayLike = Union[np.ndarray, pd.Series, pd.DataFrame]
 
 
-__all__ = ('listify', 'integer_to_boolean', 'object_to_categorical', 'boolean_to_integer', 'standardize')
+__all__ = ('listify', 'switcheroo', 'integer_to_boolean', 'object_to_categorical', 'boolean_to_integer', 'standardize')
 
 
 def listify(a):
@@ -20,6 +20,11 @@ def listify(a):
         return a
     else:
         return [a]
+
+
+def switcheroo(ser: pd.Series) -> pd.Series:
+    """Switches a pandas.Series index and values set."""
+    return pd.Series(ser.index, index=ser.values)
 
 
 def integer_to_boolean(ser: pd.Series) -> pd.Series:

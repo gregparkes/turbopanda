@@ -48,6 +48,11 @@ def _find_sklearn_model(name):
         raise TypeError("model '{}' not recognized as scikit-learn model.".format(name))
 
 
+def _model_family(models):
+    """Given a list of model names, return the sklearn family package name it belongs to."""
+    return [_find_sklearn_package(m).split(".")[-1] for m in models]
+
+
 def _extract_coefficients_from_model(cv, x, pkg_name):
     """accepted packages: linear_model, tree, ensemble, svm."""
 

@@ -14,7 +14,7 @@ from ._inspect import inspect
 
 def transform(self,
               func: Callable,
-              selector: Optional[List[SelectorType]] = None,
+              selector: SelectorType = None,
               method: str = 'transform',
               whole: bool = False,
               *args,
@@ -115,7 +115,7 @@ def transform_k(self, ops: Tuple[Callable, SelectorType]) -> "MetaPanda":
 def aggregate(self,
               func: Union[Callable, str],
               name: Optional[str] = None,
-              selector: Optional[List[SelectorType]] = None,
+              selector: SelectorType = None,
               keep: bool = False) -> "MetaPanda":
     """Perform inplace column-wise aggregations using a selector.
 
@@ -129,7 +129,7 @@ def aggregate(self,
     name : str, optional
         A name for the aggregated column.
         If None, will attempt to extract common pattern subset out of columns.
-    selector : (list of) str or tuple args
+    selector : (list of) str or tuple args, optional
         Contains either types, meta column names, column names or regex-compliant strings.
     keep : bool, optional
         If False, drops the rows from which the calculation was made.
@@ -200,10 +200,10 @@ def aggregate_k(self,
     func : str or function
       If function: takes a pd.DataFrame x and returns pd.Series y, for each selection.
       If str: choose from {'mean', 'sum', 'min', 'max', 'std', 'count'}.
-    names : str, optional
+    names : str or list of str, optional
       A name for the aggregated column.
       If None, will attempt to extract common pattern subset out of columns.
-    selectors : (list of) str or tuple args
+    selectors : (list of) str or tuple args, optional
       Contains either types, meta column names, column names or regex-compliant strings.
     keep : bool, optional
       If False, drops the rows from which the calculation was made.

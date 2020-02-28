@@ -240,6 +240,7 @@ class Pipe(object):
     def clean(cls,
               with_drop: bool = True,
               with_boolint: bool = True,
+              with_categories: bool = True,
               with_downcast: bool = True) -> "Pipe":
         """Pipeline to clean a pandas.DataFrame.
 
@@ -257,6 +258,8 @@ class Pipe(object):
             If True, drops columns containing only one data value.
         with_boolint : bool, optional
             If True, converts all boolean columns into np.uint8 integers.
+        with_categories : bool, optional
+            If True, converts object columns with only n-unique variables into type 'category'
         with_downcast : bool, optional
             If True, attempts to downcast all columns in df_ to a lower value.
 
@@ -274,13 +277,15 @@ class Pipe(object):
             ("transform", (to_numeric,),
              {"selector": ("float64", "int64"), "errors": "ignore", "downcast": "unsigned"})
         ] if with_downcast else None
-
+        category_step = [
+            ('transform', (object_to_categorical, "object",), {'method': 'transform'})
+        ] if with_categories else None
         # compulsory steps.
         strip_step = [('apply_columns', ('strip',), {})]
         rename_step = [('rename_axis', ([(' ', '_'), ('\t', '_'), ('-', '')],), {})]
 
         # join them together, dropping None where applicable.
-        order = join(drop_step, numeric_step, boolint_step, strip_step, rename_step)
+        order = join(drop_step, numeric_step, boolint_step, category_step, strip_step, rename_step)
         return cls.raw(order)
 
     @classmethod

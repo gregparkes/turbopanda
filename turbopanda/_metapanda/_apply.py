@@ -86,7 +86,6 @@ def apply(self, f_name: str, *f_args, **f_kwargs) -> "MetaPanda":
     self
     """
     instance_check(f_name, str)
-
     self._apply_function(f_name, *f_args, **f_kwargs)
     return self
 

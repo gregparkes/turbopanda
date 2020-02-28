@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from turbopanda.ml._clean import cleaned_subset
-from turbopanda.utils import standardize
+from turbopanda.utils import standardize, instance_check
 
 __all__ = ('vif', 'cook_distance', 'hat', 'hat_generalized')
 
@@ -29,6 +29,7 @@ def hat(df, x):
     H : np.ndarray
         hat matrix.
     """
+
     X = np.atleast_2d(df[x].values)
     # standardize
     X = standardize(X)
@@ -56,6 +57,8 @@ def hat_generalized(df, x, cov):
     H : np.ndarray
         hat matrix.
     """
+    instance_check(cov, np.ndarray)
+
     X = np.atleast_2d(df[x].values)
     # assume covariance matrix of errors
     X = standardize(X)
@@ -83,6 +86,8 @@ def vif(df, x, y):
         variance inflationary factors for each in x
     """
     from statsmodels.stats.outliers_influence import variance_inflation_factor as vif
+
+    instance_check(y, str)
 
     _df = cleaned_subset(df, x, y)
     _X = np.atleast_2d(_df[df.view(x)].values)

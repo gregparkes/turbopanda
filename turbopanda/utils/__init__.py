@@ -12,3 +12,4 @@ from ._error_raise import *
 from ._string_ops import *
 from ._remove_na import remove_na
 from ._convert import *
+from ._panderize import panderfy

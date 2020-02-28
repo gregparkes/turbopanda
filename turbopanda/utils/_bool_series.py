@@ -27,6 +27,11 @@ def not_column_float(ser: pd.Series) -> bool:
     return ser.dtype not in c_float()
 
 
+def is_column_boolean(ser: pd.Series):
+    """Checks whether the column data type is a boolean, either type bool or np.uint8/16."""
+    return (ser.dtype == np.bool) or (ser.dtype in (np.uint8, np.uint16) and np.unique(ser).size == 2)
+
+
 def is_column_float(ser: pd.Series) -> bool:
     """Checks whether the data type in Series is a float column."""
     return ser.dtype in c_float()

@@ -70,6 +70,8 @@ def save(fig_obj: plt.Figure,
     accepted_savemodes = ('first', 'update')
 
     instance_check(fig_obj, plt.Figure)
+    instance_check(name, str)
+    instance_check(fp, str)
     belongs(plot_type, accepted_types)
     belongs(savemode, accepted_savemodes)
 

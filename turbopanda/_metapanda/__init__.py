@@ -49,6 +49,8 @@ class MetaPanda(object):
         A wrapper for pandas.DataFrame.head()
     dtypes(grouped=True)
         Determines the data type of each column in `df_`
+    printf()
+        Prints the raw data in full pandas format
     view(selector)
         Views a selection of columns in `df_`
     search(selector)
@@ -159,7 +161,7 @@ class MetaPanda(object):
     # shadowed columns
     from ._shadow import head, dtypes, copy, info
     # saving files
-    from ._write import write, _write_csv, _write_hdf, _write_json
+    from ._write import write, _write_csv, _write_hdf, _write_json, printf
     # application to pandas.api functions
     from ._apply import apply, apply_index, apply_columns, _apply_function, \
         _apply_index_function, _apply_column_function

@@ -25,10 +25,18 @@ def _fitted_vs_residual(plot, y, yp):
     plot.set_ylabel("Residuals")
 
 
-def _boxplot_scores(plot, cv):
-    plot.boxplot(cv['train_score|test_score'].values)
+def _boxplot_scores(plot, cv, score="RMSE"):
+    # has columns: fit_time, test_score, train_score
+    # create a copy
+    res = cv.copy()
+    # transform.
+    if res['test_score'].mean() < 0.:
+        res.transform(np.abs, "_score")
+
+    plot.boxplot(res['train_score|test_score'].values)
     plot.set_xlabel("Train/Test Score")
-    plot.set_ylabel(r"$r^2$")
+    plot.set_ylabel(score)
+    plot.set_title("{}: {:0.3f}".format(score, res['test_score'].median()))
     plot.tick_params('x', rotation=45)
     plot.set_xticks(range(1, 3))
     plot.set_xticklabels(['test', 'train'])
@@ -49,8 +57,8 @@ def coefficient_plot(plot, cv):
     coef = coef.reindex(cv['w__'].mean(axis=0).sort_values().index, axis=1)
     # plot
     plot.boxplot(coef.values)
-    plot.set_xlabel("Coefficient")
-
+    plot.set_yscale("log")
+    plot.set_ylabel(r"$\beta$")
     # if we have too many labels, randomly select some
     if len(coef.columns) > 10:
         # subset
@@ -62,6 +70,8 @@ def coefficient_plot(plot, cv):
         plot.set_xticklabels(coef.columns.str[3:])
 
     plot.tick_params("x", rotation=45)
+    for tick in plot.get_xmajorticklabels():
+        tick.set_horizontalalignment('right')
 
 
 def _basic_correlation_matrix(plot, df, x, y):
@@ -80,7 +90,10 @@ def _basic_correlation_matrix(plot, df, x, y):
         plot.set_xticklabels(_cmatrix.iloc[:, tick_locs].columns)
         plot.set_yticks(tick_locs)
         plot.set_yticklabels(_cmatrix.iloc[:, tick_locs].columns)
-        plot.tick_params('x', rotation=45)
+
+    plot.tick_params('x', rotation=45)
+    for tick in plot.get_xmajorticklabels():
+        tick.set_horizontalalignment('right')
 
 
 def _plot_vif(plot, _vif):
@@ -88,6 +101,7 @@ def _plot_vif(plot, _vif):
         plot.bar(range(1, len(_vif) + 1), _vif.values, width=.7, color='r')
         plot.set_xlabel("Feature")
         plot.set_ylabel("VIF")
+        plot.set_yscale("log")
         if len(_vif) > 10:
             tick_locs = np.random.choice(len(_vif), 10, replace=False)
             plot.set_xticks(tick_locs)
@@ -126,7 +140,7 @@ def overview_plot(df, x, y, cv, yp):
     -------
     a bunch of plots. No Return.
     """
-    fig, ax = shape_multiplot(8, ax_size=3)
+    fig, ax = shape_multiplot(8, ax_size=4)
     # set yp as series
     yp = yp[y].squeeze()
     # pair them and remove NA

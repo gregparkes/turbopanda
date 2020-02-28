@@ -7,7 +7,9 @@ import numpy as np
 import pandas as pd
 from matplotlib import cm
 import matplotlib.pyplot as plt
-from typing import List
+from typing import List, Tuple, Union
+
+from turbopanda.utils import instance_check
 
 
 def _colormap_to_hex(cm_array: np.ndarray):
@@ -36,13 +38,14 @@ def _colormap_to_hex(cm_array: np.ndarray):
             raise ValueError("dimension of 'cm_array' must be 3 or 4, not {}".format(cm_array.shape[1]))
 
 
-def color_qualitative(n: int, sharp: bool = True) -> List:
+def color_qualitative(n: Union[int, List, Tuple],
+                      sharp: bool = True) -> List:
     """Generates a qualitative palette generator as hex.
 
     Parameters
     ----------
-    n : int
-        The number of hex colors to return
+    n : int, list or tuple
+        The number of hex colors to return, or the list/tuple of elements.
     sharp : bool
         If True, only uses strong/sharp colors, else uses pastelly colors.
 
@@ -51,6 +54,12 @@ def color_qualitative(n: int, sharp: bool = True) -> List:
     L : list
         list of hex colors of length (n,).
     """
+    instance_check(n, (int, list, tuple))
+    instance_check(sharp, bool)
+
+    if isinstance(n, (list, tuple)):
+        n = len(n)
+
     lt8_sharp = ('Accent', 'Dark2')
     lt8_pastel = ('Pastel2', 'Set2')
     # lt9 = ('Set1', 'Pastel1')

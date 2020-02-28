@@ -1,6 +1,6 @@
 # turbopanda: Turbo-charging the Pandas library in an integrative, meta-orientated style
 
-**Current version: 0.2.2**
+**Current version: 0.2.3**
 
 The aim of this library is extend the functionality of the `pandas` library package,
  which is extensively used for data munging,
@@ -234,6 +234,17 @@ This takes every column of type `float` and applies a square-function
   representing a given column, and expects the return type to be
    the same size as before.
 
+### Statistical Support
+
+`turbopanda` also supports a limited number of useful statistical functions, including 
+automatic fitting of continuous distributions to sets of data, *correlation* between 
+heterogeneous data columns, *mutual information* and entropy calculations, as well as
+model checking operations such as `cook_distance` and variance inflationary factors.
+
+Drawing heavily from the 
+
+### AOB
+
 Further details can be found by exploring the 
 [examples](https://github.com/gregparkes/turbopanda/blob/master/examples/) 
 section of this repository.
@@ -276,6 +287,26 @@ Now within the `turbopanda` environment run your Jupyter notebook:
 ```bash
 jupyter notebook
 ```
+
+## Acknowledgments
+
+We would like to acknowledge the following sources for inspiration for much of this work:
+
+- pandas dev team: [Github](https://github.com/pandas-dev/pandas)
+- `pingouin` [python library][3]
+- Wikipedia for many topics
+
+## References
+
+[1]: "Pernet CR, Wilcox R, Rousselet GA. Robust Correlation Analyses:
+       False Positive and Power Validation Using a New Open Source Matlab
+       Toolbox. Frontiers in Psychology. 2012;3:606.
+       doi:10.3389/fpsyg.2012.00606."
+       
+[2]: "Wilcox, R.R., 1994. The percentage bend correlation coefficient.
+       Psychometrika 59, 601–616. https://doi.org/10.1007/BF02294395"
+
+[3]: <https://github.com/raphaelvallat/pingouin/blob/master/pingouin/correlation.py> "Pingouin's correlation"
 
 ***
 

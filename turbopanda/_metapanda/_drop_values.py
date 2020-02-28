@@ -79,7 +79,7 @@ def keep(self, *selector: SelectorType) -> "MetaPanda":
 
 def filter_rows(self,
                 func: Callable,
-                selector: Tuple[SelectorType, ...] = None,
+                selector: SelectorType = None,
                 *args) -> "MetaPanda":
     """Filter j rows using boolean-index returned from `function`.
 

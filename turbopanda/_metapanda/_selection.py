@@ -112,7 +112,7 @@ def _get_selector_item(df: DataFrame,
 def get_selector(df: DataFrame,
                  meta: DataFrame,
                  cached: Dict[str, SelectorType],
-                 selector: Tuple[SelectorType, ...],
+                 selector: SelectorType,
                  raise_error: bool = False,
                  select_join: str = "OR") -> Index:
     """

@@ -11,7 +11,7 @@ from ._metadata import default_columns
 from turbopanda.utils import split_file_directory, union
 
 
-__all__ = ('write', '_write_csv', '_write_json', '_write_hdf')
+__all__ = ('write', '_write_csv', '_write_json', '_write_hdf', 'printf')
 
 
 def _write_csv(self, filename: str, with_meta: bool = False, *args, **kwargs):
@@ -94,3 +94,9 @@ def write(self,
     else:
         raise IOError("Doesn't recognize filename or type: '{}', must end in [csv, json]".format(filename))
     return self
+
+
+def printf(self):
+    """Prints the MetaPanda in full pandas-like output."""
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+        print(self.df_)

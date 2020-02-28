@@ -25,7 +25,7 @@ def _rename_axis(df: pd.DataFrame, meta: pd.DataFrame, old: PandaIndex, new: Pan
 
 def rename_axis(self,
                 ops: Tuple[str, str],
-                selector: Optional[Tuple[SelectorType, ...]] = None,
+                selector: SelectorType = None,
                 axis: int = 1) -> "MetaPanda":
     """Perform a chain of .str.replace operations on one of the axes.
 
@@ -60,7 +60,7 @@ def rename_axis(self,
 
 
 def add_prefix(self, pref: str,
-               selector: Optional[List[SelectorType]] = None) -> "MetaPanda":
+               selector: SelectorType = None) -> "MetaPanda":
     """Add a prefix to all of the columns or selected columns.
 
     Parameters
@@ -86,7 +86,7 @@ def add_prefix(self, pref: str,
 
 
 def add_suffix(self, suf: str,
-               selector: Optional[List[SelectorType]] = None) -> "MetaPanda":
+               selector: SelectorType = None) -> "MetaPanda":
     """Add a suffix to all of the columns or selected columns.
 
     Parameters

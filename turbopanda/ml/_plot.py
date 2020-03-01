@@ -47,9 +47,6 @@ def _model_selection_parameters(cv_results, model_name, params, plot=None, prefi
             fig, plot = plt.subplots(figsize=(6, 4))
         if prim_param in log_params:
             plot.set_xscale("log")
-        # check that prim_param is in params
-        if len(intersect([prefix+prim_param], params)) <= 0:
-            raise ValueError("primary param: '{}' not found in parameter list: {}".format(prim_param, params))
 
         if len(params) == 1:
             # mean, sd
@@ -147,12 +144,12 @@ def best_model_plot(cv_results, minimize=True, score="RMSE", **box_kws):
         # arrange data
         result_p = res.df_.loc[indices, res.view("split[0-9]+_test_score")]
         # reorder based on the best score
-        re_order = result_p.mean(axis=1).sort_values()
+        re_order = result_p.median(axis=1).sort_values()
         result_p = result_p.reindex(re_order.index)
         # get best score name
         indices = switcheroo(indices).reindex(re_order.index)
         # plot
-        bp = ax.boxplot(result_p, patch_artist=True, **box_kws)
+        bp = ax.boxplot(result_p, patch_artist=True, showfliers=False, **box_kws)
         # fetch package names and map them to colors - returned as pd.Series
         packages = find_model_family(indices.values)
         # map colors to each of the packages.

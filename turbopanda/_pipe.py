@@ -240,7 +240,7 @@ class Pipe(object):
     def clean(cls,
               with_drop: bool = True,
               with_boolint: bool = True,
-              with_categories: bool = True,
+              with_categories: bool = False,
               with_downcast: bool = True) -> "Pipe":
         """Pipeline to clean a pandas.DataFrame.
 

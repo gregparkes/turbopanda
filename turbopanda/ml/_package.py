@@ -12,7 +12,8 @@ __all__ = ('skpackages', 'is_sklearn_model',
 
 def skpackages():
     """Returns compliant sklearn packages."""
-    return sklearn.linear_model, sklearn.tree, sklearn.neighbors, sklearn.ensemble, sklearn.svm
+    return (sklearn.linear_model, sklearn.tree, sklearn.neighbors,
+            sklearn.ensemble, sklearn.svm, sklearn.gaussian_process)
 
 
 def is_sklearn_model(name):

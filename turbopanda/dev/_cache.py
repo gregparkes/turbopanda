@@ -16,16 +16,20 @@ from __future__ import print_function
 # imports
 import os
 import warnings
-from typing import Callable, Optional
-from pandas import DataFrame
+from typing import Callable, Optional, Union, List, Tuple
+from pandas import DataFrame, concat
 
 # locals
 from turbopanda._fileio import read
 from turbopanda._metapanda import MetaPanda
-from turbopanda.utils import instance_check, belongs, intersect
+from turbopanda.utils import instance_check, belongs, intersect, insert_suffix, dictcopy
 
 
-__all__ = ("cached", "cache")
+__all__ = ("cached", "cache", 'cached_chunk')
+
+
+def _stack_rows(rows):
+    return MetaPanda(concat(rows, axis=0, ignore_index=True))
 
 
 def _set_index_def(df, values=('Unnamed:_0', 'Unnamed: 0', 'colnames', 'index', 'counter')):
@@ -40,7 +44,7 @@ def cached(func: Callable,
            filename: Optional[str] = 'example1.json',
            verbose: int = 0,
            *args,
-           **kwargs) -> MetaPanda:
+           **kwargs) -> "MetaPanda":
     """Provides automatic {.json, .csv} caching for `turb.MetaPanda` or `pd.DataFrame`.
 
     .. note:: this is a direct-call cache function. Not cached.
@@ -86,10 +90,11 @@ def cached(func: Callable,
 
     See Also
     --------
-    cache : Provides automatic {.json, .csv} caching for `turb.MetaPanda` or `pd.DataFrame`.
+    cache : Provides automatic {.json, .csv} decorator caching for `turb.MetaPanda` or `pd.DataFrame`.
     """
     # check it is string
     instance_check(filename, str)
+    instance_check(verbose, int)
     if not callable(func):
         raise ValueError('function is not callable')
     # check that file ends with json or csv
@@ -121,8 +126,95 @@ def cached(func: Callable,
             return mpf
 
 
+def cached_chunk(func: Callable,
+                 param_name: str,
+                 param_values: Union[List, Tuple],
+                 filename: Optional[str] = 'example1.json',
+                 verbose: int = 0,
+                 *args, **kwargs) -> "MetaPanda":
+    """Provides chunked automatic {.json, .csv} caching for `turb.MetaPanda` or `pd.DataFrame`.
+
+    .. note:: custom function must return a `pd.DataFrame` or `turb.MetaPanda` object.
+
+    Parameters
+    --------
+    func : function
+        A custom function returning the pd.DataFrame/MetaPanda
+    param_name : str
+        The keyword name of the parameter in question to iterate over
+    param_values : list/tuple of something
+        The values associated with the parameter to iterate over
+    filename : str, optional
+        The name of the file to cache to, or read from. This is fixed.
+        Accepts {'json', 'csv'} formats.
+    verbose : int, optional
+        If > 0, prints out useful information
+    *args : list, optional
+        Arguments to pass to function(...)
+    **kwargs : dict, optional
+        Keyword arguments to pass to function(...)
+
+    Warnings
+    --------
+    FutureWarning
+        Returned object from cache isn't of type {pd.DataFrame, MetaPanda}
+
+    Raises
+    ------
+    TypeError
+        `filename` isn't of type `str`
+    ValueError
+        `filename` extension isn't found in {'json', 'csv'}
+
+    Returns
+    -------
+    mp : MetaPanda
+        The MetaPanda object
+
+    See Also
+    --------
+    cached : Provides automatic {.json, .csv} caching for `turb.MetaPanda` or `pd.DataFrame`.
+    """
+    # check it is string
+    instance_check(filename, str)
+    instance_check(param_name, str)
+    instance_check(param_values, (list, tuple, dict))
+
+    if not callable(func):
+        raise ValueError('function is not callable')
+    # check that file ends with json or csv
+    belongs(filename.rsplit(".", 1)[-1], ("json", "csv"))
+
+    # if the final file exists, perform as normal.
+    if os.path.isfile(filename):
+        if verbose > 0:
+            print("reading in cached file: {}".format(filename))
+        # read it in
+        mdf = read(filename)
+        _set_index_def(mdf.df_)
+        return mdf
+    else:
+        # create a bunch of chunks by repeatedly calling cache.
+        _mdf_chunks = [
+            cached(func,
+                   insert_suffix(filename, "_chunk%d" % i),
+                   verbose=verbose,
+                   *args, **dictcopy(kwargs, {param_name: chunk})).df_
+            for i, chunk in enumerate(param_values)
+        ]
+        # join together the chunks
+        mpf = _stack_rows(_mdf_chunks)
+        # save file - return type must be a MetaPanda or error occurs!
+        mpf.write(filename)
+        # now delete the 'chunked' files.
+        for i in range(len(param_values)):
+            os.remove(insert_suffix(filename, "_chunk%d" % i))
+
+        return mpf
+
+
 def cache(filename: Optional[str] = "example1.json") -> Callable:
-    """Provides automatic {.json, .csv} caching for `turb.MetaPanda`, `pd.DataFrame` or `np.ndarray` formats.
+    """Provides automatic {.json, .csv} decorator caching for `turb.MetaPanda` or `pd.DataFrame`.
 
     .. note:: this is a decorator function, not to be called directly.
 
@@ -171,6 +263,7 @@ def cache(filename: Optional[str] = "example1.json") -> Callable:
     # define decorator
     def decorator(func):
         """Basic decorator."""
+
         def _caching_function(*args, **kwargs):
             # if we find the file
             if os.path.isfile(filename):

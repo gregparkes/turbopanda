@@ -12,7 +12,7 @@ from ._error_raise import instance_check
 SetLike = Union[type(None), str, Set, Index, List, Tuple, Series]
 
 __all__ = ("dict_to_tuple", "dictzip", "dictmap", "join", 'pairwise',
-           "set_like", "union", "intersect", "difference")
+           "set_like", "union", "intersect", "difference", 'dictcopy')
 
 """ DICTIONARY CONVENIENCE """
 
@@ -40,6 +40,13 @@ def dictzip(a: Iterable, b: Iterable) -> Dict:
         Mapped dictionary
     """
     return dict(it.zip_longest(a, b))
+
+
+def dictcopy(d1: Dict, d2: Dict):
+    """Updates d2 to d1 using copy rather than direct update."""
+    X = d1.copy()
+    X.update(d2)
+    return X
 
 
 def dictmap(a: Iterable, b: Callable) -> Dict:

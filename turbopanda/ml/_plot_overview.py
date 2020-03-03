@@ -50,12 +50,15 @@ def _actual_vs_predicted(plot, y, yp):
     plot.set_ylabel("Fitted Values")
 
 
-def coefficient_plot(plot, cv):
+def coefficient_plot(cv, plot=None):
     """Plots the coefficients from a cv results."""
     coef = cv['w__']
     # sort the coefficients by size
     coef = coef.reindex(cv['w__'].mean(axis=0).sort_values().index, axis=1)
     # plot
+    if plot is None:
+        fig, plot = plt.subplots(figsize=(8, 5))
+
     plot.boxplot(coef.values)
     plot.set_yscale("log")
     plot.set_ylabel(r"$\beta$")
@@ -151,7 +154,7 @@ def overview_plot(df, x, y, cv, yp):
     # plot 3. KDE plot estimation between y and yhat
     _actual_vs_predicted(ax[2], _y, yp)
     # plot 4. coefficient plot
-    coefficient_plot(ax[3], cv)
+    coefficient_plot(cv, ax[3])
     # plot 5. correlation matrix
     _basic_correlation_matrix(ax[4], _df, _xcols)
     # plot 6. variance inflation factor for each explanatory variable

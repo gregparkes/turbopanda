@@ -18,7 +18,6 @@ from ._plot_overview import overview_plot
 
 def _extract_coefficients_from_model(cv, x, pkg_name):
     """accepted packages: linear_model, tree, ensemble, svm."""
-
     if pkg_name == "sklearn.linear_model" or pkg_name == "sklearn.svm":
         cof = np.vstack([m.coef_ for m in cv['estimator']])
         if cof.shape[-1] == 1:
@@ -47,8 +46,12 @@ def fit_basic(df: MetaPanda,
               cache: Optional[str] = None,
               plot: bool = False,
               verbose: int = 0,
-              model_kws: Dict = {}):
+              **model_kws):
     """Performs a rudimentary fit model with no parameter searching.
+
+    This function helps to provide a broad overview of how successful a given model is on the
+    inputs of x -> y. `cv` returns scoring and timing metrics, as well as coefficients if available, whereas
+    `yp` provides predicted values for each given `y`.
 
     Parameters
     ----------
@@ -70,6 +73,9 @@ def fit_basic(df: MetaPanda,
         If True, produces `overview_plot` inplace.
     verbose : int, optional
         If > 0, prints out statements depending on level.
+
+    Other Parameters
+    ----------------
     model_kws : dict, optional
         Keywords to pass to the sklearn model which are not parameterized.
 
@@ -80,9 +86,22 @@ def fit_basic(df: MetaPanda,
     yp : pd.Series
         The predictions for each of y
 
+    Notes
+    -----
+    Shorthand names for the models, i.e `lm` for LinearRegression or `gauss` for a GaussianProcessRegressor, are accepted.
+
+    By default, `fit_basic` uses the root mean squared error (RMSE). There is currently no option to change this.
+
+    By default, this model assumes you are working with a regression problem. Classification compatibility
+    will arrive in a later version.
+
     See Also
     --------
-    fit_grid : Performs exhaustive grid search analysis on the models selected
+    fit_grid : Performs exhaustive grid search analysis on the models selected.
+
+    References
+    ----------
+    .. [1] Scikit-learn: Machine Learning in Python, Pedregosa et al., JMLR 12, pp. 2825-2830, 2011.
     """
     # checks
     instance_check(df, MetaPanda)
@@ -96,14 +115,23 @@ def fit_basic(df: MetaPanda,
     instance_check(model_kws, dict)
     assert is_sklearn_model(model), "model '{}' is not a valid sklearn model."
 
-    lm, pkg_name = find_sklearn_model(model)
+    # determine whether the problem is a classification or regression problem.
+    mt = "classification" if df[y].dtype == int else "regression"
+
+    lm, pkg_name = find_sklearn_model(model, "regression")
     # assign keywords to lm
     lm.set_params(**model_kws)
     # make data set machine learning ready.
     _df, _x, _y, _xcols = ml_ready(df, x, y)
 
     # function 1: performing cross-validated fit.
-    def _perform_cv_fit(_x, _xcols, _y, _k, _repeats, _lm, package_name):
+    def _perform_cv_fit(_x: np.ndarray,
+                        _xcols: pd.Index,
+                        _y: np.ndarray,
+                        _k: int,
+                        _repeats: int,
+                        _lm,
+                        package_name: str) -> "MetaPanda":
         # generate repeatedkfold.
         rep = RepeatedKFold(n_splits=_k, n_repeats=_repeats)
         # cv cross-validate and wrap.
@@ -122,7 +150,12 @@ def fit_basic(df: MetaPanda,
         return MetaPanda(cv)
 
     # function 2: performing cross-validated predictions.
-    def _perform_prediction_fit(_df, _x, _y, _yn, _k, _lm):
+    def _perform_prediction_fit(_df: pd.DataFrame,
+                                _x: np.ndarray,
+                                _y: np.ndarray,
+                                _yn: str,
+                                _k: int,
+                                _lm) -> pd.Series:
         return pd.Series(cross_val_predict(_lm, _x, _y, cv=_k), index=_df.index).to_frame(_yn)
 
     if cache is not None:

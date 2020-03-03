@@ -11,21 +11,37 @@ from ._error_raise import instance_check
 
 SetLike = Union[type(None), str, Set, Index, List, Tuple, Series]
 
-__all__ = ("dict_to_tuple", "dictzip", "dictmap", "join", 'pairwise',
+__all__ = ("dictsplit", "dict_to_tuple", "dictzip", "dictmap", "dictchunk", "join", 'pairwise',
            "set_like", "union", "intersect", "difference", 'dictcopy')
 
 """ DICTIONARY CONVENIENCE """
 
 
 def dict_to_tuple(d: Dict) -> Tuple:
-    """Converts a dictionary to a 2-tuple."""
+    """Converts a dictionary to a 2-tuple.
+
+    Parameters
+    ----------
+    d : dict
+        The dictionary
+
+    Returns
+    -------
+    t : tuple
+        The tuplized dictionary
+    """
     return tuple((a, b) for a, b in d.items())
+
+
+def dictsplit(d: Dict):
+    """Splits a dictionary into two tuples."""
+    return tuple(d.keys()), tuple(d.values())
 
 
 def dictzip(a: Iterable, b: Iterable) -> Dict:
     """Map together a, b to make {a: b}.
 
-    a and b must be the same length.
+    .. note:: a and b do not need to be the same length. Nones are filled where empty.
 
     Parameters
     ----------
@@ -43,7 +59,24 @@ def dictzip(a: Iterable, b: Iterable) -> Dict:
 
 
 def dictcopy(d1: Dict, d2: Dict):
-    """Updates d2 to d1 using copy rather than direct update."""
+    """Updates d2 to d1 using copy rather than direct update.
+
+    This can be thought of as an `update` with copy.
+
+    Note that values in d2 will override any existing same-key in d1.
+
+    Parameters
+    ----------
+    d1 : dict
+        first dictionary
+    d2 : dict
+        second dictionary
+
+    Returns
+    -------
+    d3 : dict
+        Result dictionary
+    """
     X = d1.copy()
     X.update(d2)
     return X
@@ -67,6 +100,50 @@ def dictmap(a: Iterable, b: Callable) -> Dict:
         Mapped dictionary
     """
     return dict(it.zip_longest(a, map(b, a)))
+
+
+def dictchunk(d: Dict, k: int = 1) -> List:
+    """Divides dictionary d into k-sized list chunks.
+
+    The list may not be in the order given in the dictionary.
+
+    Parameters
+    ----------
+    d : dict
+        A given dictionary, must have multiple elements.
+    k : int, optional
+        The size of each list-chunk
+
+    Raises
+    ------
+    TypeError
+        When k > length of d - not valid
+
+    Returns
+    -------
+    L : list of dict
+        A list containing elements from d into k-chunks
+
+    Examples
+    --------
+    Given dictionary:
+    >>> d = {'a': 1, 'b': 2, 'c': 3}
+    >>> print(dictchunk(d, 1))
+    [{'a': 1}, {'b': 2}, {'c': 3}]
+    >>> print(dictchunk(d, 2))
+    [{'a': 1, 'b': 2}, {'c': 3}]
+    """
+    if k > len(d):
+        raise ValueError("k cannot be greater than the length of d")
+    elif k == 1:
+        return [{a: x[a]} for a in x]
+    else:
+        split_a, split_b = dictsplit(x)
+        return [
+            dict(it.zip_longest(
+                it.islice(split_a, i, i+k), it.islice(split_b, i, i+k)
+            )) for i in range(0, len(x), k)
+        ]
 
 
 def join(*pipes) -> List:

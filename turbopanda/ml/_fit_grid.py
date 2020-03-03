@@ -11,12 +11,13 @@ from sklearn.model_selection import RepeatedKFold, GridSearchCV
 from sklearn.pipeline import Pipeline
 
 from turbopanda._metapanda import MetaPanda, SelectorType
-from turbopanda.utils import listify, standardize, instance_check, broadsort, strpattern
-from turbopanda.dev import cached
+from turbopanda.utils import listify, standardize, instance_check, broadsort, strpattern, dictchunk
+from turbopanda.dev import cached, cached_chunk
 
 from ._clean import ml_ready
 from ._default import model_types, param_types
 from ._package import find_sklearn_model
+from ._plot_tune import parameter_tune_plot
 
 
 def _get_default_param_name(model):
@@ -89,16 +90,19 @@ def _make_parameter_grid(models, header="model"):
 def fit_grid(df: MetaPanda,
              x: SelectorType,
              y: str,
-             models: Dict[str, Dict],
+             models,
              k: int = 5,
              repeats: int = 10,
              cache: Optional[str] = None,
              plot: bool = False,
+             chunks: bool = False,
              verbose: int = 0,
              **grid_kws) -> "MetaPanda":
     """Performs exhaustive grid search analysis on the models selected.
 
-    By default, fit tunes using the root mean squared error (RMSE).
+    This function aims to encapsulate much of the functionality associated around `GridSearchCV` class
+    within scikit-learn. With in-built caching options, flexible selection of inputs and outputs with the
+    MetaPanda class.
 
     Parameters
     ----------
@@ -116,18 +120,58 @@ def fit_grid(df: MetaPanda,
     repeats : int, optional
         We use RepeatedKFold, so specifying some repeats
     cache : str, optional
-        If not None, stores the resulting model parts in JSON and reloads if present.
+        If not None, cache is a filename handle for caching the `cv_results` as a JSON/csv file.
     plot : bool, optional
         If True, produces appropriate plot determining for each parameter.
+    chunks : bool, optional
+        If True, and if cache is not None: caches the ML gridsearch into equal-sized chunks.
+        This saves chunk files which means that if part of the pipeline breaks, you can start from the previous chunk.
     verbose : int, optional
         If > 0, prints out statements depending on level.
+
+    Other Parameters
+    ----------------
     grid_kws : dict, optional
         Additional keywords to assign to GridSearchCV.
+
+    Raises
+    ------
+    TypeError
+        If one of the parameters has wrong input type
 
     Returns
     -------
     cv_results : MetaPanda
         A dataframe result from GridSearchCV detailing iterations and all scores.
+
+    Notes
+    -----
+    From version 0.2.3 the `chunks` argument allows for fitting by parts. This means that breaks throughout
+    a large pipeline will result only in losses up to the previous chunk. Chunk files are saved as
+    '%filename_chunk%i.csv' so beware of clashes. Make sure to set `chunks=True` and `cache=str` where the `models` parameter
+    is time-expensive.
+
+    By default, `fit_grid` tunes using the root mean squared error (RMSE). There is currently no option to change this.
+
+    By default, this model assumes you are working with a regression problem. Classification compatibility
+    will arrive in a later version.
+
+    See Also
+    --------
+    fit_basic : Performs a rudimentary fit model with no parameter searching.
+    sklearn.model_selection.GridSearchCV : Exhaustive search over specified parameter values for an estimator
+
+    Examples
+    --------
+    To fit a basic grid, say using Ridge Regression we would:
+    >>> import turbopanda as turb
+    >>> results = turb.ml.fit_grid(df, "x_column", "y_column", ['Ridge'])
+    >>> # these results could then be plotted
+    >>> turb.ml.parameter_tune_plot(results)
+
+    References
+    ----------
+    .. [1] Scikit-learn: Machine Learning in Python, Pedregosa et al., JMLR 12, pp. 2825-2830, 2011.
     """
     # checks
     instance_check(df, MetaPanda)
@@ -138,6 +182,7 @@ def fit_grid(df: MetaPanda,
     instance_check(repeats, int)
     instance_check(cache, (type(None), str))
     instance_check(plot, bool)
+    instance_check(chunks, bool)
 
     # do caching
     def _perform_fit(_df: MetaPanda, _x, _y, _k: int, _repeats: int, _models):
@@ -169,26 +214,70 @@ def fit_grid(df: MetaPanda,
         return _met_result
 
     if cache is not None:
-        return cached(_perform_fit, cache, verbose, _df=df, _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
+        if chunks:
+            # if dictionary, we need to split this into 1-sized list/dict blocks.
+            values = dictchunk(models, 1) if isinstance(models, dict) else models
+            _cv_results = cached_chunk(_perform_fit, "_models", values, cache, verbose, _df=df,
+                         _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
+        else:
+            _cv_results = cached(_perform_fit, cache, verbose, _df=df, _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
     else:
-        return _perform_fit(_df=df, _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
+        _cv_results = _perform_fit(_df=df, _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
+
+    if plot:
+        parameter_tune_plot(_cv_results)
+
+    return _cv_results
 
 
-def get_best_model(cv_results, minimize=True):
-    """Returns the best model (with correct params) given the cv_results from a `fit_grid` call."""
+def get_best_model(cv_results: MetaPanda, minimize: bool = True):
+    """Returns the best model (with correct params) given the cv_results from a `fit_grid` call.
+
+    The idea behind this function is to fetch from the pool of models the best model
+    which could be fed directly into `fit_basic` to get the detailed plots.
+
+    Parameters
+    ----------
+    cv_results : MetaPanda
+        A dataframe result from GridSearchCV detailing iterations and all scores.
+    minimize : bool
+        Determines whether the scoring function is minimized or maximized
+
+    Returns
+    -------
+    M : sklearn model
+        A parameterized sklearn model (unfitted).
+
+    Notes
+    -----
+    The returned model is not fitted, you will need to do this yourself.
+
+    See Also
+    --------
+    fit_basic : Performs a rudimentary fit model with no parameter searching
+    """
     if minimize:
         select = cv_results.df_['mean_test_score'].idxmin()
     else:
-        select = cv_results.df_['mean_test_score'].idxmin()
+        select = cv_results.df_['mean_test_score'].idxmax()
 
     M = cv_results.df_.loc[select, 'model']
     # instantiate a model from text M
-    inst_M = find_sklearn_model(M)
+    inst_M = find_sklearn_model(M)[0]
     # get dict params
     param_columns = strpattern(
         "param_model__", cv_results.df_.loc[select].dropna().index
     )
-    params = cv_results.df_.loc[select, param_columns].to_dict()
-    # set to model
-    M.set_params(**params)
-    return M
+    # preprocess dict params to eliminate the header for sklearn models
+    _old_params = cv_results.df_.loc[select, param_columns]
+    _old_params.index = _old_params.index.str.rsplit("__", 1).str[-1]
+    params = _old_params.to_dict()
+    # iterate through parameters and cast down potential floats to ints
+    for k, v in params.items():
+        if isinstance(v, float):
+            if v.is_integer():
+                params[k] = int(v)
+
+    # set parameters in to the model.
+    inst_M.set_params(**params)
+    return inst_M

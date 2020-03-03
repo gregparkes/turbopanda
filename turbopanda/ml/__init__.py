@@ -6,7 +6,7 @@ The most basic beginning support we provide is automatic JSON caching of ML mode
 """
 
 from ._fit_basic import fit_basic
-from ._fit import fit_grid
+from ._fit_grid import fit_grid, get_best_model
 
 from ._plot import best_model_plot
 from ._plot_overview import overview_plot, coefficient_plot

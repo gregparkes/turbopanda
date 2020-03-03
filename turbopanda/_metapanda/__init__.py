@@ -401,7 +401,7 @@ class MetaPanda(object):
 
     @property
     def selectors_(self) -> Dict[str, Any]:
-        """Fetch the cached selectors available."""
+        """Fetch the cached selectors available. This also includes boolean columns found in `meta_`."""
         return self._select
 
     @property

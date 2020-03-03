@@ -136,13 +136,13 @@ def dictchunk(d: Dict, k: int = 1) -> List:
     if k > len(d):
         raise ValueError("k cannot be greater than the length of d")
     elif k == 1:
-        return [{a: x[a]} for a in x]
+        return [{a: d[a]} for a in d]
     else:
-        split_a, split_b = dictsplit(x)
+        split_a, split_b = dictsplit(d)
         return [
             dict(it.zip_longest(
                 it.islice(split_a, i, i+k), it.islice(split_b, i, i+k)
-            )) for i in range(0, len(x), k)
+            )) for i in range(0, len(d), k)
         ]
 
 

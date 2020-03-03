@@ -76,7 +76,7 @@ def _make_parameter_grid(models, header="model"):
                 _p[header] = listify(find_sklearn_model(name)[0])
                 return _p
             elif isinstance(_val, dict):
-                _p = {header + "__" + k: broadsort(v) for k, v in _val.items()}
+                _p = {header + "__" + k: broadsort(list(v)) for k, v in _val.items()}
                 _p[header] = listify(find_sklearn_model(name)[0])
                 return _p
 
@@ -218,9 +218,10 @@ def fit_grid(df: MetaPanda,
             # if dictionary, we need to split this into 1-sized list/dict blocks.
             values = dictchunk(models, 1) if isinstance(models, dict) else models
             _cv_results = cached_chunk(_perform_fit, "_models", values, cache, verbose, _df=df,
-                         _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
+                                       _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
         else:
-            _cv_results = cached(_perform_fit, cache, verbose, _df=df, _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
+            _cv_results = cached(_perform_fit, cache, verbose, _df=df, _x=x, _y=y, _k=k, _repeats=repeats,
+                                 _models=models)
     else:
         _cv_results = _perform_fit(_df=df, _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
 

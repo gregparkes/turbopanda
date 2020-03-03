@@ -7,7 +7,7 @@ from typing import Union, List, Tuple
 from ._error_raise import instance_check
 
 
-def broadsort(a: Union[List, Tuple]) -> List:
+def broadsort(a: Union[List, Tuple, np.ndarray]) -> List:
     """Sorts elements of most object types.
 
     Parameters
@@ -20,7 +20,7 @@ def broadsort(a: Union[List, Tuple]) -> List:
     a_s : list/tuple
         sorted list of a
     """
-    instance_check(a, (list, tuple))
+    instance_check(a, (list, tuple, np.ndarray))
 
     try:
         a_s = sorted(a)

@@ -12,7 +12,7 @@ from turbopanda.corr._correlate import _row_to_matrix
 from turbopanda.utils import union
 from turbopanda.stats import vif, cook_distance
 from turbopanda.plot import shape_multiplot
-from ._clean import cleaned_subset
+from ._clean import ml_ready
 
 
 __all__ = ('coefficient_plot', 'overview_plot')
@@ -74,11 +74,9 @@ def coefficient_plot(plot, cv):
         tick.set_horizontalalignment('right')
 
 
-def _basic_correlation_matrix(plot, df, x, y):
-    # determine columns
-    cols = union(df.view(x), y)
+def _basic_correlation_matrix(plot, df, xcols):
     # perform correlation
-    corr = correlate(df[cols].dropna())
+    corr = correlate(df[xcols].dropna())
     # convert to matrix
     _cmatrix = _row_to_matrix(corr)
     # plot heatmap
@@ -144,18 +142,18 @@ def overview_plot(df, x, y, cv, yp):
     # set yp as series
     yp = yp[y].squeeze()
     # pair them and remove NA
-    _df = cleaned_subset(df, x, y)
+    _df, _x, _y, _xcols = ml_ready(df, x, y)
 
     # plot 1. fitted vs. residual plots
-    _fitted_vs_residual(ax[0], _df[y], yp)
+    _fitted_vs_residual(ax[0], _y, yp)
     # plot 2. boxplot for scores
     _boxplot_scores(ax[1], cv)
     # plot 3. KDE plot estimation between y and yhat
-    _actual_vs_predicted(ax[2], _df[y], yp)
+    _actual_vs_predicted(ax[2], _y, yp)
     # plot 4. coefficient plot
     coefficient_plot(ax[3], cv)
     # plot 5. correlation matrix
-    _basic_correlation_matrix(ax[4], df, x, y)
+    _basic_correlation_matrix(ax[4], _df, _xcols)
     # plot 6. variance inflation factor for each explanatory variable
     _plot_vif(ax[5], vif(df, x, y))
     # plot 7. q-q plot

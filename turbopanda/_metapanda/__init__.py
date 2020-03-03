@@ -352,7 +352,7 @@ class MetaPanda(object):
 
     @source_.setter
     def source_(self, source):
-        if isinstance(source, str):
+        if isinstance(source, (str, list, tuple)):
             self._source = source
 
     @property

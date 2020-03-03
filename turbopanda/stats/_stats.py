@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 
-from turbopanda.ml._clean import cleaned_subset
+from turbopanda.ml._clean import ml_ready
 from turbopanda.utils import standardize, instance_check
 
 __all__ = ('vif', 'cook_distance', 'hat', 'hat_generalized')
@@ -85,19 +85,14 @@ def vif(df, x, y):
     vif : pd.Series (|x|,)
         variance inflationary factors for each in x
     """
-    from statsmodels.stats.outliers_influence import variance_inflation_factor as vif
+    from statsmodels.stats.outliers_influence import variance_inflation_factor as _vif
 
     instance_check(y, str)
-
-    _df = cleaned_subset(df, x, y)
-    _X = np.atleast_2d(_df[df.view(x)].values)
-    # standardize
-    _X = standardize(_X)
-
-    if _X.shape[1] > 1:
+    _df, _x, _y, _xcol = ml_ready(df, x, y)
+    if _x.shape[1] > 1:
         # for every column, extract vif
-        vifs = [vif(_X, i) for i in range(_X.shape[1])]
-        return pd.Series(vifs, index=df.view(x))
+        vifs = [_vif(_x, i) for i in range(_x.shape[1])]
+        return pd.Series(vifs, index=_xcol)
     else:
         return []
 
@@ -122,12 +117,12 @@ def cook_distance(df, x, y, yp):
         Cook's value for each in y.
     """
     # we clean df by choosing consistent subset, no NA.
-    _df = cleaned_subset(df, x, y)
-    _p = len(df.view(x))
-    resid_sq = np.square(_df[y] - yp)
-
+    _df, _x, _y, _xcol = ml_ready(df, x, y)
+    _p = len(_xcol)
+    # determine squared-residuals
+    resid_sq = np.square(_y - yp)
     # calculate hat matrix as OLS : @ is dot product between matrices
-    diag_H = np.diag(hat(_df, df.view(x)))
+    diag_H = np.diag(hat(_df, _xcol))
     # calculate cook points
     cooks = (resid_sq / (_p * np.mean(resid_sq))) * (diag_H / np.square(1 - diag_H))
     return cooks

@@ -17,7 +17,7 @@ import itertools as it
 # locals
 from ._metapanda import MetaPanda
 from ._pipe import PipeMetaPandaType
-from .utils import belongs, intersect, instance_check, check_list_type
+from .utils import belongs, intersect, instance_check, check_list_type, union
 
 # custom types
 DataSetType = Union[Series, DataFrame, MetaPanda]
@@ -184,21 +184,24 @@ def merge(mdfs: Tuple[DataSetType, ...],
         for ds in mdfs[1:]:
             nmdf = _single_merge(nmdf, ds, how=how)
 
-    # remove duplicated columns
-    nmdf._df = nmdf.df_.loc[:, ~nmdf.columns.duplicated()]
+    # do some additional things if the return type is a MetaPanda object.
+    if isinstance(nmdf, MetaPanda):
+        # remove duplicated columns
+        nmdf._df = nmdf.df_.loc[:, ~nmdf.columns.duplicated()]
 
-    # add on a meta_ column indicating the source of every feature.
-    col_sources = concat([Series(ds.name_, index=ds.df_.columns.copy()) for ds in mdfs],
-                         axis=0, sort=False)
-    # define new column as a categorical
-    nmdf.meta_["datasets"] = col_sources.astype("category")
-
-    # override name if given
-    if name is not None and isinstance(nmdf, MetaPanda):
-        nmdf.name_ = name
-    # compute clean if applicable
-    if clean_pipe is not None and isinstance(nmdf, MetaPanda):
-        nmdf.compute(clean_pipe, inplace=True)
+        # add on a meta_ column indicating the source of every feature.
+        col_sources = concat([Series(ds.name_, index=ds.df_.columns.copy()) for ds in mdfs],
+                             axis=0, sort=False)
+        # define new column as a categorical
+        nmdf.meta_["datasets"] = col_sources.astype("category")
+        # join together sources into a list
+        nmdf.source_ = [mdf.source_ for mdf in mdfs]
+        # override name if given
+        if name is not None:
+            nmdf.name_ = name
+        # compute clean if applicable
+        if clean_pipe is not None:
+            nmdf.compute(clean_pipe, inplace=True)
 
     # return
     return nmdf

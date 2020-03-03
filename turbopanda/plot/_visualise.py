@@ -44,6 +44,10 @@ def _generate_square_like_grid(n, ax_size=2):
     fig, axes = plt.subplots(ncols=f1, nrows=f2, figsize=(ax_size * f1, ax_size * f2))
     if axes.ndim > 1:
         axes = list(it.chain.from_iterable(axes))
+    if len(axes) > n:
+        # iterate over non-plots and set them to be negative.
+        for i in range(len(axes) - n):
+            axes[np.negative(i+1)].set_visible(False)
     return fig, axes
 
 
@@ -58,6 +62,11 @@ def _generate_diag_like_grid(n, direction, ax_size=2):
     fig, axes = plt.subplots(ncols=nc, nrows=nr, figsize=tup)
     if axes.ndim > 1:
         axes = list(it.chain.from_iterable(axes))
+    if len(axes) > n:
+        # iterate over non-plots and set them to be negative.
+        for i in range(len(axes) - n):
+            axes[np.negative(i+1)].set_visible(False)
+        # make the last-k invisible
     return fig, axes
 
 

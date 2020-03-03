@@ -2,11 +2,17 @@
 # -*- coding: utf-8 -*-
 """Operations for handling utility string operationss."""
 
+import re
 from typing import Union, Tuple, List
 from pandas import Series, Index, DataFrame
-from ._sets import pairwise
+from ._sets import pairwise, set_like
 
-__all__ = ('string_replace', 'common_substring_match', 'pairwise_common_substring_matches', 'reformat')
+__all__ = ('strpattern', 'string_replace', 'common_substring_match', 'pairwise_common_substring_matches', 'reformat')
+
+
+def strpattern(pat, K):
+    """Determines if pattern `pat` exists in list of str `K`."""
+    return set_like([s for s in K if re.search(pat, s)])
 
 
 def string_replace(strings: Union[Series, Index], operations: Tuple[str, str]) -> Series:

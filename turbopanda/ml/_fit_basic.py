@@ -100,8 +100,7 @@ def fit_basic(df: MetaPanda,
     # assign keywords to lm
     lm.set_params(**model_kws)
     # make data set machine learning ready.
-    _df, _x, _y = ml_ready(df, x, y)
-    xcols = df.view(x)
+    _df, _x, _y, _xcols = ml_ready(df, x, y)
 
     # function 1: performing cross-validated fit.
     def _perform_cv_fit(_x, _xcols, _y, _k, _repeats, _lm, package_name):
@@ -130,14 +129,14 @@ def fit_basic(df: MetaPanda,
         cache_cv = insert_suffix(cache, "_cv")
         cache_yp = insert_suffix(cache, "_yp")
         _cv = cached(
-            _perform_cv_fit, cache_cv, verbose, _x=_x, _xcols=xcols, _y=_y, _k=k,
+            _perform_cv_fit, cache_cv, verbose, _x=_x, _xcols=_xcols, _y=_y, _k=k,
             _repeats=repeats, _lm=lm, package_name=pkg_name
         )
         _yp = cached(
             _perform_prediction_fit, cache_yp, verbose, _df=_df, _x=_x, _y=_y, _yn=y, _k=k, _lm=lm
         )
     else:
-        _cv = _perform_cv_fit(_x, xcols, _y, k, repeats, lm, pkg_name)
+        _cv = _perform_cv_fit(_x, _xcols, _y, k, repeats, lm, pkg_name)
         _yp = _perform_prediction_fit(_df, _x, _y, y, k, lm)
 
     if plot:

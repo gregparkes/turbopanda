@@ -11,7 +11,7 @@ from sklearn.model_selection import RepeatedKFold, GridSearchCV
 from sklearn.pipeline import Pipeline
 
 from turbopanda._metapanda import MetaPanda, SelectorType
-from turbopanda.utils import listify, standardize, instance_check
+from turbopanda.utils import listify, standardize, instance_check, broadsort, strpattern
 from turbopanda.dev import cached
 
 from ._clean import ml_ready
@@ -64,18 +64,18 @@ def _make_parameter_grid(models, header="model"):
     """
     if isinstance(models, (list, tuple)):
         _p = [{header: [find_sklearn_model(model)[0]],
-               header+"__"+_get_default_param_name(model): _get_default_params(model)} \
+               header + "__" + _get_default_param_name(model): broadsort(_get_default_params(model))} \
               for model in models]
         return _p
     elif isinstance(models, dict):
         def _handle_single_model(name, _val):
             if isinstance(_val, (list, tuple)):
                 # if the values are list/tuple, they are parameter names, use defaults
-                _p = {header + "__" + _v: _get_default_params(name, _v) for _v in _val}
+                _p = {header + "__" + _v: broadsort(_get_default_params(name, _v)) for _v in _val}
                 _p[header] = listify(find_sklearn_model(name)[0])
                 return _p
             elif isinstance(_val, dict):
-                _p = {header + "__" + k: v for k, v in _val.items()}
+                _p = {header + "__" + k: broadsort(v) for k, v in _val.items()}
                 _p[header] = listify(find_sklearn_model(name)[0])
                 return _p
 
@@ -95,7 +95,7 @@ def fit_grid(df: MetaPanda,
              cache: Optional[str] = None,
              plot: bool = False,
              verbose: int = 0,
-             grid_kws: Dict = {}) -> "MetaPanda":
+             **grid_kws) -> "MetaPanda":
     """Performs exhaustive grid search analysis on the models selected.
 
     By default, fit tunes using the root mean squared error (RMSE).
@@ -126,7 +126,7 @@ def fit_grid(df: MetaPanda,
 
     Returns
     -------
-    r : MetaPanda
+    cv_results : MetaPanda
         A dataframe result from GridSearchCV detailing iterations and all scores.
     """
     # checks
@@ -155,7 +155,7 @@ def fit_grid(df: MetaPanda,
         # create gridsearch
         gs = GridSearchCV(pipe, param_grid=pgrid, cv=rep, **def_grid_params)
         # make ml ready
-        __df, __xnp, __y = ml_ready(_df, _x, _y)
+        __df, __xnp, __y, _xcols = ml_ready(_df, _x, _y)
         # fit the grid - expensive.
         gs.fit(__xnp, __y)
         # generate result
@@ -172,3 +172,23 @@ def fit_grid(df: MetaPanda,
         return cached(_perform_fit, cache, verbose, _df=df, _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
     else:
         return _perform_fit(_df=df, _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
+
+
+def get_best_model(cv_results, minimize=True):
+    """Returns the best model (with correct params) given the cv_results from a `fit_grid` call."""
+    if minimize:
+        select = cv_results.df_['mean_test_score'].idxmin()
+    else:
+        select = cv_results.df_['mean_test_score'].idxmin()
+
+    M = cv_results.df_.loc[select, 'model']
+    # instantiate a model from text M
+    inst_M = find_sklearn_model(M)
+    # get dict params
+    param_columns = strpattern(
+        "param_model__", cv_results.df_.loc[select].dropna().index
+    )
+    params = cv_results.df_.loc[select, param_columns].to_dict()
+    # set to model
+    M.set_params(**params)
+    return M

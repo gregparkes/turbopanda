@@ -111,7 +111,7 @@ def _create_new_metamap(df, meta, selectors, mapper, name, meta_set):
     cat = object_to_categorical(new_grid, meta_set)
     cat.name = name
     # APPARENTLY CONCAT doesn't work here? for some dumb reason.
-    meta = meta.join(cat)
+    meta[name] = cat
     # store meta_map for future reference.
     mapper[name] = meta_set
 
@@ -122,12 +122,12 @@ def _redefine_metamaps(df, meta, mapper, selectors):
             _create_new_metamap(df, meta, selectors, mapper, k, v)
 
 
-def _reset_meta(df, meta, mapper, selectors) -> pd.DataFrame:
+def _reset_meta(df, mapper, selectors) -> pd.DataFrame:
     """Returns a meta dataset. """
     # add in metadata rows.
     _meta = _add_metadata(df)
     # if we have mapper elements, add these in
-    _redefine_metamaps(df, meta, mapper, selectors)
+    _redefine_metamaps(df, _meta, mapper, selectors)
     return _meta
 
 
@@ -180,7 +180,7 @@ def update_meta(self) -> "MetaPanda":
     self
     """
     # should include a call to define the meta maps.
-    self._meta = _reset_meta(self.df_, self.meta_, self.mapper_, self.selectors_)
+    self._meta = _reset_meta(self.df_, self.mapper_, self.selectors_)
     return self
 
 

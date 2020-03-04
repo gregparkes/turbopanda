@@ -79,7 +79,7 @@ def add_prefix(self, pref: str,
     --------
     add_suffix : Add a suffix to all of the columns or selected columns..
     """
-    sel_cols = inspect(self.df_, self.meta_, self.selectors_, selector, axis=axis, mode='view')
+    sel_cols = inspect(self.df_, self.meta_, self.selectors_, selector, axis=1, mode='view')
     # set to df_ and meta_
     _rename_axis(self.df_, self.meta_, sel_cols, pref + sel_cols, axis=1)
     return self
@@ -105,7 +105,7 @@ def add_suffix(self, suf: str,
     --------
     add_prefix : Add a prefix to all of the columns or selected columns.
     """
-    sel_cols = inspect(self.df_, self.meta_, self.selectors_, selector, axis=axis, mode='view')
+    sel_cols = inspect(self.df_, self.meta_, self.selectors_, selector, axis=1, mode='view')
     # set to df_ and meta_
     _rename_axis(self.df_, self.meta_, sel_cols, sel_cols + suf, axis=1)
     return self

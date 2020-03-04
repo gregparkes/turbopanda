@@ -27,5 +27,5 @@ def broadsort(a: Union[List, Tuple, np.ndarray]) -> List:
         return a_s
     except TypeError:
         # if we have objects, try to use the __class__ object to sort them by.
-        ss = np.argsort([b.__class__ for b in a])
+        ss = np.argsort([str(b.__class__) for b in a])
         return np.asarray(a)[ss].tolist()

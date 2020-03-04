@@ -3,14 +3,15 @@
 """Provides an interface to the MetaPanda object."""
 
 import json
+import numpy as np
 import pandas as pd
 import hashlib
 import warnings
 from typing import Any, Dict, Union, Tuple, Optional, List
-from turbopanda.utils import split_file_directory
 from pandas.core.groupby.generic import DataFrameGroupBy
 
 from turbopanda._pipe import Pipe, is_pipe_structure, PipeMetaPandaType
+from turbopanda.utils import split_file_directory, join
 from ._inspect import inspect
 from ._types import SelectorType
 from ._drop_values import drop_columns
@@ -36,6 +37,8 @@ class MetaPanda(object):
         The number of columns in `df_`
     memory_ : str
         String-formatted representation of memory consumption in megabytes
+    options_ : tuple
+        A list of options for selectors
     selectors_ : dict
         Maps unique name (key) to cached selected groups of columns (value)
     mapper_ : dict
@@ -88,9 +91,9 @@ class MetaPanda(object):
     transform_k(ops)
         Performs multiple inplace transformations to a group of columns within `df_`
     aggregate(func, name=None, selector=None, keep=False)
-        Perform inplace column-wise aggregations to multiple selectors.
+        Perform an inplace column-wise aggregation with a selector.
     aggregate_k(func, names=None, selectors=None, keep=False)
-
+        Perform inplace column-wise aggregations to multiple selectors.
     meta_map(name, selectors)
         Maps a group of selectors with an identifier, in `mapper_`
     update_meta(None)
@@ -403,6 +406,11 @@ class MetaPanda(object):
     def selectors_(self) -> Dict[str, Any]:
         """Fetch the cached selectors available. This also includes boolean columns found in `meta_`."""
         return self._select
+
+    @property
+    def options_(self) -> Tuple:
+        """Fetch the available selector options cached in this object."""
+        return tuple(join(self._select, self.meta_.columns[self.meta_.dtypes == np.bool]))
 
     @property
     def memory_(self) -> str:

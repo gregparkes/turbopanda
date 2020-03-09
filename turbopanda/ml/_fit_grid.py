@@ -231,7 +231,8 @@ def fit_grid(df: MetaPanda,
     return _cv_results
 
 
-def get_best_model(cv_results: MetaPanda, minimize: bool = True):
+def get_best_model(cv_results: MetaPanda,
+                   minimize: bool = True):
     """Returns the best model (with correct params) given the cv_results from a `fit_grid` call.
 
     The idea behind this function is to fetch from the pool of models the best model

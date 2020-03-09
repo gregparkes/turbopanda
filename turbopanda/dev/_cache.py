@@ -29,7 +29,7 @@ __all__ = ("cached", "cache", 'cached_chunk')
 
 
 def _stack_rows(rows):
-    return MetaPanda(concat(rows, axis=0, ignore_index=True))
+    return MetaPanda(concat(rows, axis=0, sort=False, ignore_index=True))
 
 
 def _set_index_def(df, values=('Unnamed:_0', 'Unnamed: 0', 'colnames', 'index', 'counter')):

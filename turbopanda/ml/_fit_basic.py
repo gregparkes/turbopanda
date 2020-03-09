@@ -123,6 +123,8 @@ def fit_basic(df: MetaPanda,
     lm.set_params(**model_kws)
     # make data set machine learning ready.
     _df, _x, _y, _xcols = ml_ready(df, x, y)
+    if verbose > 0:
+        print("full dataset: {}/{} -> ML: {}/{}".format(df.n_, df.p_, _df.shape[0], _df.shape[1]))
 
     # function 1: performing cross-validated fit.
     def _perform_cv_fit(_x: np.ndarray,

@@ -20,7 +20,7 @@ import pandas as pd
 # locals
 from turbopanda._metapanda import MetaPanda
 from turbopanda.utils import instance_check, union, remove_na, \
-    is_column_float, belongs, difference
+    is_column_float, belongs, difference, is_column_boolean
 
 # user define dataset type
 DataSetType = Union[pd.Series, pd.DataFrame, MetaPanda]
@@ -29,24 +29,20 @@ DataSetType = Union[pd.Series, pd.DataFrame, MetaPanda]
 __all__ = ('correlate', 'bicorr', 'partial_bicorr')
 
 
-def _boolean_like(x):
-    return (x.dtype == np.bool) or (x.dtype in (np.uint8, np.uint16) and np.unique(x).size == 2)
-
-
 def _both_continuous(x, y):
     return is_column_float(x) and is_column_float(y)
 
 
 def _continuous_bool(x, y):
-    return (is_column_float(x) and _boolean_like(y)) or (is_column_float(y) and _boolean_like(x))
+    return (is_column_float(x) and is_column_boolean(y)) or (is_column_float(y) and is_column_boolean(x))
 
 
 def _get_continuous_bool_order(x, y):
-    return (x, y) if (is_column_float(x) and _boolean_like(y)) else (y, x)
+    return (x, y) if (is_column_float(x) and is_column_boolean(y)) else (y, x)
 
 
 def _boolbool(x, y):
-    return _boolean_like(x) and _boolean_like(y)
+    return is_column_boolean(x) and is_column_boolean(y)
 
 
 def _row_to_matrix(rows: pd.DataFrame) -> pd.DataFrame:

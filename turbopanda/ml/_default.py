@@ -280,14 +280,16 @@ def model_types():
                       'ExtraTreesClassifier': {'Name': 'Extra Trees',
                                                'Short': 'etc',
                                                'ModelType': 'classification',
-                                               'Primary Parameter': 'max_depth',
-                                               'All Parameters': 'max_depth, criterion, min_samples_leaf, max_features'
+                                               'Primary Parameter': 'n_estimators',
+                                               'All Parameters': 'n_estimators, max_depth, criterion, '
+                                                                 'min_samples_leaf, max_features '
                                                },
                       'ExtraTreesRegressor': {'Name': 'Extra Trees',
                                               'Short': 'etr',
                                               'ModelType': 'regression',
-                                              'Primary Parameter': 'max_depth',
-                                              'All Parameters': 'max_depth, criterion, min_samples_leaf, max_features'
+                                              'Primary Parameter': 'n_estimators',
+                                              'All Parameters': 'n_estimators, max_depth, criterion, '
+                                                                'min_samples_leaf, max_features '
 
                                               },
                       'KNeighborsClassifier': {'Name': 'Nearest Neighbors',

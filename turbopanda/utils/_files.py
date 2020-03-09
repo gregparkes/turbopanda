@@ -2,10 +2,27 @@
 # -*- coding: utf-8 -*-
 """Methods utility file-related functions."""
 
+import glob
 from typing import Any, List
+from ._sets import join
+from ._error_raise import instance_check
+
+__all__ = ("list_dir", "split_file_directory", 'insert_prefix', 'insert_suffix', 'get_file_expanded')
 
 
-__all__ = ("list_dir", "split_file_directory", 'insert_prefix', 'insert_suffix')
+def _is_filepath_object(f):
+    """Returns whether f is a filepath type object."""
+    try:
+        glob.glob(f)
+        return True
+    except TypeError:
+        return False
+
+
+def get_file_expanded(files: List[str]) -> List:
+    """Given a list of filenames, get the associated found files."""
+    instance_check(files, (list, tuple))
+    return join(*[glob.glob(f) for f in files if _is_filepath_object(f)])
 
 
 def list_dir(obj: Any) -> List:

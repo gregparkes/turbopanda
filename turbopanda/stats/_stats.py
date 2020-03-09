@@ -11,17 +11,15 @@ from turbopanda.utils import standardize, instance_check
 __all__ = ('vif', 'cook_distance', 'hat', 'hat_generalized')
 
 
-def hat(df, x):
+def hat(X):
     """Calculates the hat matrix.
 
     H = X(X^T X)^{-1} X^T
 
-     Parameters
+    Parameters
     ----------
-    df : MetaPanda
-        The full dataset
-    x : list/tuple
-        List of selected x columns
+    X : np.ndarray
+        numpy matrix.
 
 
     Returns
@@ -29,12 +27,11 @@ def hat(df, x):
     H : np.ndarray
         hat matrix.
     """
-
-    X = np.atleast_2d(df[x].values)
-    # standardize
-    X = standardize(X)
+    X = np.atleast_2d(X)
+    # attempt to invert X.T @ X
+    X_inv = np.linalg.pinv(X.T @ X)
     # calculate H
-    H = X @ np.linalg.pinv(X.T @ X) @ X.T
+    H = X @ X_inv @ X.T
     return H
 
 
@@ -122,7 +119,7 @@ def cook_distance(df, x, y, yp):
     # determine squared-residuals
     resid_sq = np.square(_y - yp)
     # calculate hat matrix as OLS : @ is dot product between matrices
-    diag_H = np.diag(hat(_df, _xcol))
+    diag_H = np.diag(hat(_x))
     # calculate cook points
     cooks = (resid_sq / (_p * np.mean(resid_sq))) * (diag_H / np.square(1 - diag_H))
     return cooks

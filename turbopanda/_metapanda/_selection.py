@@ -92,6 +92,7 @@ def _get_selector_item(df: DataFrame,
         else:
             return df.columns[ser]
     elif isinstance(selector, str):
+        # if we begin with ~, reverse the str search as NOT
         # check if the key is in the meta_ column names, only if a boolean column
         if (selector in meta) and (meta[selector].dtype == bool):
             return df.columns[meta[selector]]

@@ -8,7 +8,7 @@ from __future__ import division
 from __future__ import print_function
 
 # imports
-from typing import Tuple, Union, Optional
+from typing import Tuple, Union, Optional, List
 import numpy as np
 from pandas import merge as pmerge
 from pandas import DataFrame, Series, concat
@@ -16,8 +16,9 @@ import itertools as it
 
 # locals
 from ._metapanda import MetaPanda
+from ._fileio import read
 from ._pipe import PipeMetaPandaType
-from .utils import belongs, intersect, instance_check, check_list_type, union
+from .utils import belongs, intersect, instance_check, check_list_type, union, get_file_expanded
 
 # custom types
 DataSetType = Union[Series, DataFrame, MetaPanda]
@@ -70,6 +71,10 @@ def _single_merge(sdf1: DataSetType,
 
     Parameters
     ----------
+    sdf1 : str, Series, DataFrame, MetaPanda
+        Dataset 1. If str, reads it in as if a file.
+    sdf2 : str, Series, DataFrame, MetaPanda
+        Dataset 2. If str, reads it in as if a file.
     how : str
         How to join on concat or merge between sdf1, sdf2.
     """
@@ -131,7 +136,7 @@ def _single_merge(sdf1: DataSetType,
         return mpf
 
 
-def merge(mdfs: Tuple[DataSetType, ...],
+def merge(mdfs: Union[str, List[DataSetType]],
           name: Optional[str] = None,
           how: str = 'inner',
           clean_pipe: Optional[PipeMetaPandaType] = None):
@@ -143,9 +148,11 @@ def merge(mdfs: Tuple[DataSetType, ...],
 
     Parameters
     ---------
-    mdfs : list of str/pd.Series/pd.DataFrame/MetaPanda
+    mdfs : str/pd.Series/pd.DataFrame/MetaPanda
         An ordered set of DataFrames to merge together. Must be at least 2 elements.
-            If type is str, treats it as a filename and attempts to read in.
+            If str: reads in using glob-like, must read in multiple files then merges
+            If list of str: reads in each separate file then merges
+            If list of DataFrame/Series/MetaPanda, simply merges them together
     name : str, optional
         A new name to give the merged dataset.
         If None, joins together the names of every dataset in `mdfs`.
@@ -169,11 +176,26 @@ def merge(mdfs: Tuple[DataSetType, ...],
     -------
     nmdf : MetaPanda
         The fully merged Dataset
+
+    See Also
+    --------
+    pd.merge : Merge DataFrame or named Series objects with a database-style join.
     """
     # check the element type of every mdf
-    check_list_type(mdfs, (Series, DataFrame, MetaPanda))
+    instance_check(mdfs, (str, list, tuple))
     instance_check(name, (type(None), str))
     belongs(how, ['left', 'inner', 'outer'])
+
+    if isinstance(mdfs, str):
+        """Use glob to select multiple files to merge together."""
+        mdfs = read(mdfs)
+    else:
+        ff_ext = get_file_expanded(mdfs)
+        # filter out non-dataset type elements
+        mdfs = list(filter(lambda x: not isinstance(x, str), mdfs))
+        if len(ff_ext) > 0:
+            # if we found some glob-like files, read in every ff_ext as a metapanda and append to mdfs
+            mdfs += [read(f) for f in ff_ext]
 
     if len(mdfs) < 2:
         raise ValueError("mdfs must be at least length 2")

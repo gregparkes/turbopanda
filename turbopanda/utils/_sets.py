@@ -3,7 +3,6 @@
 """Operations for handling dictionaries and sets."""
 
 import itertools as it
-import warnings
 from typing import Dict, Tuple, Iterable, Callable, Any, List, Union, Set, Optional
 from pandas import Index, Series
 
@@ -170,8 +169,6 @@ def join(*pipes) -> List:
     # filter out None elements.
     if len(pipes) == 1 and isinstance(pipes[0], str):
         return list(pipes)
-    elif len(pipes) <= 1:
-        warnings.warn("in `join`, length of arguments was < 2.", UserWarning)
 
     _p = list(filter(None.__ne__, pipes))
     _p = list(filter(lambda y: len(y) > 0, _p))

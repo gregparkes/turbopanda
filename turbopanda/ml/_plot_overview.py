@@ -15,7 +15,6 @@ from turbopanda.stats import vif, cook_distance
 from turbopanda.plot import shape_multiplot
 from ._clean import ml_ready
 
-
 __all__ = ('coefficient_plot', 'overview_plot')
 
 

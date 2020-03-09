@@ -11,4 +11,4 @@ from ._fit_grid import fit_grid, get_best_model
 from ._plot import best_model_plot
 from ._plot_overview import overview_plot, coefficient_plot
 from ._plot_tune import parameter_tune_plot
-from ._clean import ml_ready
+from ._clean import ml_ready, make_polynomial

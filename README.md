@@ -241,8 +241,6 @@ automatic fitting of continuous distributions to sets of data, *correlation* bet
 heterogeneous data columns, *mutual information* and entropy calculations, as well as
 model checking operations such as `cook_distance` and variance inflationary factors.
 
-Drawing heavily from the 
-
 ### AOB
 
 Further details can be found by exploring the 

@@ -6,7 +6,8 @@ import itertools as it
 import pandas as pd
 from typing import Callable, Optional, Tuple, Union, List
 
-from turbopanda.utils import belongs, instance_check, pairwise, common_substring_match, is_twotuple, listify
+from turbopanda.utils import belongs, instance_check, pairwise, is_twotuple, listify
+from turbopanda.str import common_substring_match
 from ._types import SelectorType
 from ._drop_values import drop_columns
 from ._inspect import inspect

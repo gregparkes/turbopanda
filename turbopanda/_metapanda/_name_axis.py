@@ -7,7 +7,8 @@ from typing import List, Tuple, Optional
 from ._types import SelectorType, PandaIndex
 from ._inspect import inspect
 from turbopanda._deprecator import deprecated
-from turbopanda.utils import is_twotuple, string_replace, belongs
+from turbopanda.utils import is_twotuple, belongs
+from turbopanda.str import string_replace
 
 
 __all__ = ('rename_axis', 'add_prefix', 'add_suffix')

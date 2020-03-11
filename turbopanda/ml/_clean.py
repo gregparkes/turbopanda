@@ -13,14 +13,17 @@ from turbopanda._metapanda import SelectorType, MetaPanda
 def ml_ready(df: "MetaPanda",
              x: SelectorType,
              y: Optional[str] = None,
-             y_std=False):
+             x_std: bool = True,
+             y_std: bool = False,
+             verbose: int = 0):
     """Make sci-kit learn ready datasets from high-level dataset.
 
     Operations performed:
         1. standardizes float-based columns
         2. drops columns with one unique value in
-
-    Optional standardization of the y-column.
+        3. drops columns of type 'object' - we do not accept string data for most ML models.
+        4. TODO: columns of type 'category' are converted to one-hot encode (only X)
+        5. Optional standardization of y-column
 
     Parameters
     ----------
@@ -30,8 +33,12 @@ def ml_ready(df: "MetaPanda",
         The selection of x-column inputs
     y : str, optional
         The target column
+    x_std: bool, optional
+        If True, standardizes float columns in X
     y_std : bool, optional
         If True, standardizes _y.
+    verbose : int, optional
+        If > 0, prints info statements out
 
     Returns
     -------
@@ -49,21 +56,33 @@ def ml_ready(df: "MetaPanda",
     instance_check(y_std, bool)
 
     _df = df.copy()
-    # eliminate columns with only one unique value in - only for boolean/category options
+    # 2. eliminate columns with only one unique value in - only for boolean/category options
     elim_cols = _df.view(lambda z: z.nunique() <= 1)
-    _df.drop(elim_cols)
-    # standardize float columns only
+    # 1. standardize float columns only
     std_cols = _df.search(x, float)
-    if len(std_cols) > 0:
+    if len(std_cols) > 0 and x_std:
         _df.transform(standardize, selector=std_cols, whole=True)
+    # 5. standardize y if selected
     if y is not None and y_std:
         _df.transform(standardize, selector=y, whole=True)
+    # 3. add 'object columns' into `elim_cols`
+    elim_cols = union(elim_cols, _df.view("object"))
+    # drop here
+    _df.drop(elim_cols)
+    # 4. perform one-hot encoding of categorical columns
+
     # view x columns as pd.Index
     xcols = df.view(x).difference(elim_cols)
     # if we have no y, just prepare for x
     cols = union(xcols, y) if y is not None else xcols
     # reduced subsets and dropna - get DataFrame
     __df = _df[cols].dropna()
+
+    if verbose > 0:
+        print("MLReady Chain: [drop nunique==1: k={} -> standardize: k={} -> y_std: {} -> drop: n={}]".format(
+            len(elim_cols), len(std_cols), y is not None and y_std, _df.n_ - __df.shape[0]
+        ))
+
     # access x, y
     _x = np.asarray(__df[xcols]).reshape(-1, 1) if len(xcols) == 1 else np.asarray(__df[xcols])
     if y is None:

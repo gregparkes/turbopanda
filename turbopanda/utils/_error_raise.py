@@ -7,7 +7,7 @@ from typing import List, Union, Any, Tuple, TypeVar
 
 
 __all__ = ("belongs", "instance_check", "check_list_type",
-           "boolean_series_check", "is_twotuple")
+           "boolean_series_check", "is_twotuple", "is_iterable")
 
 
 def belongs(elem: Any, home: Union[List[Any], Tuple[Any, ...]]):
@@ -52,3 +52,12 @@ def is_twotuple(t: Tuple[Any, Any]):
                 raise ValueError("elem i: {} is not of length 2".format(i))
     else:
         raise TypeError("L must be of type [list, tuple]")
+
+
+def is_iterable(e):
+    """Determines whether object `e` is an iterable object"""
+    try:
+        iterator = iter(e)
+        return True
+    except TypeError:
+        return False

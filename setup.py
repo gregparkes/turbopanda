@@ -13,7 +13,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="turbopanda",
-    version="0.2.3",
+    version="0.2.4",
     description="Turbo-charging the Pandas library in an integrative, meta-orientated style",
     long_description=long_description,
     long_description_content_type="text/markdown",

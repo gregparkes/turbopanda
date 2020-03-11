@@ -31,9 +31,10 @@ from . import dev
 from . import corr
 from . import ml
 from . import stats
+from . import str
 
 
-__version__ = "0.2.3"
+__version__ = "0.2.4"
 __name__ = "turbopanda"
 __doc__ = """turbopanda: Turbo-charging the Pandas library in an integrative, meta-orientated style.
 

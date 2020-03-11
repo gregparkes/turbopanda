@@ -22,12 +22,15 @@ def _handle_mode(df, v, mode='view'):
         raise ValueError("mode '{}' not recognized, choose from ['view', 'search', 'view_not']".format(mode))
 
 
-def inspect(df, meta, selectors, s=None, join_t='OR', axis=1, mode='view'):
+def inspect(df, meta, selectors, s=None, join_t='union', axis=1, mode='view'):
     """Handles basic selection using the `get_selector`."""
     if s is None:
         return df.columns if axis == 1 else df.index
     elif axis == 1:
-        v = get_selector(df, meta, selectors, s, raise_error=False, select_join=join_t)
+        if len(s) <= 1:
+            v = get_selector(df, meta, selectors, s[0], raise_error=False, select_join=join_t)
+        else:
+            v = get_selector(df, meta, selectors, s, raise_error=False, select_join=join_t)
         return _handle_mode(df, v, mode=mode)
     else:
         raise ValueError("cannot use argument [selector] with axis=0, for rows")
@@ -63,7 +66,7 @@ def view(self, *selector: SelectorType) -> pd.Index:
     search : View the intersection of search terms, for columns in `df_`.
     """
     # we do this 'double-drop' to maintain the order of the DataFrame, because of set operations.
-    sel = inspect(self.df_, self.meta_, self.selectors_, list(selector), join_t='OR', mode='view')
+    sel = inspect(self.df_, self.meta_, self.selectors_, list(selector), join_t='union', mode='view')
     # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
     return sel
 
@@ -97,7 +100,7 @@ def search(self, *selector: SelectorType) -> pd.Index:
     view_not : Views the non-selected columns in `df_`.
     view : View a selection of columns in `df_`.
     """
-    sel = inspect(self.df_, self.meta_, self.selectors_, list(selector), join_t='AND', mode='search')
+    sel = inspect(self.df_, self.meta_, self.selectors_, list(selector), join_t='intersect', mode='search')
     # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
     return sel
 
@@ -131,6 +134,6 @@ def view_not(self, *selector: SelectorType) -> pd.Index:
     view : View a selection of columns in `df_`.
     search : View the intersection of search terms, for columns in `df_`.
     """
-    sel = inspect(self.df_, self.meta_, self.selectors_, list(selector), join_t='OR', mode='view_not')
+    sel = inspect(self.df_, self.meta_, self.selectors_, list(selector), join_t='union', mode='view_not')
     # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
     return sel

@@ -1,6 +1,6 @@
 # turbopanda: Turbo-charging the Pandas library in an integrative, meta-orientated style
 
-**Current version: 0.2.3**
+**Current version: 0.2.4**
 
 The aim of this library is extend the functionality of the `pandas` library package,
  which is extensively used for data munging,

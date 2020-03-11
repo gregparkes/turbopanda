@@ -203,11 +203,14 @@ def set_like(x: SetLike = None) -> Index:
     if isinstance(x, str):
         return Index([x])
     if isinstance(x, (list, tuple)):
-        return Index(set(x)) if len(x) > 0 else Index([])
+        if len(x) <= 0:
+            return Index([])
+        else:
+            return Index(sorted(set(x), key=x.index))
     elif isinstance(x, (Series, Index)):
         return Index(x.dropna().unique(), name=x.name) if x.shape[0] > 0 else Index([])
     elif isinstance(x, set):
-        return Index(x)
+        return Index(sorted(x, key=list(x).index))
     else:
         raise TypeError("in `set_like`: `x` must be in {}, not of type {}".format(acc_types, type(x)))
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""Handles generic visualization/plotting functions."""
 
 # future imports
 from __future__ import absolute_import
@@ -12,12 +13,14 @@ import matplotlib.pyplot as plt
 import itertools as it
 from scipy import stats
 from sklearn.metrics import r2_score
-from typing import Tuple
+from typing import Tuple, Optional, Union
 
 from ._save_fig import save
+from turbopanda.utils import remove_na
+from turbopanda.corr import bicorr
 
 # locals
-from turbopanda.utils import nearest_factors, belongs, fself, standardize
+from turbopanda.utils import nearest_factors, belongs
 
 __all__ = ("scatter_grid", "missing", "hist_grid", "shape_multiplot")
 
@@ -27,13 +30,17 @@ def _iqr(a):
     return stats.scoreatpercentile(np.asarray(a), 75) - stats.scoreatpercentile(np.asarray(a), 25)
 
 
-def _data_polynomial_length(length):
-    # calculate length based on size of DF
-    # dimensions follow this polynomial
-    x = np.linspace(0, 250, 100)
-    y = np.sqrt(np.linspace(0, 1, 100)) * 22 + 3
-    p = np.poly1d(np.polyfit(x, y, deg=2))
-    return int(p(length).round())
+def _clean_axes_objects(n, axes):
+    """Given axes and true n, clean and hide redundant axes plots."""
+    if axes.ndim > 1:
+        # flatten to 1d
+        axes = list(it.chain.from_iterable(axes))
+    if len(axes) > n:
+        # if we have too many axes
+        for i in range(len(axes) - n):
+            # set invisible
+            axes[np.negative(i + 1)].set_visible(False)
+    return axes
 
 
 def _generate_square_like_grid(n, ax_size=2):
@@ -42,12 +49,8 @@ def _generate_square_like_grid(n, ax_size=2):
     """
     f1, f2 = nearest_factors(n, shape="square")
     fig, axes = plt.subplots(ncols=f1, nrows=f2, figsize=(ax_size * f1, ax_size * f2))
-    if axes.ndim > 1:
-        axes = list(it.chain.from_iterable(axes))
-    if len(axes) > n:
-        # iterate over non-plots and set them to be negative.
-        for i in range(len(axes) - n):
-            axes[np.negative(i+1)].set_visible(False)
+    # update axes with clean
+    axes = _clean_axes_objects(n, axes)
     return fig, axes
 
 
@@ -60,17 +63,11 @@ def _generate_diag_like_grid(n, direction, ax_size=2):
     tup, nc, nr = ((ax_size * fmin, ax_size * fmax), fmin, fmax) \
         if direction == 'row' else ((ax_size * fmax, ax_size * fmin), fmax, fmin)
     fig, axes = plt.subplots(ncols=nc, nrows=nr, figsize=tup)
-    if axes.ndim > 1:
-        axes = list(it.chain.from_iterable(axes))
-    if len(axes) > n:
-        # iterate over non-plots and set them to be negative.
-        for i in range(len(axes) - n):
-            axes[np.negative(i+1)].set_visible(False)
-        # make the last-k invisible
+    axes = _clean_axes_objects(n, axes)
     return fig, axes
 
 
-def _freedman_diaconis_bins(a):
+def _freedman_diaconis_bins(a) -> int:
     """
     Calculate number of hist bins using Freedman-Diaconis rule.
 
@@ -91,7 +88,9 @@ def _freedman_diaconis_bins(a):
 """ ################################### USEFUL FUNCTIONS ######################################"""
 
 
-def shape_multiplot(n_plots: int, arrange: str = "square", ax_size: int = 2):
+def shape_multiplot(n_plots: int,
+                    arrange: str = "square",
+                    ax_size: int = 2):
     """Determines the most optimal shape for a set of plots.
 
     Parameters
@@ -120,7 +119,7 @@ def shape_multiplot(n_plots: int, arrange: str = "square", ax_size: int = 2):
             if arrange == 'square' else _generate_diag_like_grid(n_plots, arrange, ax_size=ax_size)
 
 
-def missing(mdf):
+def missing(mdf: "MetaPanda"):
     """
     Plots the missing data as a greyscale heatmap.
 
@@ -133,6 +132,14 @@ def missing(mdf):
     -------
     None
     """
+    def _data_polynomial_length(length):
+        # calculate length based on size of DF
+        # dimensions follow this polynomial
+        x = np.linspace(0, 250, 100)
+        y = np.sqrt(np.linspace(0, 1, 100)) * 22 + 3
+        p = np.poly1d(np.polyfit(x, y, deg=2))
+        return int(p(length).round())
+
     dims = (16, _data_polynomial_length(mdf.df_.shape[1]))
 
     # wrangle data
@@ -147,7 +154,10 @@ def missing(mdf):
     ax.set_yticklabels(mdf.df_.columns)
 
 
-def hist_grid(mdf, selector, arrange="square", savepath=None):
+def hist_grid(mdf: "MetaPanda", selector,
+              arrange: str = "square",
+              plot_size: int = 3,
+              savepath: Optional[Union[str, bool]] = None):
     """
     Plots a grid of histograms comparing the distributions in a MetaPanda
     selector.
@@ -161,6 +171,8 @@ def hist_grid(mdf, selector, arrange="square", savepath=None):
     arrange : str
         Choose from ['square', 'row', 'column']. Square arranges the plot as square-like as possible. Row
         prioritises plots row-like, and column-wise for column.
+    plot_size : int
+        The size of each axes
     savepath : None, bool, str
         saves the figure to file. If bool, uses the name in mdf, else uses given string. If None, no fig is saved.
 
@@ -172,7 +184,7 @@ def hist_grid(mdf, selector, arrange="square", savepath=None):
     # get selector
     selection = mdf.view(selector)
     if selection.size > 0:
-        fig, axes = shape_multiplot(len(selection), arrange)
+        fig, axes = shape_multiplot(len(selection), arrange, ax_size=plot_size)
 
         for i, x in enumerate(selection):
             # calculate the bins
@@ -187,7 +199,12 @@ def hist_grid(mdf, selector, arrange="square", savepath=None):
             save(fig, "hist", mdf.name_, fp=savepath)
 
 
-def scatter_grid(mdf, selector, target, arrange="square", savepath=None):
+def scatter_grid(mdf: "MetaPanda",
+                 x,
+                 y,
+                 arrange: str = "square",
+                 plot_size: int = 3,
+                 savepath: Optional[Union[bool, str]] = None):
     """
     Plots a grid of scatter plots comparing each column for MetaPanda
     in selector to y target value.
@@ -196,13 +213,15 @@ def scatter_grid(mdf, selector, target, arrange="square", savepath=None):
     --------
     mdf : turb.MetaPanda
         The dataset
-    selector : str or list/tuple of str
+    x : str or list/tuple of str
             Contains either types, meta column names, column names or regex-compliant strings
-    target : str
-        The y-response variable to plot
+    y : str or list/tuple of str
+            Contains either types, meta column names, column names or regex-compliant strings
     arrange : str
         Choose from ['square', 'row', 'column']. Square arranges the plot as square-like as possible. Row
         prioritises plots row-like, and column-wise for column.
+    plot_size : int
+        The size of each axes
     savepath : None, bool, str
         saves the figure to file. If bool, uses the name in mdf, else uses given string.
 
@@ -212,15 +231,27 @@ def scatter_grid(mdf, selector, target, arrange="square", savepath=None):
     """
     belongs(arrange, ["square", "row", "column"])
     # get selector
-    selection = mdf.view(selector)
-    if selection.size > 0:
-        fig, axes = shape_multiplot(len(selection), arrange)
+    x_sel = mdf.view(x)
+    y_sel = mdf.view(y)
+    # create a product between x and y and plot
+    prod = list(it.product(x_sel, y_sel))
 
-        for i, x in enumerate(selection):
-            axes[i].scatter(mdf.df_[x], mdf.df_[target], alpha=.5)
+    if len(prod) > 0:
+        fig, axes = shape_multiplot(len(prod), arrange, ax_size=plot_size)
+        for i, (_x, _y) in enumerate(prod):
+            # pair x, y
+            __x, __y = remove_na(mdf[_x].values, mdf[_y].values, paired=True)
+            axes[i].scatter(__x.flatten(), __y, alpha=.5)
+            # line of best fit
+            xn = np.linspace(__x.min(), __x.max(), 100)
+            z = np.polyfit(__x.flatten(), __y, deg=1)
+            axes[i].plot(xn, np.polyval(z, xn), 'k--')
             # spearman correlation
-            pair_corr = mdf.df_[[x, target]].corr(method="spearman").iloc[0, 1]
-            axes[i].set_title("{}: r={:0.3f}".format(x, pair_corr))
+            pair_corr = bicorr(mdf[_x], mdf[_y]).loc['spearman', 'r']
+            axes[i].set_title("r={:0.3f}".format(pair_corr))
+            axes[i].set_xlabel(_x)
+            axes[i].set_ylabel(_y)
+
         fig.tight_layout()
 
         if isinstance(savepath, bool):

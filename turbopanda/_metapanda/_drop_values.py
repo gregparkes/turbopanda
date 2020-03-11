@@ -103,7 +103,7 @@ def filter_rows(self,
     self
     """
     # perform inplace
-    selection = inspect(self.df_, self.meta_, self.selectors_, selector, axis=1, )
+    selection = inspect(self.df_, self.meta_, self.selectors_, selector, axis=1)
     # modify
     if callable(func) and selection.shape[0] == 1:
         bs = func(self.df_[selection[0]], *args)

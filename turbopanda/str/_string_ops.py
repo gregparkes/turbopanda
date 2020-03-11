@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Operations for handling utility string operationss."""
+"""Operations for handling string operationss."""
 
 import re
 from typing import Union, Tuple, List
 from pandas import Series, Index, DataFrame
-from ._sets import pairwise, set_like
 
-__all__ = ('strpattern', 'string_replace', 'common_substring_match', 'pairwise_common_substring_matches', 'reformat')
+from turbopanda.utils import set_like
+
+
+__all__ = ('strpattern', 'string_replace', 'reformat')
 
 
 def strpattern(pat, K):
@@ -20,37 +22,6 @@ def string_replace(strings: Union[Series, Index], operations: Tuple[str, str]) -
     for op in operations:
         strings = strings.str.replace(*op)
     return strings
-
-
-def common_substring_match(a: str, b: str) -> str:
-    """Given two strings, find the longest common substring.
-
-     Also known as the Longest Common Substring problem."""
-    from difflib import SequenceMatcher
-    match = SequenceMatcher(None, a, b).find_longest_match(0, len(a), 0, len(b))
-    # return the longest substring
-    if match.size != 0:
-        return a[match.a:match.a + match.size]
-    else:
-        return ""
-
-
-def pairwise_common_substring_matches(array: List[str]) -> Series:
-    """
-    Given k strings, find the most frequent longest common substring.
-
-    Parameters
-    ----------
-    array : list, tuple, pd.Index
-        A list of strings
-
-    Returns
-    -------
-    ser : Series
-        The value counts of every pairwise common substring match
-    """
-    pairs = pairwise(common_substring_match, array)
-    return Series(pairs).value_counts()
 
 
 def reformat(s: str, df: DataFrame) -> Series:

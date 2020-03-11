@@ -84,3 +84,5 @@ def best_model_plot(cv_results, y_var: str = "test", minimize=True, score="RMSE"
     # generate legend
     ax.legend(legend(mapping), list(mapping.keys()), bbox_to_anchor=(1.03, 1.03))
     plt.show()
+
+

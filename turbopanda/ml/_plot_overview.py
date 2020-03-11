@@ -10,7 +10,7 @@ from scipy import stats
 
 from turbopanda.corr import correlate
 from turbopanda.corr._correlate import _row_to_matrix
-from turbopanda.utils import union, instance_check
+from turbopanda.utils import union, instance_check, intersect
 from turbopanda.stats import vif, cook_distance
 from turbopanda.plot import shape_multiplot
 from ._clean import ml_ready
@@ -80,13 +80,10 @@ def coefficient_plot(cv, plot=None):
         plot.tick_params("x", rotation=45)
         for tick in plot.get_xmajorticklabels():
             tick.set_horizontalalignment('right')
+        plot.set_title("Coefficients")
 
 
-def _basic_correlation_matrix(plot, df, xcols):
-    # perform correlation
-    corr = correlate(df, xcols)
-    # convert to matrix
-    _cmatrix = _row_to_matrix(corr)
+def _basic_correlation_matrix(plot, _cmatrix):
     # plot heatmap
     plot.pcolormesh(_cmatrix, vmin=-1., vmax=1., cmap="seismic")
     # if we have too many labels, randomly choose some
@@ -128,7 +125,7 @@ def _cooks(plot, cooks):
 """ ######################### PUBLIC FUNCTIONS ######################### """
 
 
-def overview_plot(df, x, y, cv, yp, plot_names=None):
+def overview_plot(df, x, y, cv, yp, plot_names=None, plot_size=3):
     """Presents an overview of the results of a machine learning basic run.
 
     Parameters
@@ -147,6 +144,8 @@ def overview_plot(df, x, y, cv, yp, plot_names=None):
         Names of specific plot types to draw.
         Choose any combo of {'resid_fitted', 'score', 'actual_predicted', 'coef', 'correlation', 'vif', 'qqplot', 'cooks'}
         If None: draws ALL.
+    plot_size : int, optional
+        Defines the size of each plot size.
 
     Returns
     -------
@@ -162,37 +161,47 @@ def overview_plot(df, x, y, cv, yp, plot_names=None):
     yp = yp[y].squeeze()
     # pair them and remove NA
     _df, _x, _y, _xcols = ml_ready(df, x, y)
+    options_yes_ = (True, True, True, True, len(_xcols) > 1, len(_xcols) > 1,
+                    True, True)
+    # compress down options
+    option_compressed = list(it.compress(options_, options_yes_))
 
     """ Make plots here """
     if plot_names is None:
         plot_names = options_
+    # overlap plots
+    overlap_ = sorted(intersect(option_compressed, plot_names),
+                      key=options_.index)
+
     # make plots
-    fig, ax = shape_multiplot(len(plot_names), ax_size=4)
+    fig, ax = shape_multiplot(len(overlap_), ax_size=plot_size)
     I = it.count()
 
-    if "score" in plot_names:
+    if "score" in overlap_:
         # plot 2. boxplot for scores
         _boxplot_scores(ax[next(I)], cv)
-    if "resid_fitted" in plot_names:
+    if "resid_fitted" in overlap_:
         # plot 1. fitted vs. residual plots
         _fitted_vs_residual(ax[next(I)], _y, yp)
-    if "actual_predicted" in plot_names:
+    if "actual_predicted" in overlap_:
         # plot 3. KDE plot estimation between y and yhat
         _actual_vs_predicted(ax[next(I)], _y, yp)
-    if "coef" in plot_names:
+    if "coef" in overlap_:
         # plot 4. coefficient plot
         coefficient_plot(cv, ax[next(I)])
-    if "correlation" in plot_names:
+    if "correlation" in overlap_ and len(_xcols) > 1:
         # plot 5. correlation matrix
-        _basic_correlation_matrix(ax[next(I)], df, x)
-    if "vif" in plot_names:
+        corr = correlate(_df, _xcols)
+        _cmatrix = _row_to_matrix(corr)
+        _basic_correlation_matrix(ax[next(I)], _cmatrix)
+    if "vif" in overlap_ and len(_xcols) > 1:
         # plot 6. variance inflation factor for each explanatory variable
         _v = vif(df, x, y)
         _plot_vif(ax[next(I)], _v)
-    if "qqplot" in plot_names:
+    if "qqplot" in overlap_:
         # plot 7. q-q plot
         stats.probplot(_df[y], dist="norm", plot=ax[next(I)])
-    if "cooks" in plot_names:
+    if "cooks" in overlap_:
         # plot 8. outlier detection using cook's distance plot
         _c = cook_distance(df, x, y, yp)
         _cooks(ax[next(I)], _c)

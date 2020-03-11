@@ -139,8 +139,6 @@ def test_play_audio():
 
 
 def bleep(note='C') -> Callable:
-    # the note must belong as a possible note.
-    belongs(note, _get_notes_all())
     """Provides automatic sound release when a function has completed.
 
     .. note:: this requires the `simpleaudio` package to run.
@@ -160,6 +158,7 @@ def bleep(note='C') -> Callable:
     ...     # compute some long function here
     ...     pass
     """
+    belongs(note, _get_notes_all())
     # define decorator
     def decorator(func):
         """Basic decorator."""

@@ -16,10 +16,9 @@ from pandas import CategoricalDtype, concat, Index, Series, DataFrame
 # locals
 from turbopanda.utils import boolean_series_check, intersect, union, \
     t_numpy, dictmap, dictzip, join, difference
-
 from ._types import SelectorType
 
-__all__ = ("regex_column", "get_selector", "selector_types", 'selector_options')
+__all__ = ("regex_column", "get_selector", "selector_types", 'selector_options', 'not_selector_types')
 
 
 def selector_types() -> Iterable:
@@ -28,6 +27,14 @@ def selector_types() -> Iterable:
         t_numpy(),
         tuple(map(lambda n: n.__name__, t_numpy())),
         (float, int, bool, object, CategoricalDtype, "object", "category")
+    )
+
+
+def not_selector_types() -> Iterable:
+    """Returns the NOT acceptable selector data types that are searched for, i.e everything NOT as k"""
+    return join(
+        tuple(map(lambda n: "~"+n.__name__, t_numpy())),
+        ("~object", "~category")
     )
 
 
@@ -64,7 +71,7 @@ def _get_selector_item(df: DataFrame,
     """
     if selector is None:
         return Index([], name=df.columns.name)
-    if isinstance(selector, Index):
+    elif isinstance(selector, Index):
         # check to see if values in selector match df.column names
         return intersect(df.columns, selector)
     elif selector in selector_types():
@@ -115,7 +122,7 @@ def get_selector(df: DataFrame,
                  cached: Dict[str, SelectorType],
                  selector: SelectorType,
                  raise_error: bool = False,
-                 select_join: str = "OR") -> Index:
+                 select_join: str = "union") -> Index:
     """
     Selector must be a list/tuple of selectors.
 
@@ -130,10 +137,12 @@ def get_selector(df: DataFrame,
         # iterate over all selector elements and get pd.Index es.
         s_groups = [_get_selector_item(df, meta, cached, s, raise_error) for s in selector]
         # print(s_groups)
-        if select_join == "AND":
+        if select_join == "intersect":
             return intersect(*s_groups)
-        elif select_join == "OR":
+        elif select_join == "union":
             return union(*s_groups)
+        else:
+            raise ValueError("join '{}' not recognized, use {}".format(select_join, ('union', 'intersect')))
         # by default, use intersection for AND, union for OR
     else:
         # just one item, return asis

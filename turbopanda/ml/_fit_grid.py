@@ -11,7 +11,8 @@ from sklearn.model_selection import RepeatedKFold, GridSearchCV
 from sklearn.pipeline import Pipeline
 
 from turbopanda._metapanda import MetaPanda, SelectorType
-from turbopanda.utils import listify, standardize, instance_check, broadsort, strpattern, dictchunk
+from turbopanda.utils import listify, standardize, instance_check, broadsort, dictchunk
+from turbopanda.str import strpattern
 from turbopanda.dev import cached, cached_chunk
 
 from ._clean import ml_ready

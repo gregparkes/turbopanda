@@ -122,7 +122,8 @@ class MetaPanda(object):
                  dataset: pd.DataFrame,
                  name: Optional[str] = None,
                  with_clean: bool = True,
-                 with_warnings: bool = False):
+                 with_warnings: bool = False,
+                 select_def: str = "union"):
         """Define a MetaPanda frame.
 
         Creates a Meta DataFrame with the raw data and parametrization of
@@ -138,6 +139,10 @@ class MetaPanda(object):
             If True, uses Pipe.clean() to perform minor preprocessing on `dataset`
         with_warnings : bool, optional
             If True, prints warnings when strange things happen, for instance during selection
+        select_def : str, optional
+            Choose between {'union', 'intersect'}
+            If 'union': any selector parameters return the `union` set of searched terms
+            If 'intersect': any selector parameters return the `intersect` overlap set of searched terms
         """
         self._with_warnings = with_warnings
         self._with_clean = with_clean
@@ -151,6 +156,7 @@ class MetaPanda(object):
         # set empty meta
         self._meta = None
         self._source = ""
+        self.select_crit_ = select_def
         # set using property
         self.df_ = dataset
         self.name_ = name if name is not None else 'DataSet'
@@ -313,7 +319,7 @@ class MetaPanda(object):
     def __getitem__(self, *selector: SelectorType):
         """Fetch a subset determined by the selector."""
         # we take the columns that are NOT this selection, then drop to keep order.
-        sel = inspect(self.df_, self.meta_, self.selectors_, selector, join_t='OR')
+        sel = inspect(self.df_, self.meta_, self.selectors_, selector, join_t=self.select_crit_, mode='view')
         if sel.size > 0:
             # drop anti-selection to maintain order/sorting
             return self.df_[sel].squeeze()
@@ -411,6 +417,19 @@ class MetaPanda(object):
     def options_(self) -> Tuple:
         """Fetch the available selector options cached in this object."""
         return tuple(join(self._select, self.meta_.columns[self.meta_.dtypes == np.bool]))
+
+    @property
+    def select_crit_(self) -> str:
+        """Determines the default action when `inspect` is called."""
+        return self._select_crit
+
+    @select_crit_.setter
+    def select_crit_(self, s):
+        opt = ('union', 'intersect')
+        if s in opt:
+            self._select_crit = s
+        else:
+            raise ValueError("selection criteria '{}' not found, choose from {}".format(s, opt))
 
     @property
     def memory_(self) -> str:

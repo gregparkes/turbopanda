@@ -5,3 +5,4 @@
 
 from ._string_ops import *
 from ._longest_common_match import *
+from ._levenshtein import levenshtein

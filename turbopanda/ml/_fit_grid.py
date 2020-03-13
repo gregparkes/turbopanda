@@ -4,7 +4,7 @@
 
 import numpy as np
 import pandas as pd
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import RepeatedKFold, GridSearchCV
@@ -92,8 +92,7 @@ def fit_grid(df: MetaPanda,
              x: SelectorType,
              y: str,
              models,
-             k: int = 5,
-             repeats: int = 10,
+             cv: Tuple[int, int] = (5, 10),
              cache: Optional[str] = None,
              plot: bool = False,
              chunks: bool = False,
@@ -116,10 +115,9 @@ def fit_grid(df: MetaPanda,
     models : tuple/dict
         tuple: list of model names, uses default parameters
         dict: key (model name), value tuple (parameter names) / dict: key (parameter name), value (list of values)
-    k : int, optional
-        The number of cross-fold validations
-    repeats : int, optional
-        We use RepeatedKFold, so specifying some repeats
+    cv : int/tuple, optional (5, 10)
+        If int: just reflects number of cross-validations
+        If Tuple: (cross_validation, n_repeats) `for RepeatedKFold`
     cache : str, optional
         If not None, cache is a filename handle for caching the `cv_results` as a JSON/csv file.
     plot : bool, optional
@@ -178,12 +176,16 @@ def fit_grid(df: MetaPanda,
     instance_check(df, MetaPanda)
     instance_check(x, (str, list, tuple, pd.Index))
     instance_check(y, str)
-    instance_check(k, int)
+    instance_check(cv, (int, tuple))
     instance_check(models, (tuple, list, dict))
-    instance_check(repeats, int)
     instance_check(cache, (type(None), str))
     instance_check(plot, bool)
     instance_check(chunks, bool)
+
+    if isinstance(cv, tuple):
+        k, repeats = cv
+    else:
+        k, repeats = cv, 1
 
     # do caching
     def _perform_fit(_df: MetaPanda, _x, _y, _k: int, _repeats: int, _models):

@@ -287,7 +287,7 @@ def difference(a: SetLike, b: SetLike) -> Index:
     return set_like(a).symmetric_difference(set_like(b))
 
 
-def pairwise(f: Callable, x: SetLike) -> List:
+def pairwise(f: Callable, x: SetLike, *args, **kwargs) -> List:
     """Conduct a pairwise operation on a list of elements, receiving them in pairs.
 
     e.g for list x = [1, 2, 3] we conduct:
@@ -300,15 +300,19 @@ def pairwise(f: Callable, x: SetLike) -> List:
     f : function
         Receives two arguments and returns something
     x : list-like
-        A list of strings, parameters etc, to pass to f
+        A list of strings, parameters etc, to pass to f, as f(x1, x2)
+    *args : list
+        Additional arguments to pass to f(x1, x2)
+    **kwargs : dict
+        Additional keyword arguments to pass to f(x1, x2)
 
     Returns
     -------
     y : list-like
-        A list of the return elements from f(x)
+        A list of the return elements from f(x1, x2, *args, **kwargs)
     """
     y = []
     pairs = it.combinations(x, 2)
     for p1, p2 in pairs:
-        y.append(f(p1, p2))
+        y.append(f(p1, p2, *args, **kwargs))
     return join(y)

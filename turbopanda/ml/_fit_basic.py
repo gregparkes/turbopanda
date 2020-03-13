@@ -4,7 +4,7 @@
 
 import numpy as np
 import pandas as pd
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple
 
 from sklearn.model_selection import RepeatedKFold, cross_validate, cross_val_predict
 
@@ -40,8 +40,7 @@ def _extract_coefficients_from_model(cv, x, pkg_name):
 def fit_basic(df: MetaPanda,
               x: SelectorType,
               y: str,
-              k: int = 5,
-              repeats: int = 10,
+              cv: Tuple[int, int] = (5, 10),
               model: str = "LinearRegression",
               cache: Optional[str] = None,
               plot: bool = False,
@@ -61,10 +60,9 @@ def fit_basic(df: MetaPanda,
         A list of selected column names for x or MetaPanda `selector`.
     y : str
         A selected y column.
-    k : int, optional
-        The number of cross-fold validations
-    repeats : int, optional
-        We use RepeatedKFold, so specifying some repeats
+    cv : int/tuple, optional (5, 10)
+        If int: just reflects number of cross-validations
+        If Tuple: (cross_validation, n_repeats) `for RepeatedKFold`
     model : str, sklearn model
         The name of a scikit-learn model, or the model object itself.
     cache : str, optional
@@ -107,16 +105,17 @@ def fit_basic(df: MetaPanda,
     instance_check(df, MetaPanda)
     instance_check(x, (str, list, tuple, pd.Index))
     instance_check(y, str)
-    instance_check(k, int)
-    instance_check(repeats, int)
+    instance_check(cv, (int, tuple))
     instance_check(cache, (type(None), str))
     instance_check(plot, bool)
     instance_check(verbose, int)
     instance_check(model_kws, dict)
     assert is_sklearn_model(model), "model '{}' is not a valid sklearn model."
 
-    # determine whether the problem is a classification or regression problem.
-    mt = "classification" if df[y].dtype == int else "regression"
+    if isinstance(cv, tuple):
+        k, repeats = cv
+    else:
+        k, repeats = cv, 1
 
     lm, pkg_name = find_sklearn_model(model, "regression")
     # assign keywords to lm

@@ -84,7 +84,6 @@ def nearest_factors(n: int,
                     w_var: float = 1.5) -> Tuple[int, int]:
     """Calculate the nearest best factors of a given integer.
 
-
     Given n size that may not be even, return the 'most square' factors
     of that integer. Uses square_factors and searches linearly around
     options.

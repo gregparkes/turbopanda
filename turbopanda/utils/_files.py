@@ -30,6 +30,12 @@ def list_dir(obj: Any) -> List:
     return [a for a in dir(obj) if not a.startswith("__") and not a.startswith("_")]
 
 
+def list_dir_object(obj: Any) -> List:
+    import string
+    """Lists all public objects within a directory."""
+    return [a for a in dir(obj) if a[0] in string.ascii_uppercase]
+
+
 def split_file_directory(filename: str):
     """Breaks down the filename pathway into constitute parts.
 

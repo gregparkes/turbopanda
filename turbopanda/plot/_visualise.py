@@ -12,111 +12,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import itertools as it
 from scipy import stats
-from sklearn.metrics import r2_score
 from typing import Tuple, Optional, Union
 
-from ._save_fig import save
-from turbopanda.utils import remove_na
+from turbopanda.utils import remove_na, belongs
 from turbopanda.corr import bicorr
+from ._save_fig import save
+from ._gridplot import gridplot
+from ._histogram import freedman_diaconis_bins
 
-# locals
-from turbopanda.utils import nearest_factors, belongs
-
-__all__ = ("scatter_grid", "missing", "hist_grid", "shape_multiplot")
-
-
-def _iqr(a):
-    """Calculate the IQR for an array of numbers."""
-    return stats.scoreatpercentile(np.asarray(a), 75) - stats.scoreatpercentile(np.asarray(a), 25)
-
-
-def _clean_axes_objects(n, axes):
-    """Given axes and true n, clean and hide redundant axes plots."""
-    if axes.ndim > 1:
-        # flatten to 1d
-        axes = list(it.chain.from_iterable(axes))
-    if len(axes) > n:
-        # if we have too many axes
-        for i in range(len(axes) - n):
-            # set invisible
-            axes[np.negative(i + 1)].set_visible(False)
-    return axes
-
-
-def _generate_square_like_grid(n, ax_size=2):
-    """
-    Given n, returns a fig, ax pairing of square-like grid objects
-    """
-    f1, f2 = nearest_factors(n, shape="square")
-    fig, axes = plt.subplots(ncols=f1, nrows=f2, figsize=(ax_size * f1, ax_size * f2))
-    # update axes with clean
-    axes = _clean_axes_objects(n, axes)
-    return fig, axes
-
-
-def _generate_diag_like_grid(n, direction, ax_size=2):
-    """ Direction is in [row, column]"""
-    belongs(direction, ["row", "column"])
-    f1, f2 = nearest_factors(n, shape="diag")
-    fmax, fmin = max(f1, f2), min(f1, f2)
-    # get longest one
-    tup, nc, nr = ((ax_size * fmin, ax_size * fmax), fmin, fmax) \
-        if direction == 'row' else ((ax_size * fmax, ax_size * fmin), fmax, fmin)
-    fig, axes = plt.subplots(ncols=nc, nrows=nr, figsize=tup)
-    axes = _clean_axes_objects(n, axes)
-    return fig, axes
-
-
-def _freedman_diaconis_bins(a) -> int:
-    """
-    Calculate number of hist bins using Freedman-Diaconis rule.
-
-    Taken from https://github.com/mwaskom/seaborn/blob/master/seaborn/distributions.py
-    """
-    # From https://stats.stackexchange.com/questions/798/
-    a = np.asarray(a)
-    if len(a) < 2:
-        return 1
-    h = 2 * _iqr(a) / (a.shape[0] ** (1 / 3))
-    # fall back to sqrt(a) bins if iqr is 0
-    if h == 0:
-        return int(np.sqrt(a.size))
-    else:
-        return int(np.ceil((np.nanmax(a) - np.nanmin(a)) / h))
-
-
-""" ################################### USEFUL FUNCTIONS ######################################"""
-
-
-def shape_multiplot(n_plots: int,
-                    arrange: str = "square",
-                    ax_size: int = 2):
-    """Determines the most optimal shape for a set of plots.
-
-    Parameters
-    ----------
-    n_plots : int
-        The total number of plots.
-    arrange : str
-        Choose from {'square', 'row' 'column'}. Indicates preference for direction
-        of plots.
-    ax_size : int
-        The square size of each plot.
-
-    Returns
-    -------
-    fig : matplotlib.figure.Figure
-        The figure
-    axes : list of matplotlib.ax.Axes
-        A list of axes to use.
-    """
-    if n_plots == 1:
-        fig, ax = plt.subplots(figsize=(ax_size, ax_size))  #
-        # wrap ax as a list to iterate over.
-        return fig, [ax]
-    else:
-        return _generate_square_like_grid(n_plots, ax_size=ax_size) \
-            if arrange == 'square' else _generate_diag_like_grid(n_plots, arrange, ax_size=ax_size)
+__all__ = ("scatter_grid", "missing", "hist_grid")
 
 
 def missing(mdf: "MetaPanda"):
@@ -154,7 +58,8 @@ def missing(mdf: "MetaPanda"):
     ax.set_yticklabels(mdf.df_.columns)
 
 
-def hist_grid(mdf: "MetaPanda", selector,
+def hist_grid(mdf: "MetaPanda",
+              selector,
               arrange: str = "square",
               plot_size: int = 3,
               savepath: Optional[Union[str, bool]] = None):
@@ -184,11 +89,11 @@ def hist_grid(mdf: "MetaPanda", selector,
     # get selector
     selection = mdf.view(selector)
     if selection.size > 0:
-        fig, axes = shape_multiplot(len(selection), arrange, ax_size=plot_size)
+        fig, axes = gridplot(len(selection), arrange, ax_size=plot_size)
 
         for i, x in enumerate(selection):
             # calculate the bins
-            bins_ = min(_freedman_diaconis_bins(mdf.df_[x]), 50)
+            bins_ = min(freedman_diaconis_bins(mdf.df_[x]), 50)
             axes[i].hist(mdf.df_[x].dropna(), bins=bins_)
             axes[i].set_title(x)
         fig.tight_layout()
@@ -237,7 +142,7 @@ def scatter_grid(mdf: "MetaPanda",
     prod = list(it.product(x_sel, y_sel))
 
     if len(prod) > 0:
-        fig, axes = shape_multiplot(len(prod), arrange, ax_size=plot_size)
+        fig, axes = gridplot(len(prod), arrange, ax_size=plot_size)
         for i, (_x, _y) in enumerate(prod):
             # pair x, y
             __x, __y = remove_na(mdf[_x].values, mdf[_y].values, paired=True)

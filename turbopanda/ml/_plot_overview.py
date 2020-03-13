@@ -12,7 +12,7 @@ from turbopanda.corr import correlate
 from turbopanda.corr._correlate import _row_to_matrix
 from turbopanda.utils import union, instance_check, intersect
 from turbopanda.stats import vif, cook_distance
-from turbopanda.plot import shape_multiplot
+from turbopanda.plot import gridplot
 from ._clean import ml_ready
 
 __all__ = ('coefficient_plot', 'overview_plot')
@@ -142,7 +142,8 @@ def overview_plot(df, x, y, cv, yp, plot_names=None, plot_size=3):
         The result fitted values from a call to `fit_basic`
     plot_names : list of str, optional
         Names of specific plot types to draw.
-        Choose any combo of {'resid_fitted', 'score', 'actual_predicted', 'coef', 'correlation', 'vif', 'qqplot', 'cooks'}
+        Choose any combo of: {'resid_fitted', 'score', 'actual_predicted', 'coef',
+            'correlation', 'vif', 'qqplot', 'cooks'}
         If None: draws ALL.
     plot_size : int, optional
         Defines the size of each plot size.
@@ -161,7 +162,7 @@ def overview_plot(df, x, y, cv, yp, plot_names=None, plot_size=3):
     yp = yp[y].squeeze()
     # pair them and remove NA
     _df, _x, _y, _xcols = ml_ready(df, x, y)
-    options_yes_ = (True, True, True, True, len(_xcols) > 1, len(_xcols) > 1,
+    options_yes_ = (True, True, True, True, 1 < len(_xcols) < 50, len(_xcols) > 1,
                     True, True)
     # compress down options
     option_compressed = list(it.compress(options_, options_yes_))
@@ -174,7 +175,7 @@ def overview_plot(df, x, y, cv, yp, plot_names=None, plot_size=3):
                       key=options_.index)
 
     # make plots
-    fig, ax = shape_multiplot(len(overlap_), ax_size=plot_size)
+    fig, ax = gridplot(len(overlap_), ax_size=plot_size)
     I = it.count()
 
     if "score" in overlap_:
@@ -189,9 +190,9 @@ def overview_plot(df, x, y, cv, yp, plot_names=None, plot_size=3):
     if "coef" in overlap_:
         # plot 4. coefficient plot
         coefficient_plot(cv, ax[next(I)])
-    if "correlation" in overlap_ and len(_xcols) > 1:
+    if "correlation" in overlap_ and (1 < len(_xcols) < 50):
         # plot 5. correlation matrix
-        corr = correlate(_df, _xcols)
+        corr = correlate(df, x)
         _cmatrix = _row_to_matrix(corr)
         _basic_correlation_matrix(ax[next(I)], _cmatrix)
     if "vif" in overlap_ and len(_xcols) > 1:

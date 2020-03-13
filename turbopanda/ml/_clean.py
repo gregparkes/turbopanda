@@ -5,8 +5,10 @@
 import numpy as np
 import pandas as pd
 from typing import Optional
+from sklearn.preprocessing import scale, power_transform, normalize, quantile_transform
 
-from turbopanda.utils import union, standardize, difference, instance_check
+
+from turbopanda.utils import union, standardize, difference, instance_check, belongs
 from turbopanda._metapanda import SelectorType, MetaPanda
 
 
@@ -15,6 +17,7 @@ def ml_ready(df: "MetaPanda",
              y: Optional[str] = None,
              x_std: bool = True,
              y_std: bool = False,
+             std_func: str = "standardize",
              verbose: int = 0):
     """Make sci-kit learn ready datasets from high-level dataset.
 
@@ -37,6 +40,13 @@ def ml_ready(df: "MetaPanda",
         If True, standardizes float columns in X
     y_std : bool, optional
         If True, standardizes _y.
+    std_func : str/function, optional
+        Choose from {'standardize', 'power', 'quantile', 'normalize'}
+        If 'standardize': performs z-score scaling
+        If 'power': uses power transformation
+        If 'quantile': Transforms features using quantiles information
+        If 'normalize': Scales vectors to unit norm
+        Else let it be a sklearn object (sklearn.preprocessing)
     verbose : int, optional
         If > 0, prints info statements out
 
@@ -51,9 +61,13 @@ def ml_ready(df: "MetaPanda",
     xcols : pd.Index
         The names of the columns selected for ML
     """
-
+    std_funcs_ = {'standardize': scale, 'power': power_transform,
+                  'quantile': quantile_transform, 'normalize': normalize}
     instance_check(y, (type(None), str))
     instance_check(y_std, bool)
+    if isinstance(std_func, str):
+        belongs(std_func, tuple(std_funcs_.keys()))
+
 
     _df = df.copy()
     # 2. eliminate columns with only one unique value in - only for boolean/category options
@@ -61,10 +75,10 @@ def ml_ready(df: "MetaPanda",
     # 1. standardize float columns only
     std_cols = _df.search(x, float)
     if len(std_cols) > 0 and x_std:
-        _df.transform(standardize, selector=std_cols, whole=True)
+        _df.transform(std_funcs_[std_func], selector=std_cols, whole=True)
     # 5. standardize y if selected
     if y is not None and y_std:
-        _df.transform(standardize, selector=y, whole=True)
+        _df.transform(std_funcs_[std_func], selector=y, whole=True)
     # 3. add 'object columns' into `elim_cols`
     elim_cols = union(elim_cols, _df.view("object"))
     # drop here

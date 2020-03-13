@@ -1,28 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Nov  5 17:29:46 2019
+"""Operations for handling the edit distance of strings using the levenshtein method."""
 
-@author: gparkes
-
-Some analysis functions to apply to meta columns.
-"""
-# future imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-# further imports
 import numpy as np
 import pandas as pd
-from sklearn.cluster import FeatureAgglomeration
-
-# local imports
-from .utils import union
-from .__distribution import Distribution
 
 
-def _levenshtein_ratio_and_distance(s, t, ratio_calc=False):
+def _levenshtein_ratio_and_distance(s, t, ratio_calc=True):
     """ levenshtein_ratio_and_distance:
         Calculates levenshtein distance between two strings.
         If ratio_calc = True, the function computes the
@@ -75,23 +59,17 @@ def _levenshtein_matrix(columns):
     return pd.DataFrame(lev_m, columns=columns, index=columns)
 
 
-def agglomerate(columns):
-    """Agglomerate column names based on edit distance."""
-    # calculate lev distance
-    lev_m = _levenshtein_matrix(columns)
-    fa = FeatureAgglomeration(2).fit(lev_m)
-    return fa.labels_
+def levenshtein(columns):
+    """Determines the levenshtein matrix distance between every pair of column names.
 
+    Parameters
+    ----------
+    columns : list-like
+        string column names
 
-def dist(df):
-    """Given pandas.DataFrame, find the best distribution for all """
-    # select numerical columns
-    d = Distribution()
-    # fit each numerical column
-    numcols = df.columns[df.dtypes.eq(float)]
-    models = [d.fit(df[col].dropna()) for col in numcols]
-    model_names = [name if val >= 0.05 else np.nan for name, val in models]
-    not_numcols = df.columns.symmetric_difference(numcols)
-    return pd.concat([
-        pd.Series(np.nan, not_numcols), pd.Series(model_names, numcols)
-    ])
+    Returns
+    -------
+    L : DataFrame (n, n)
+        The levenshtein distance matrix, where n is the number of column elements
+    """
+    return _levenshtein_matrix(columns)

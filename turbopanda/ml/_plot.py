@@ -12,7 +12,11 @@ from turbopanda.utils import intersect, listify, set_like, switcheroo, dictzip, 
 from ._package import find_model_family
 
 
-def best_model_plot(cv_results, y_var: str = "test", minimize=True, score="RMSE", **box_kws):
+def best_model_plot(cv_results: "MetaPanda",
+                    y_var: str = "test",
+                    minimize: bool = True,
+                    score: str = "RMSE",
+                    **box_kws):
     """Determines the best model (min or max) and plots the boxplot of all resulting best models.
 
     Parameters
@@ -32,11 +36,12 @@ def best_model_plot(cv_results, y_var: str = "test", minimize=True, score="RMSE"
 
     Returns
     -------
-    None
+    fig : matplotlib.figure
+        The figure object
     """
     instance_check(minimize, bool)
     instance_check(score, str)
-    belongs(y_var, ('train','test'))
+    belongs(y_var, ('train', 'test'))
 
     block_y = "mean_%s_score" % y_var
     # create figures
@@ -85,4 +90,4 @@ def best_model_plot(cv_results, y_var: str = "test", minimize=True, score="RMSE"
     ax.legend(legend(mapping), list(mapping.keys()), bbox_to_anchor=(1.03, 1.03))
     plt.show()
 
-
+    return fig

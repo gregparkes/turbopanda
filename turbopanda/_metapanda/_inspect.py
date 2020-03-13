@@ -27,8 +27,11 @@ def inspect(df, meta, selectors, s=None, join_t='union', axis=1, mode='view'):
     if s is None:
         return df.columns if axis == 1 else df.index
     elif axis == 1:
-        if len(s) <= 1:
-            v = get_selector(df, meta, selectors, s[0], raise_error=False, select_join=join_t)
+        if isinstance(s, (tuple, list)):
+            if len(s) <= 1:
+                v = get_selector(df, meta, selectors, s[0], raise_error=False, select_join=join_t)
+            else:
+                v = get_selector(df, meta, selectors, s, raise_error=False, select_join=join_t)
         else:
             v = get_selector(df, meta, selectors, s, raise_error=False, select_join=join_t)
         return _handle_mode(df, v, mode=mode)

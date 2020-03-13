@@ -121,12 +121,12 @@ def fit_learning(df: "MetaPanda",
     rep = RepeatedKFold(n_splits=k, n_repeats=repeats)
     vars_ = learning_curve(lm, _x, _y, train_sizes=train_n,
                            cv=rep, scoring="neg_root_mean_squared_error",
-                           n_jobs=-2, verbose=2, return_times=True)
+                           n_jobs=-2, verbose=verbose, return_times=True)
     # permutation analysis if permute_n > 0
     if permute_n > 0:
         perm_score_, perm_scorez_, pval = permutation_test_score(lm, _x, _y, cv=rep, n_permutations=permute_n,
                                                                  scoring="neg_root_mean_squared_error",
-                                                                 n_jobs=-2, verbose=2)
+                                                                 n_jobs=-2, verbose=verbose)
 
     # outputs
     output_labels_ = ['train_score', 'test_score', 'fit_time', 'score_time']
@@ -142,7 +142,9 @@ def fit_learning(df: "MetaPanda",
     # add N column
     results['N'] = vars_[0]
     R = MetaPanda(results)
-    if plot:
+    if plot and permute_n > 0:
+        learning_curve_plot(R, perm_scorez_)
+    elif plot:
         learning_curve_plot(R)
     # return as MetaPanda
     if permute_n > 0:

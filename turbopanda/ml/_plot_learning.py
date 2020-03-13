@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import itertools as it
 
-from turbopanda.plot import color_qualitative, gridplot
+from turbopanda.plot import color_qualitative, gridplot, histogram
 
 
 def learning_curve_plot(cv_results,
@@ -36,11 +36,16 @@ def learning_curve_plot(cv_results,
     -------
     None
     """
-    fig, axes = gridplot(3, arrange='column', ax_size=plot_size)
+    if perm is None:
+        fig, axes = gridplot(3, arrange='column', ax_size=plot_size)
+    else:
+        fig, axes = gridplot(4, arrange='column', ax_size=plot_size)
 
     _cv = cv_results.copy()
     if inverse_score:
         _cv.transform(np.abs, '(mean|std)_(train|test)_score', whole=True)
+        if perm is not None:
+            perm = np.negative(perm)
 
     # 1. plotting the learning curve
     axes[0].set_title("Learning Curves")
@@ -82,6 +87,10 @@ def learning_curve_plot(cv_results,
     )
     axes[2].set_xlabel(r"Fit Times")
     axes[2].set_ylabel(score)
+
+    # permutation option
+    if perm is not None:
+        histogram(perm, None, True, True, axes[3], x_label=score, title="Permutations")
 
     fig.tight_layout()
     plt.show()

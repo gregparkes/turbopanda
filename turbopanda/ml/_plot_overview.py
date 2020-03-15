@@ -13,6 +13,7 @@ from turbopanda.corr._correlate import _row_to_matrix
 from turbopanda.utils import union, instance_check, intersect
 from turbopanda.stats import vif, cook_distance
 from turbopanda.plot import gridplot
+from turbopanda._dependency import is_statsmodels_installed
 from ._clean import ml_ready
 
 __all__ = ('coefficient_plot', 'overview_plot')
@@ -93,6 +94,11 @@ def _basic_correlation_matrix(plot, _cmatrix):
         plot.set_xticklabels(_cmatrix.iloc[:, tick_locs].columns)
         plot.set_yticks(tick_locs)
         plot.set_yticklabels(_cmatrix.iloc[:, tick_locs].columns)
+    else:
+        plot.set_xticks(range(1,_cmatrix.shape[0]+1))
+        plot.set_xticklabels(_cmatrix.columns)
+        plot.set_yticks(range(1,_cmatrix.shape[0]+1))
+        plot.set_yticklabels(_cmatrix.columns)
 
     plot.tick_params('x', rotation=45)
     for tick in plot.get_xmajorticklabels():
@@ -162,7 +168,7 @@ def overview_plot(df, x, y, cv, yp, plot_names=None, plot_size=3):
     yp = yp[y].squeeze()
     # pair them and remove NA
     _df, _x, _y, _xcols = ml_ready(df, x, y)
-    options_yes_ = (True, True, True, True, 1 < len(_xcols) < 50, len(_xcols) > 1,
+    options_yes_ = (True, True, True, True, 1 < len(_xcols) < 50, (len(_xcols) > 1) and is_statsmodels_installed(),
                     True, True)
     # compress down options
     option_compressed = list(it.compress(options_, options_yes_))

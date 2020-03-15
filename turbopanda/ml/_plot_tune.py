@@ -84,7 +84,7 @@ def _model_selection_parameters(cv_results,
         plot.set_ylabel("%s %s" % (y_name, score))
 
 
-def parameter_tune_plot(cv_results, y='test'):
+def parameter_tune_plot(cv_results, y='test', arrange='square'):
     """Iterates over every model type in `cv_results` and plots the best parameter. cv_results is MetaPanda
 
     Generates a series of plots for each model type, plotting the parameters.
@@ -96,6 +96,8 @@ def parameter_tune_plot(cv_results, y='test'):
     y : str, optional
         Choose from {'test', 'train'}
         Uses the mean/std test or train scores, respectively.
+    arrange : str
+        Choose from {'square', 'row' 'column'}. Indicates preference for direction of plots.
 
     Returns
     -------
@@ -107,7 +109,7 @@ def parameter_tune_plot(cv_results, y='test'):
         # get unique models
         models = set_like(cv_results['model'])
         # create figures
-        fig, axes = gridplot(len(models), ax_size=4)
+        fig, axes = gridplot(len(models), ax_size=4, arrange=arrange)
         for i, m in enumerate(models):
             # determine parameter names from results.
             _P = [p for p in cv_results.view("param_model__") if

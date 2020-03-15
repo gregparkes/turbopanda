@@ -18,7 +18,7 @@ from turbopanda.utils import remove_na, belongs
 from turbopanda.corr import bicorr
 from ._save_fig import save
 from ._gridplot import gridplot
-from ._histogram import freedman_diaconis_bins
+from ._histogram import histogram
 
 __all__ = ("scatter_grid", "missing", "hist_grid")
 
@@ -92,10 +92,7 @@ def hist_grid(mdf: "MetaPanda",
         fig, axes = gridplot(len(selection), arrange, ax_size=plot_size)
 
         for i, x in enumerate(selection):
-            # calculate the bins
-            bins_ = min(freedman_diaconis_bins(mdf.df_[x]), 50)
-            axes[i].hist(mdf.df_[x].dropna(), bins=bins_)
-            axes[i].set_title(x)
+            _ = histogram(mdf[x].dropna(), ax=axes[i], title=x)
         fig.tight_layout()
 
         if isinstance(savepath, bool):

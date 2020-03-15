@@ -6,6 +6,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import numpy as np
 import itertools as it
 import matplotlib.pyplot as plt
 
@@ -60,8 +61,7 @@ def gridplot(n_plots: int,
     n_plots : int
         The total number of plots.
     arrange : str
-        Choose from {'square', 'row' 'column'}. Indicates preference for direction
-        of plots.
+        Choose from {'square', 'row' 'column'}. Indicates preference for direction of plots.
     ax_size : int
         The square size of each plot.
 

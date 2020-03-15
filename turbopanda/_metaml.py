@@ -25,6 +25,7 @@ from sklearn.metrics import r2_score
 from ._pipe import Pipe
 from .ml._default import param_types, model_types
 from ._metapanda import MetaPanda
+from ._deprecator import deprecated
 
 
 __sklearn_model_packages__ = (tree, linear_model, ensemble, svm, gaussian_process, neighbors)
@@ -171,6 +172,7 @@ class MetaML(object):
         Performs a single run/fit and returns predictions and scores based on defaults.
     """
 
+    @deprecated("0.2.4", '0.2.6', '.ml extension', 'MetaML is out of date, soon to be replaced')
     def __init__(self, mp: MetaPanda, x_select, y_select, model: str = "LinearRegression"):
         """
         Receives a MetaPanda object with all of the features ready to go(ish).

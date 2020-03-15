@@ -77,20 +77,24 @@ def learning_curve_plot(cv_results,
     axes[1].set_ylabel("Fit Times")
 
     # 3. Model performance
+    # fetch as df and sort_values by mean_fit_time
+    _cv_fit_sort = _cv.df_.sort_values(by="mean_fit_time")
     axes[2].set_title("Model Performance")
-    axes[2].plot(_cv['mean_fit_time'], _cv['mean_test_score'], 'x-', color='orange')
+    axes[2].plot(_cv_fit_sort['mean_fit_time'], _cv_fit_sort['mean_test_score'], 'x-', color='orange')
     axes[2].fill_between(
-        _cv['mean_fit_time'],
-        _cv['mean_test_score'] + _cv['std_test_score'],
-        _cv['mean_test_score'] - _cv['std_test_score'], color='orange',
+        _cv_fit_sort['mean_fit_time'],
+        _cv_fit_sort['mean_test_score'] + _cv_fit_sort['std_test_score'],
+        _cv_fit_sort['mean_test_score'] - _cv_fit_sort['std_test_score'], color='orange',
         alpha=.3
     )
     axes[2].set_xlabel(r"Fit Times")
     axes[2].set_ylabel(score)
-
+    axes[2].set_xscale("log")
+    axes[2].tick_params("x", which='both', rotation=45)
+    axes[2].xaxis.set_major_locator(plt.MaxNLocator(3))
     # permutation option
     if perm is not None:
-        histogram(perm, None, True, True, axes[3], x_label=score, title="Permutations")
+        histogram(perm, bins=None, kde=True, ax=axes[3], x_label=score, title="Permutations")
 
     fig.tight_layout()
     plt.show()

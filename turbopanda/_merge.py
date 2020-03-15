@@ -207,12 +207,12 @@ def merge(mdfs: Union[str, List[DataSetType]],
             nmdf = _single_merge(nmdf, ds, how=how)
 
     # do some additional things if the return type is a MetaPanda object.
-    if isinstance(nmdf, MetaPanda):
+    if check_list_type(mdfs, MetaPanda, raised=False):
         # remove duplicated columns
         nmdf._df = nmdf.df_.loc[:, ~nmdf.columns.duplicated()]
 
         # add on a meta_ column indicating the source of every feature.
-        col_sources = concat([Series(ds.name_, index=ds.df_.columns.copy()) for ds in mdfs],
+        col_sources = concat([Series(ds.name, index=ds.columns.copy()) for ds in mdfs],
                              axis=0, sort=False)
         # define new column as a categorical
         nmdf.meta_["datasets"] = col_sources.astype("category")

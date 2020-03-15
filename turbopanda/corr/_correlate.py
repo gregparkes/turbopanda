@@ -521,7 +521,7 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
     if x is None and y is None:
         return _corr_matrix_singular(df, covar=covar, method=method)
     elif isinstance(x, str) and y is None and isinstance(data, MetaPanda):
-        cols = union(df.view(x), covar)
+        cols = union(data.view(x), covar)
         return _corr_matrix_singular(df[cols], covar=covar, method=method)
     elif isinstance(x, (list, tuple, pd.Index)) and y is None:
         cols = union(x, covar)

@@ -5,34 +5,50 @@ import numpy as np
 import pandas as pd
 from typing import List, Union, Any, Tuple, TypeVar
 
-
 __all__ = ("belongs", "instance_check", "check_list_type",
            "boolean_series_check", "is_twotuple", "is_iterable")
 
 
-def belongs(elem: Any, home: Union[List[Any], Tuple[Any, ...]]):
+def belongs(elem: Any, home: Union[List[Any], Tuple[Any, ...]], raised=True):
     """Check whether elem belongs in a list."""
     if elem not in home:
-        raise ValueError("element {} is not found in list: {}".format(elem, home))
+        if raised:
+            raise ValueError("element {} is not found in list: {}".format(elem, home))
+        else:
+            return False
+    return True
 
 
-def instance_check(a: object, i: TypeVar):
+def instance_check(a: object, i: TypeVar, raised=True):
     """Check that a is an instance of type i."""
     if isinstance(i, str):
         if not hasattr(a, i):
-            raise AttributeError("object '{}' does not have attribute '{}'".format(a, i))
+            if raised:
+                raise AttributeError("object '{}' does not have attribute '{}'".format(a, i))
+            else:
+                return False
     elif not isinstance(a, i):
-        raise TypeError("object '{}' does not belong to type {}".format(a, i))
+        if raised:
+            raise TypeError("object '{}' does not belong to type {}".format(a, i))
+        else:
+            return False
     elif isinstance(i, (list, tuple)):
         if None in i and a is not None:
-            raise TypeError("object '{}' is not of type None".format(a))
+            if raised:
+                raise TypeError("object '{}' is not of type None".format(a))
+            else:
+                return False
+    return True
 
 
-def check_list_type(elems: Tuple, t: TypeVar):
+def check_list_type(elems: Tuple, t: TypeVar, raised=True):
     """Checks the type of every element in the list."""
     for i, elem in enumerate(elems):
         if not isinstance(elem, t):
-            raise TypeError("type '{}' not found in list at index [{}]".format(t, i))
+            if raised:
+                raise TypeError("type '{}' not found in list at index [{}]".format(t, i))
+            else:
+                return False
     return True
 
 

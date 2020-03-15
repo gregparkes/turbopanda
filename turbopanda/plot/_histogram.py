@@ -109,7 +109,7 @@ def histogram(X,
         _ = ax.hist(_X, bins=bins, density=density, label=stat_label, *hist_args, **hist_kwargs)
         ax.legend()
     else:
-        _ = ax.hist(_X, bins=bins, density=density, *hist_args, **hist_kwargs)
+        _ = ax.hist(_X, bins=bins, density=density, rwidth=.9, *hist_args, **hist_kwargs)
 
     ax.set_xlabel(x_label)
     ax.set_title(title)

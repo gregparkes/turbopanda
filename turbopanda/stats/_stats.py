@@ -7,6 +7,8 @@ import pandas as pd
 
 from turbopanda.ml._clean import ml_ready
 from turbopanda.utils import standardize, instance_check
+from turbopanda._dependency import is_statsmodels_installed
+
 
 __all__ = ('vif', 'cook_distance', 'hat', 'leverage')
 
@@ -73,14 +75,18 @@ def vif(df, x, y):
     vif : pd.Series (|x|,)
         variance inflationary factors for each in x
     """
-    from statsmodels.stats.outliers_influence import variance_inflation_factor as _vif
 
-    instance_check(y, str)
-    _df, _x, _y, _xcol = ml_ready(df, x, y)
-    if _x.shape[1] > 1:
-        # for every column, extract vif
-        vifs = [_vif(_x, i) for i in range(_x.shape[1])]
-        return pd.Series(vifs, index=_xcol)
+    if is_statsmodels_installed():
+        from statsmodels.stats.outliers_influence import variance_inflation_factor as _vif
+
+        instance_check(y, str)
+        _df, _x, _y, _xcol = ml_ready(df, x, y)
+        if _x.shape[1] > 1:
+            # for every column, extract vif
+            vifs = [_vif(_x, i) for i in range(_x.shape[1])]
+            return pd.Series(vifs, index=_xcol)
+        else:
+            return []
     else:
         return []
 

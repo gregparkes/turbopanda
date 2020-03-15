@@ -18,7 +18,8 @@ import numpy as np
 import pandas as pd
 
 # locals
-from turbopanda._metapanda import MetaPanda
+from turbopanda._metapanda import MetaPanda, SelectorType
+from turbopanda._deprecator import deprecated
 from turbopanda.utils import instance_check, union, remove_na, \
     is_column_float, belongs, difference, is_column_boolean
 
@@ -26,7 +27,7 @@ from turbopanda.utils import instance_check, union, remove_na, \
 DataSetType = Union[pd.Series, pd.DataFrame, MetaPanda]
 
 
-__all__ = ('correlate', 'bicorr', 'partial_bicorr')
+__all__ = ('correlate', 'bicorr', 'partial_bicorr', 'row_to_matrix')
 
 
 def _both_continuous(x, y):
@@ -45,9 +46,9 @@ def _boolbool(x, y):
     return is_column_boolean(x) and is_column_boolean(y)
 
 
-def _row_to_matrix(rows: pd.DataFrame) -> pd.DataFrame:
+def _row_to_matrix(rows: pd.DataFrame, y_column="r") -> pd.DataFrame:
     """Takes the verbose row output and converts to lighter matrix format."""
-    square = rows.pivot_table(index="x", columns="y", values="r")
+    square = rows.pivot_table(index="x", columns="y", values=y_column)
     # fillna
     square.fillna(0.0, inplace=True)
     # ready for transpose
@@ -142,7 +143,6 @@ def bicorr(x: pd.Series,
        source matlab toolbox. Front. Psychol. 3, 606.
        https://doi.org/10.3389/fpsyg.2012.00606
     """
-
     from scipy.stats import pearsonr, spearmanr, kendalltau, pointbiserialr
     from ._corr_metrics import percbend, shepherd, skipped
     from ._stats_extra import compute_esci, power_corr
@@ -161,6 +161,7 @@ def bicorr(x: pd.Series,
     x_arr, y_arr = remove_na(x_arr, y_arr, paired=True)
     nx = x_arr.size
 
+    outliers = []
     # Compute correlation coefficient
     if _both_continuous(x, y):
         # use method
@@ -207,21 +208,9 @@ def bicorr(x: pd.Series,
         pr = np.inf
 
     # Create dictionary
-    stats = {
-        'x': x.name,
-        'y': y.name,
-        'n': nx,
-        'r': round(r, 3),
-        'r2': round(r2, 3),
-        'adj_r2': round(adj_r2, 3),
-        'CI95_lower': ci[0],
-        'CI95_upper': ci[1],
-        'p-val': pval if tail == 'two-sided' else .5 * pval,
-        'power': pr
-    }
-
-    if method in ('shepherd', 'skipped'):
-        stats['outliers'] = sum(outliers)
+    stats = {'x': x.name, 'y': y.name, 'n': nx, 'r': round(r, 3), 'r2': round(r2, 3), 'adj_r2': round(adj_r2, 3),
+             'CI95_lower': ci[0], 'CI95_upper': ci[1], 'p-val': pval if tail == 'two-sided' else .5 * pval, 'power': pr,
+             'outliers': sum(outliers) if method in ('shepherd', 'skipped') else np.nan}
 
     # Convert to DataFrame
     stats = pd.DataFrame.from_records(stats, index=[method])
@@ -407,6 +396,7 @@ def _corr_matrix_vector(data: pd.DataFrame,
 """##################### PUBLIC FUNCTIONS ####################################################### """
 
 
+@deprecated("0.2.4", '0.2.6', instead="")
 def correlate_mat(data, covar=None, method="spearman") -> pd.DataFrame:
     """Correlates data matrix into row set. No additional parameters.
 
@@ -440,11 +430,11 @@ def correlate_mat(data, covar=None, method="spearman") -> pd.DataFrame:
 
 
 def correlate(data: Union[pd.DataFrame, MetaPanda],
-              x: Optional[Union[str, List[str], Tuple[str, ...], pd.Index]] = None,
-              y: Optional[Union[str, List[str], Tuple[str, ...], pd.Index]] = None,
-              covar: Optional[Union[str, List[str], Tuple[str, ...], pd.Index]] = None,
+              x: Optional[SelectorType] = None,
+              y: Optional[SelectorType] = None,
+              covar: Optional[SelectorType] = None,
               method: str = "spearman") -> pd.DataFrame:
-    """Correlates X and Y together to generate a correlation matrix.
+    """Correlates X and Y together to generate a list of correlations.
 
     If X/Y are MetaPandas, returns a MetaPanda object, else returns pandas.DataFrame
 
@@ -518,11 +508,14 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
     x = x[0] if (isinstance(x, (tuple, list, pd.Index)) and len(x) == 1) else x
     y = y[0] if (isinstance(y, (tuple, list, pd.Index)) and len(y) == 1) else y
 
+    # convert using `view` if we have string instances.
+    if isinstance(x, str) and isinstance(data, MetaPanda):
+        x = data.view(x)
+    if isinstance(y, str) and isinstance(data, MetaPanda):
+        y = data.view(y)
+
     if x is None and y is None:
         return _corr_matrix_singular(df, covar=covar, method=method)
-    elif isinstance(x, str) and y is None and isinstance(data, MetaPanda):
-        cols = union(data.view(x), covar)
-        return _corr_matrix_singular(df[cols], covar=covar, method=method)
     elif isinstance(x, (list, tuple, pd.Index)) and y is None:
         cols = union(x, covar)
         return _corr_matrix_singular(df[cols], covar=covar, method=method)
@@ -536,11 +529,31 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
         raise ValueError("XC: {}; YC: {}; COVA: {} combination unknown.".format(x, y, covar))
 
 
+def row_to_matrix(rows: pd.DataFrame, piv_value='r'):
+    """Converts a row-output from `correlate` into matrix form.
+
+    Parameters
+    ----------
+    rows : pd.DataFrame
+        The output from `correlate`
+    piv_value : str, optional
+        Which parameter to pivot on, by default is `r`, the coefficient.
+
+    Returns
+    -------
+    m : pd.DataFrame (p, p)
+        The correlation matrix
+    """
+    return _row_to_matrix(rows, y_column=piv_value)
+
+
 #########################################################################################################
 # EXTRACTS TAKEN FROM PINGOUIN LIBRARY..
 #########################################################################################################
 
 
+@deprecated("0.2.4", "0.2.6", instead="`correlate`", reason="partial correlations are now factored into correlate() "
+                                                            "with `covar` argument")
 def pcm(df: Union[pd.DataFrame, MetaPanda]) -> pd.DataFrame:
     """Partial correlation matrix.
 

@@ -139,7 +139,8 @@ def _single_merge(sdf1: DataSetType,
 def merge(mdfs: Union[str, List[DataSetType]],
           name: Optional[str] = None,
           how: str = 'inner',
-          clean_pipe: Optional[PipeMetaPandaType] = None):
+          clean_pipe: Optional[PipeMetaPandaType] = None,
+          verbose: int = 0):
     """Merge together K datasets.
 
     Merges together a series of MetaPanda objects. This is primarily different
@@ -161,9 +162,11 @@ def merge(mdfs: Union[str, List[DataSetType]],
         'inner': drops rows that aren't found in all Datasets
         'outer': keeps all rows
         'left': drops rows that aren't found in first Dataset
-    clean_pipe : Pipe/None, optional
+    clean_pipe : Pipe, optional
         A set of instructions to pass to the fully-merged DataFrame once we're done.
         See turb.Pipe() for details.
+    verbose : int, optional
+        If greater than 0, prints out various useful debugging messages.
 
     Raises
     ------
@@ -212,7 +215,7 @@ def merge(mdfs: Union[str, List[DataSetType]],
         nmdf._df = nmdf.df_.loc[:, ~nmdf.columns.duplicated()]
 
         # add on a meta_ column indicating the source of every feature.
-        col_sources = concat([Series(ds.name, index=ds.columns.copy()) for ds in mdfs],
+        col_sources = concat([Series(ds.name_, index=ds.columns.copy()) for ds in mdfs],
                              axis=0, sort=False)
         # define new column as a categorical
         nmdf.meta_["datasets"] = col_sources.astype("category")

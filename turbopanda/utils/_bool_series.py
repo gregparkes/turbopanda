@@ -13,6 +13,8 @@ __all__ = ('nunique', 'is_possible_category', 'not_column_float', 'is_column_boo
            'is_unique_id', 'is_potential_id', 'is_potential_stacker')
 
 
+""" ######################## PANDAS OPERATIONS on SERIES ################################# """
+
 def nunique(ser: pd.Series) -> int:
     """Convert ser to be nunique."""
     return ser.nunique() if not_column_float(ser) else -1

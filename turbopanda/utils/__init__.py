@@ -4,6 +4,7 @@
 
 # import statements here
 from ._typegroups import *
+from ._array_checks import *
 from ._factor import nearest_factors
 from ._bool_series import *
 from ._sets import *

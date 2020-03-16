@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Converts pandas.Series from one type to another."""
+
 import numpy as np
 import pandas as pd
+import warnings
+import scipy.sparse as sp
 from typing import Optional, Tuple, Union
 
 from ._bool_series import is_n_value_column, is_column_int, \

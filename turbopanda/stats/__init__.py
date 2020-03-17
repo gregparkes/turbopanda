@@ -5,3 +5,4 @@
 from ._stats import *
 from ._linear_model import LinearModel
 from ._matrix_check import is_invertible
+from ._kde import univariate_kde, get_bins

@@ -7,15 +7,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from scipy import stats
-from scipy.interpolate import make_interp_spline
 from typing import Union, Tuple, List, Optional
 
 from turbopanda.utils import instance_check
+from turbopanda.stats import univariate_kde, get_bins
 
-
-def _iqr(a):
-    """Calculate the IQR for an array of numbers."""
-    return stats.scoreatpercentile(np.asarray(a), 75) - stats.scoreatpercentile(np.asarray(a), 25)
+""" Helper methods for redundant code such as plotting, getting bin type, smoothing etc. """
 
 
 def _plot_hist(_x, _ax, *args, **kwargs):
@@ -28,72 +25,7 @@ def _plot_hist(_x, _ax, *args, **kwargs):
         raise TypeError("np.ndarray type '{}' not recognized; must be float or int".format(_x.dtype))
 
 
-def _get_bins(_x):
-    # if X is float, use freedman_diaconis_bins determinant, else simply np.arange for integer input.
-    if _x.dtype.kind == 'f' or (np.max(_x) - np.min(_x) > 50):
-        bins = min(freedman_diaconis_bins(_x), 50)
-    elif (_x.dtype.kind == 'i' or _x.dtype.kind == 'u') and np.max(_x) - np.min(_x) <= 50:
-        # firstly we determine if the range is small, because if not we just use the above technique
-        bins = np.arange(np.min(_x), np.max(_x) + 2, step=1)
-    else:
-        raise TypeError("np.ndarray type '{}' not recognized; must be float or int".format(_x.dtype))
-    return bins
-
-
-#def _negative_discrete_likelihood()
-
-
-def _get_kde(_x, _kde_name, _bins,
-             discrete_options_, discrete_est_options_,
-             _kde_range=1e-3,
-             _smoothen_kde=True):
-    # if _mt doesn't have the `fit` attribute, its discrete and we use bins as x_kde
-    _mt = getattr(stats, _kde_name)
-
-    if hasattr(_mt, "fit"):
-        # fit mt with x
-        params = _mt.fit(_x)
-        model = _mt(*params)
-        # generate x_kde
-        x_kde = np.linspace(model.ppf(_kde_range), model.ppf(1 - _kde_range), 200)
-        return x_kde, model.pdf(x_kde)
-    else:
-        # try to fit a model??
-        if _kde_name in discrete_options_.keys():
-            # single parameter discrete models - which take the data and get the 'mean' or whatever
-            param = [discrete_options_[_kde_name](_x)]
-            # x_kde is the bins.
-            if _smoothen_kde:
-                xn = np.linspace(_x.min(), _x.max()+1, 300)
-                spl = make_interp_spline(_bins, _mt.pmf(_bins, *param), 2)
-                return xn, spl(xn)
-            else:
-                return _bins, _mt.pmf(_bins, *param)
-        elif _kde_name in discrete_est_options_.keys():
-            # binomial distribution case where we estimate parameters
-            param_names = _mt.shapes.split(", ")
-
-
-        else:
-            raise ValueError("discrete kde '{}' not found in {}".format(_kde_name, tuple(discrete_options_.keys())))
-
-
-def freedman_diaconis_bins(a: np.ndarray) -> int:
-    """
-    Calculate number of hist bins using Freedman-Diaconis rule.
-
-    Taken from https://github.com/mwaskom/seaborn/blob/master/seaborn/distributions.py
-    """
-    # From https://stats.stackexchange.com/questions/798/
-    a = np.asarray(a)
-    if len(a) < 2:
-        return 1
-    h = 2 * _iqr(a) / (a.shape[0] ** (1 / 3))
-    # fall back to sqrt(a) bins if iqr is 0
-    if h == 0:
-        return int(np.sqrt(a.size))
-    else:
-        return int(np.ceil((np.nanmax(a) - np.nanmin(a)) / h))
+""" The meat and bones """
 
 
 def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
@@ -101,7 +33,6 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
               density: bool = True,
               kde: str = "norm",
               stat: bool = False,
-              full_decor: bool = False,
               ax=None,
               x_label: str = "",
               title: str = "",
@@ -124,8 +55,6 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
         else, choose from available distributions in `scipy.stats`
     stat : bool, default=False
         If True, sets statistical variables in legend
-    full_decor : bool, default=False
-        If True, draws the complete KDE distribution with mean/sd lines to +- 3SD
     ax : matplotlib.ax object, optional, default=None
         If None, creates one.
     x_label : str, optional, default=None
@@ -152,28 +81,21 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
     """
     instance_check(X, (np.ndarray, pd.Series, list, tuple))
     instance_check(density, bool)
-    instance_check(full_decor, bool)
     instance_check(stat, bool)
     instance_check(title, str)
     instance_check(x_label, str)
     instance_check(kde, (str, type(None)))
     instance_check(kde_range, float)
-
-    # mapping certain discrete kdes to calculate their parameter(s)
-    discrete_kde_ = {
-        'bernoulli': np.mean, 'poisson': np.mean, 'geom': lambda x: 1./np.mean(x)
-    }
-    discrete_kde_ests_ = {
-        # estimate initial parameters for n, p
-        "binom": [np.max, lambda x: (np.bincount(x).argmax()+1) / np.max(x)]
-    }
+    instance_check(smoothen_kde, bool)
 
     # convert to numpy.
     _X = np.asarray(X)
+    if _X.ndim > 1:
+        _X = _X.flatten()
     # make bins if set to None
     if bins is None:
         # if X is float, use freedman_diaconis_bins determinant, else simply np.arange for integer input.
-        bins = _get_bins(_X)
+        bins = get_bins(_X)
 
     if kde:
         density = True
@@ -207,20 +129,9 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
     if kde is not None:
         if hasattr(stats, kde):
             # fetches the kde if possible
-            x_kde, y_kde = _get_kde(_X, _kde_name=kde, _bins=bins,
-                                    discrete_options_=discrete_kde_, _kde_range=1e-3, _smoothen_kde=smoothen_kde)
+            x_kde, y_kde = univariate_kde(_X, bins, kde, kde_range=1e-3, smoothen_kde=smoothen_kde)
             # plot
             ax.plot(x_kde, y_kde, "-", color='r')
-            if full_decor:
-                ax.vlines(mean, 0, y_kde.max(), linestyle="-", color='r')
-                ax.vlines([mean - sd, mean + sd], 0, y_kde[np.argmin(np.abs(x_kde - mean - sd))], linestyle="-",
-                          color='#E89E30')
-                ax.vlines([mean - 2 * sd, mean + 2 * sd], 0, y_kde[np.argmin(np.abs(x_kde - mean - 2 * sd))],
-                          linestyle="-",
-                          color='#FFF700')
-                ax.vlines([mean - 3 * sd, mean + 3 * sd], 0, y_kde[np.argmin(np.abs(x_kde - mean - 3 * sd))],
-                          linestyle="-",
-                          color='#68B60E')
         else:
             raise ValueError("kde value '{}' not found in scipy.stats".format(kde))
 

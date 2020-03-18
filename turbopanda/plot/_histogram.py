@@ -38,6 +38,7 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
               title: str = "",
               kde_range: float = 1e-3,
               smoothen_kde: bool = True,
+              verbose: int = 0,
               *hist_args,
               **hist_kwargs):
     """Draws pretty histograms using `X`.
@@ -66,7 +67,8 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
         Must be > 0.
     smoothen_kde : bool, default=True
         If discrete-distribution, applies smoothing function to KDE if True
-
+    verbose : int, default=0
+        If > 0, prints out useful messages
     Other Parameters
     ----------------
     args ; list
@@ -129,7 +131,9 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
     if kde is not None:
         if hasattr(stats, kde):
             # fetches the kde if possible
-            x_kde, y_kde = univariate_kde(_X, bins, kde, kde_range=1e-3, smoothen_kde=smoothen_kde)
+            x_kde, y_kde = univariate_kde(_X, bins, kde,
+                                          kde_range=1e-3, smoothen_kde=smoothen_kde,
+                                          verbose=verbose)
             # plot
             ax.plot(x_kde, y_kde, "-", color='r')
         else:

@@ -154,7 +154,7 @@ def univariate_kde(X: np.ndarray,
             # estimates using given functions
             ests_ = [v(_X) for v in var_[2:]]
             # minimization function
-            params = var_[1](so.fmin(var_[0], ests_, args=(_X,), full_output=True, disp=False)[0])
+            params = var_[1](so.fmin(var_[0], ests_, args=(_X,), ftol=1e-4, full_output=True, disp=False)[0])
             if verbose:
                 print("estimated: {}, determined: {}".format(ests_, params))
         else:

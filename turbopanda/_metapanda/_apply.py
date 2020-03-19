@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 """Provides an interface to the application of pandas operations in Metapanda."""
 
-import pandas as pd
 import warnings
-from turbopanda.utils import instance_check, is_column_string
 
+from turbopanda.utils import instance_check, is_column_string
 
 __all__ = ('apply', 'apply_index', 'apply_columns', '_apply_function', '_apply_index_function', '_apply_column_function')
 

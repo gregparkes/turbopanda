@@ -2,10 +2,6 @@
 # -*- coding: utf-8 -*-
 """Methods for doing checks on numpy arrays."""
 
-
-import numpy as np
-
-
 __all__ = ('is_float_array', 'is_int_array')
 
 

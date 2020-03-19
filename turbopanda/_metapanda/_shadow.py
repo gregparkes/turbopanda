@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 """Provides an interface to the shadowing methods in pandas."""
 
-import pandas as pd
 from typing import Union
+
+import pandas as pd
+
 from turbopanda.utils import instance_check
 
 __all__ = ('head', 'dtypes', 'copy', 'info')

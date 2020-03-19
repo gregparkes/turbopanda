@@ -3,22 +3,20 @@
 """Determines the merging capabilities of turbopanda."""
 
 # future imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-# imports
-from typing import Tuple, Union, Optional, List
-import numpy as np
-from pandas import merge as pmerge
-from pandas import DataFrame, Series, concat
 import itertools as it
+# imports
+from typing import List, Optional, Union
 
+import numpy as np
+from pandas import DataFrame, Series, concat, merge as pmerge
+
+from ._fileio import read
 # locals
 from ._metapanda import MetaPanda
-from ._fileio import read
 from ._pipe import PipeMetaPandaType
-from .utils import belongs, intersect, instance_check, check_list_type, union, get_file_expanded
+from .utils import belongs, check_list_type, get_file_expanded, instance_check, intersect
 
 # custom types
 DataSetType = Union[Series, DataFrame, MetaPanda]
@@ -71,13 +69,16 @@ def _single_merge(sdf1: DataSetType,
 
     Parameters
     ----------
-    sdf1 : str, Series, DataFrame, MetaPanda
+    sdf1 : Series, DataFrame, MetaPanda
         Dataset 1. If str, reads it in as if a file.
-    sdf2 : str, Series, DataFrame, MetaPanda
+    sdf2 : Series, DataFrame, MetaPanda
         Dataset 2. If str, reads it in as if a file.
     how : str
         How to join on concat or merge between sdf1, sdf2.
     """
+    instance_check(sdf1, (Series, DataFrame, MetaPanda))
+    instance_check(sdf2, (Series, DataFrame, MetaPanda))
+
     # both are series.
     if isinstance(sdf1, Series) and isinstance(sdf2, Series):
         # perform pd.concat on the indexes.

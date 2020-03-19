@@ -3,15 +3,14 @@
 """Produces decorator sounds for success and fail operations."""
 
 # future imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-from typing import List, Callable
 import itertools as it
+from typing import Callable, List
+
 import numpy as np
 
-from turbopanda.utils import instance_check, belongs
+from turbopanda.utils import belongs
 
 __all__ = ['bleep']
 

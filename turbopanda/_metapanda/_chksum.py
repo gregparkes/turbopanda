@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 """Provides an interface to the checksum operations in Metapanda."""
 
-import numpy as np
-import pandas as pd
 import hashlib
 import warnings
+
+import numpy as np
 
 
 def _seeded_checksum(df):

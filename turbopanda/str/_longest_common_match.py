@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 """Operations for handling the longest common substring match problem."""
 
-from typing import List, Tuple
-from pandas import Series
 import itertools as it
-import numpy as np
+from typing import List, Tuple
+
 import matplotlib.pyplot as plt
+import numpy as np
+from pandas import Series
 
 from turbopanda.utils import pairwise
 

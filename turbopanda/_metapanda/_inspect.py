@@ -2,11 +2,10 @@
 # -*- coding: utf-8 -*-
 """Provides an interface to the inspection of column names in MetaPanda."""
 
-import warnings
 import pandas as pd
-from typing import Tuple
-from ._types import SelectorType
+
 from ._selection import get_selector
+from ._types import SelectorType
 
 """ INSPECTING COLUMNS """
 

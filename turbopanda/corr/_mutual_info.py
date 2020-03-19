@@ -3,16 +3,11 @@
 """Handles some mutual information calculations."""
 
 # future imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
-import pandas as pd
 
-from turbopanda._metapanda import MetaPanda
-from turbopanda.utils import intersect, instance_check
-from turbopanda._deprecator import deprecated
+from turbopanda.utils import instance_check
 
 __all__ = ('entropy', 'conditional_entropy', 'continuous_mutual_info')
 

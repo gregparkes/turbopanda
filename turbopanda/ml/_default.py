@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """Fit default parameters for varying scikit-learn models."""
 
-import numpy as np
 from numpy import nan
 from pandas import DataFrame
 

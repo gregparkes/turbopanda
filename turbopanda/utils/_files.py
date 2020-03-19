@@ -4,8 +4,9 @@
 
 import glob
 from typing import Any, List
-from ._sets import join
+
 from ._error_raise import instance_check
+from ._sets import join
 
 __all__ = ("list_dir", "split_file_directory", 'insert_prefix', 'insert_suffix', 'get_file_expanded')
 

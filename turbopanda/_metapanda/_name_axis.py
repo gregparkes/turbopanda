@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 """Provides an interface to the naming of columns/index in MetaPanda."""
 
-import pandas as pd
-from typing import List, Tuple, Optional
-from ._types import SelectorType, PandaIndex
-from ._inspect import inspect
-from turbopanda._deprecator import deprecated
-from turbopanda.utils import is_twotuple, belongs
-from turbopanda.str import string_replace
+from typing import Tuple
 
+import pandas as pd
+
+from turbopanda.str import string_replace
+from turbopanda.utils import belongs, is_twotuple
+from ._inspect import inspect
+from ._types import PandaIndex, SelectorType
 
 __all__ = ('rename_axis', 'add_prefix', 'add_suffix')
 

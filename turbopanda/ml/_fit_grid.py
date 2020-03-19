@@ -2,19 +2,18 @@
 # -*- coding: utf-8 -*-
 """Attempts to fit basic machine learning models."""
 
+from typing import Optional, Tuple
+
 import numpy as np
 import pandas as pd
-from typing import Optional, List, Dict, Tuple
-
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import RepeatedKFold, GridSearchCV
+from sklearn.model_selection import GridSearchCV, RepeatedKFold
 from sklearn.pipeline import Pipeline
 
 from turbopanda._metapanda import MetaPanda, SelectorType
-from turbopanda.utils import listify, standardize, instance_check, broadsort, dictchunk
-from turbopanda.str import strpattern
 from turbopanda.dev import cached, cached_chunk
-
+from turbopanda.str import strpattern
+from turbopanda.utils import broadsort, dictchunk, instance_check, listify
 from ._clean import ml_ready
 from ._default import model_types, param_types
 from ._package import find_sklearn_model

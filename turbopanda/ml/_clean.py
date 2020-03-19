@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 """Provides access to cleaning methods ready for ML applications."""
 
+from typing import Optional
+
 import numpy as np
 import pandas as pd
-from typing import Optional
-from sklearn.preprocessing import scale, power_transform, normalize, quantile_transform
+from sklearn.preprocessing import normalize, power_transform, quantile_transform, scale
 
-
-from turbopanda.utils import union, standardize, difference, instance_check, belongs
-from turbopanda._metapanda import SelectorType, MetaPanda
+from turbopanda._metapanda import MetaPanda, SelectorType
+from turbopanda.utils import belongs, instance_check, union
 
 
 def ml_ready(df: "MetaPanda",

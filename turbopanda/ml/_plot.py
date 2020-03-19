@@ -2,13 +2,11 @@
 # -*- coding: utf-8 -*-
 """Provides basic plots for machine-learning results."""
 
-import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-import warnings
+import numpy as np
 
 from turbopanda.plot import color_qualitative, legend
-from turbopanda.utils import intersect, listify, set_like, switcheroo, dictzip, belongs, instance_check
+from turbopanda.utils import belongs, dictzip, instance_check, set_like, switcheroo
 from ._package import find_model_family
 
 

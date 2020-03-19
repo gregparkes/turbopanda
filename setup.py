@@ -6,7 +6,7 @@ Created on Tue Nov 5 11:31:39 2019
 @author: gparkes
 """
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 with open("README.md", "r") as fh:
     long_description = fh.read()

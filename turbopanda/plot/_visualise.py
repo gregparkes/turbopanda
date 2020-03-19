@@ -3,22 +3,20 @@
 """Handles generic visualization/plotting functions."""
 
 # future imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
+import itertools as it
+from typing import Optional, Union
+
+import matplotlib.pyplot as plt
 # imports
 import numpy as np
-import matplotlib.pyplot as plt
-import itertools as it
-from scipy import stats
-from typing import Tuple, Optional, Union
 
-from turbopanda.utils import remove_na, belongs
 from turbopanda.corr import bicorr
-from ._save_fig import save
+from turbopanda.utils import belongs, remove_na
 from ._gridplot import gridplot
 from ._histogram import histogram
+from ._save_fig import save
 
 __all__ = ("scatter_grid", "missing", "hist_grid")
 

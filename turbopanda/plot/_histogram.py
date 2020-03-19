@@ -2,15 +2,15 @@
 # -*- coding: utf-8 -*-
 """Code for plotting pretty histograms in primitive matplotlib."""
 
+from typing import List, Optional, Tuple, Union
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-
 from scipy import stats
-from typing import Union, Tuple, List, Optional
 
+from turbopanda.stats import get_bins, univariate_kde
 from turbopanda.utils import instance_check
-from turbopanda.stats import univariate_kde, get_bins
 
 """ Helper methods for redundant code such as plotting, getting bin type, smoothing etc. """
 

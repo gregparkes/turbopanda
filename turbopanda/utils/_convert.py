@@ -2,14 +2,12 @@
 # -*- coding: utf-8 -*-
 """Converts pandas.Series from one type to another."""
 
-import numpy as np
-import pandas as pd
-import warnings
-import scipy.sparse as sp
 from typing import Optional, Tuple, Union
 
-from ._bool_series import is_n_value_column, is_column_int, \
-    nunique, is_column_object
+import numpy as np
+import pandas as pd
+
+from ._bool_series import is_column_int, is_n_value_column
 
 ArrayLike = Union[np.ndarray, pd.Series, pd.DataFrame]
 

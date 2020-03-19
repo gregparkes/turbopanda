@@ -4,10 +4,11 @@
 
 import os
 import warnings
-import matplotlib.pyplot as plt
 from typing import Tuple
 
-from turbopanda.utils import instance_check, belongs
+import matplotlib.pyplot as plt
+
+from turbopanda.utils import belongs, instance_check
 
 
 def save(fig_obj: plt.Figure,

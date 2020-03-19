@@ -3,11 +3,11 @@
 """Handles matplotlib colors and generates useful palettes."""
 
 import itertools as it
+from typing import List, Tuple, Union
+
 import numpy as np
 import pandas as pd
 from matplotlib import cm
-import matplotlib.pyplot as plt
-from typing import List, Tuple, Union
 
 from turbopanda.utils import instance_check
 

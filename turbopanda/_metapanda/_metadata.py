@@ -2,15 +2,16 @@
 # -*- coding: utf-8 -*-
 """Provides an interface to the metadata preprocessing and creating in MetaPanda."""
 
+import warnings
+from typing import Callable, Dict, List, TypeVar, Union
+
 import numpy as np
 import pandas as pd
-import warnings
-from typing import Tuple, Union, List, TypeVar, Dict, Callable
-from ._types import SelectorType
-from ._inspect import inspect
-from turbopanda.utils import pairwise, intersect, union,\
-    object_to_categorical, is_possible_category, instance_check, is_unique_id, t_numpy
 
+from turbopanda.utils import instance_check, intersect, is_possible_category, is_unique_id, object_to_categorical, \
+    pairwise, t_numpy, union
+from ._inspect import inspect
+from ._types import SelectorType
 
 __all__ = ('meta_map', 'update_meta', 'meta_split_category', 'sort_columns')
 

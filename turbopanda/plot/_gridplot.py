@@ -2,15 +2,14 @@
 # -*- coding: utf-8 -*-
 """Determines the most optimal shape for grid-like layouts of plots to take."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-import numpy as np
 import itertools as it
-import matplotlib.pyplot as plt
 
-from turbopanda.utils import nearest_factors, belongs
+import matplotlib.pyplot as plt
+import numpy as np
+
+from turbopanda.utils import belongs, nearest_factors
 
 
 def _clean_axes_objects(n, axes):

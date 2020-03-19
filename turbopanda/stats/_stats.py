@@ -5,10 +5,9 @@
 import numpy as np
 import pandas as pd
 
-from turbopanda.ml._clean import ml_ready
-from turbopanda.utils import standardize, instance_check
 from turbopanda._dependency import is_statsmodels_installed
-
+from turbopanda.ml._clean import ml_ready
+from turbopanda.utils import instance_check
 
 __all__ = ('vif', 'cook_distance', 'hat', 'leverage')
 

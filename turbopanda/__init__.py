@@ -15,24 +15,17 @@ if missing_dependencies:
 del hard_dependencies, dependency, missing_dependencies
 """ Block ends """
 
-# import Objects and critical global functions
-from ._metapanda import MetaPanda
-from ._metaml import MetaML
-from ._pipe import Pipe
+# folder extensions.
+from . import corr, dev, ml, plot, stats, str, utils
 from ._fileio import read
 from ._merge import merge
+from ._metaml import MetaML
+# import Objects and critical global functions
+from ._metapanda import MetaPanda
+from ._pipe import Pipe
+from .corr import correlate
 # import these functions so to not lose functionality...
 from .dev import cache, cached
-from .corr import correlate
-# folder extensions.
-from . import utils
-from . import plot
-from . import dev
-from . import corr
-from . import ml
-from . import stats
-from . import str
-
 
 __version__ = "0.2.4"
 __name__ = "turbopanda"

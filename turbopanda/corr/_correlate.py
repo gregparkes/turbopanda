@@ -6,22 +6,19 @@ Created on Thu Aug 15 16:08:52 2019
 @author: gparkes
 """
 # future imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import itertools as it
 # imports
-from typing import Union, List, Tuple, Optional
+from typing import List, Optional, Union
 
 import numpy as np
 import pandas as pd
 
+from turbopanda._deprecator import deprecated
 # locals
 from turbopanda._metapanda import MetaPanda, SelectorType
-from turbopanda._deprecator import deprecated
-from turbopanda.utils import instance_check, union, remove_na, \
-    is_column_float, belongs, difference, is_column_boolean
+from turbopanda.utils import belongs, difference, instance_check, is_column_boolean, is_column_float, remove_na, union
 
 # user define dataset type
 DataSetType = Union[pd.Series, pd.DataFrame, MetaPanda]

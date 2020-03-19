@@ -4,6 +4,7 @@
 
 import pandas as pd
 from matplotlib.lines import Line2D
+
 from turbopanda.utils import is_twotuple
 
 

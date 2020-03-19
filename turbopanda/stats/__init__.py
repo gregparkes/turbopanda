@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """Provides access to useful statistical functions."""
 
-from ._stats import *
+from ._dists import *
+from ._kde import get_bins, univariate_kde
 from ._linear_model import LinearModel
 from ._matrix_check import is_invertible
-from ._kde import univariate_kde, get_bins
-from ._dists import *
+from ._stats import *

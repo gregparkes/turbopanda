@@ -3,10 +3,11 @@
 """Operations for sorting lists/tuples."""
 
 import itertools as it
-import numpy as np
-from typing import Union, List, Tuple, Callable
-from ._error_raise import instance_check
+from typing import Callable, List, Tuple, Union
 
+import numpy as np
+
+from ._error_raise import instance_check
 
 __all__ = ('broadsort', 'zfilter')
 

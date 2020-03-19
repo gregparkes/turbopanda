@@ -3,7 +3,6 @@
 """Provides a basic linear model class for statistical purposes."""
 
 import numpy as np
-import pandas as pd
 from scipy import stats
 
 

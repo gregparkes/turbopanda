@@ -3,6 +3,6 @@
 """Provides access to string-like functions including longest common substring."""
 
 
-from ._string_ops import *
-from ._longest_common_match import *
 from ._levenshtein import levenshtein
+from ._longest_common_match import *
+from ._string_ops import *

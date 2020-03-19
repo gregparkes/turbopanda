@@ -2,18 +2,19 @@
 # -*- coding: utf-8 -*-
 """Provides plot_overview for data returned from `fit_basic`."""
 
-import numpy as np
 import itertools as it
-import pandas as pd
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 from scipy import stats
 
+from turbopanda._dependency import is_statsmodels_installed
 from turbopanda.corr import correlate
 from turbopanda.corr._correlate import _row_to_matrix
-from turbopanda.utils import union, instance_check, intersect
-from turbopanda.stats import vif, cook_distance
 from turbopanda.plot import gridplot
-from turbopanda._dependency import is_statsmodels_installed
+from turbopanda.stats import cook_distance, vif
+from turbopanda.utils import instance_check, intersect
 from ._clean import ml_ready
 
 __all__ = ('coefficient_plot', 'overview_plot')

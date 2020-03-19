@@ -4,8 +4,8 @@
 
 import numpy as np
 import pandas as pd
-from ._typegroups import c_cat, c_float, c_int
 
+from ._typegroups import c_cat, c_float, c_int
 
 __all__ = ('nunique', 'is_possible_category', 'not_column_float', 'is_column_boolean',
            'is_column_float', 'is_column_string', 'is_column_int',

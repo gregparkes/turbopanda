@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 """Methods for handling factorizing integers., for plots mainly."""
 import itertools as it
+from typing import List, Tuple
+
 import numpy as np
-from typing import Tuple, List
 from scipy.stats import norm
 
 from ._error_raise import belongs

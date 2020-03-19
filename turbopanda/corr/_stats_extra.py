@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Additional statistical functions. Taken from pingouin library."""
-import numpy as np
 import warnings
-from scipy.stats import norm
+
+import numpy as np
 from scipy import stats
 from scipy.optimize import brenth
+from scipy.stats import norm
 
 __all__ = ("compute_esci", "power_corr")
 

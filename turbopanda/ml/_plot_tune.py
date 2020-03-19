@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 """Provides basic plots for tuning parameters for ML models."""
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
-from turbopanda.plot import color_qualitative, gridplot
-from turbopanda.utils import difference, set_like, belongs
-from ._default import model_types, param_types
 from turbopanda._pipe import Pipe
+from turbopanda.plot import color_qualitative, gridplot
+from turbopanda.utils import belongs, difference, set_like
+from ._default import model_types, param_types
 
 
 def _basic_p(comp):

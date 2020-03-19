@@ -2,17 +2,17 @@
 # -*- coding: utf-8 -*-
 """Attempts to fit basic machine learning models."""
 
+from typing import Optional, Tuple
+
 import numpy as np
 import pandas as pd
-from typing import Optional, Dict, Tuple
-
-from sklearn.model_selection import RepeatedKFold, cross_validate, cross_val_predict
+from sklearn.model_selection import RepeatedKFold, cross_val_predict, cross_validate
 
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.dev import cached
-from turbopanda.utils import listify, union, insert_suffix, instance_check
-from ._package import find_sklearn_model, is_sklearn_model
+from turbopanda.utils import insert_suffix, instance_check, listify, union
 from ._clean import ml_ready
+from ._package import find_sklearn_model, is_sklearn_model
 from ._plot_overview import overview_plot
 
 

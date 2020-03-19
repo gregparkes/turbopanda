@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 """Provides an interface to the dropping rows or columns in Metapanda."""
 
-import pandas as pd
-from typing import Callable, Tuple
-from ._types import SelectorType
-from ._inspect import view_not, inspect
-from turbopanda.utils import boolean_series_check
+from typing import Callable
 
+import pandas as pd
+
+from turbopanda.utils import boolean_series_check
+from ._inspect import inspect
+from ._types import SelectorType
 
 __all__ = ('drop', 'keep', 'filter_rows', 'drop_columns')
 

@@ -2,11 +2,10 @@
 # -*- coding: utf-8 -*-
 """Provides an interface to the computing pipelines in MetaPanda."""
 
-import pandas as pd
 import warnings
-from typing import Optional, List
-from turbopanda._pipe import Pipe, is_pipe_structure, PipeMetaPandaType
+from typing import List, Optional
 
+from turbopanda._pipe import Pipe, PipeMetaPandaType, is_pipe_structure
 
 __all__ = ('compute', 'compute_k' '_apply_pipe')
 

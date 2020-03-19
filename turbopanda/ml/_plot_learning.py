@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Provides plot_learning for data returned from `fit_learning`."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-import numpy as np
 import matplotlib.pyplot as plt
-import itertools as it
+import numpy as np
 
-from turbopanda.plot import color_qualitative, gridplot, histogram
+from turbopanda.plot import gridplot, histogram
 
 
 def learning_curve_plot(cv_results,

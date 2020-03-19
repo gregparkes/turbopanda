@@ -3,14 +3,15 @@
 """Provides an interface to transformation operations in Metapanda."""
 
 import itertools as it
-import pandas as pd
-from typing import Callable, Optional, Tuple, Union, List
+from typing import Callable, List, Optional, Tuple, Union
 
-from turbopanda.utils import belongs, instance_check, pairwise, is_twotuple, listify
+import pandas as pd
+
 from turbopanda.str import common_substring_match
-from ._types import SelectorType
+from turbopanda.utils import belongs, instance_check, is_twotuple, listify, pairwise
 from ._drop_values import drop_columns
 from ._inspect import inspect
+from ._types import SelectorType
 
 
 def transform(self,

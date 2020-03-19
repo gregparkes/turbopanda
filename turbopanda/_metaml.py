@@ -8,25 +8,22 @@ Created on Tue Nov 26 18:01:53 2019
 Creates Meta Scikit-learn models.
 """
 # future imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 # imports
 import numpy as np
 import pandas as pd
-from sklearn import linear_model, ensemble, gaussian_process, neighbors, tree, svm
-from sklearn.base import is_classifier, is_regressor, BaseEstimator
-from sklearn.multioutput import MultiOutputRegressor, MultiOutputClassifier
-from sklearn.model_selection import cross_val_predict, GridSearchCV, cross_validate
+from sklearn import ensemble, gaussian_process, linear_model, neighbors, svm, tree
+from sklearn.base import BaseEstimator, is_classifier, is_regressor
 from sklearn.metrics import r2_score
+from sklearn.model_selection import GridSearchCV, cross_val_predict, cross_validate
+from sklearn.multioutput import MultiOutputClassifier, MultiOutputRegressor
 
+from ._deprecator import deprecated
+from ._metapanda import MetaPanda
 # locals
 from ._pipe import Pipe
-from .ml._default import param_types, model_types
-from ._metapanda import MetaPanda
-from ._deprecator import deprecated
-
+from .ml._default import model_types, param_types
 
 __sklearn_model_packages__ = (tree, linear_model, ensemble, svm, gaussian_process, neighbors)
 

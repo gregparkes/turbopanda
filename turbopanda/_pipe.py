@@ -3,21 +3,17 @@
 """This file handles the basic pipe class and related methods."""
 
 # future imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 # imports
-from typing import Union, List, Tuple, Dict, Callable, TypeVar
+from typing import Callable, Dict, List, Tuple, TypeVar, Union
 
 import numpy as np
-from pandas import to_numeric, Index, Series
+from pandas import Index, Series, to_numeric
 from sklearn import preprocessing
 
 # locals
-from .utils import boolean_to_integer, object_to_categorical, \
-    is_n_value_column, instance_check, join
-
+from .utils import instance_check, is_n_value_column, join, object_to_categorical
 
 PipeTypeRawElem = Tuple[str, Tuple, Dict]
 PipeTypeCleanElem = Tuple[Union[str, Callable, Dict, TypeVar], ...]

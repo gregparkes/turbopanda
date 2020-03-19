@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 """Contains decorators to `pandas-ify` the results of functions."""
 
-import pandas as pd
+from typing import Callable, Union
+
 import numpy as np
-from typing import Union, Callable
+import pandas as pd
 
 
 def panderfy(func: Callable) -> Union[pd.Series, pd.DataFrame]:

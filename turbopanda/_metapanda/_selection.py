@@ -3,19 +3,17 @@
 """The core of the Selector within MetaPanda."""
 
 # future imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
+import itertools as it
 # imports
 import re
-import itertools as it
-from typing import Dict, Tuple, List, Union, Callable, TypeVar, Optional, Iterable
-from pandas import CategoricalDtype, concat, Index, Series, DataFrame
+from typing import Dict, Iterable
+
+from pandas import CategoricalDtype, DataFrame, Index, Series, concat
 
 # locals
-from turbopanda.utils import boolean_series_check, intersect, union, \
-    t_numpy, dictmap, dictzip, join, difference
+from turbopanda.utils import boolean_series_check, dictzip, difference, intersect, join, t_numpy, union
 from ._types import SelectorType
 
 __all__ = ("regex_column", "get_selector", "selector_types", 'selector_options', 'not_selector_types')

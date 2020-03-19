@@ -3,12 +3,10 @@
 """Handles basic import functions."""
 
 # future imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 # locals
-from typing import Optional, Union, List
+from typing import List, Optional, Union
 
 from ._metapanda import MetaPanda
 from .utils import instance_check

@@ -3,11 +3,11 @@
 """Operations for handling string operationss."""
 
 import re
-from typing import Union, Tuple, List
-from pandas import Series, Index, DataFrame
+from typing import Tuple, Union
+
+from pandas import DataFrame, Index, Series
 
 from turbopanda.utils import set_like
-
 
 __all__ = ('strpattern', 'string_replace', 'reformat')
 

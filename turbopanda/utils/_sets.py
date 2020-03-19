@@ -3,7 +3,8 @@
 """Operations for handling dictionaries and sets."""
 
 import itertools as it
-from typing import Dict, Tuple, Iterable, Callable, Any, List, Union, Set, Optional
+from typing import Callable, Dict, Iterable, List, Set, Tuple, Union
+
 from pandas import Index, Series
 
 from ._error_raise import instance_check

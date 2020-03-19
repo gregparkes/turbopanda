@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 """Provides an interface to the expansion, shrinkage and splitting of string categories in MetaPanda."""
 
-import pandas as pd
-from typing import Optional, List
-from turbopanda.utils import instance_check
+from typing import List, Optional
 
+import pandas as pd
+
+from turbopanda.utils import instance_check
 
 __all__ = ('expand', 'shrink', 'split_categories')
 

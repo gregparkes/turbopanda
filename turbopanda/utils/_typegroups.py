@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 """Functions that define intuitive groupings of types."""
 
+from typing import Any, Tuple, TypeVar
+
 import numpy as np
-from typing import TypeVar, Tuple, Any
 
 __all__ = ("c_float", "c_int", "t_numpy", "c_cat", 'fself')
 

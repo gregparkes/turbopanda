@@ -9,21 +9,19 @@ Caching functions that take a function which returns a MetaPanda object
 and caches it to file, ready to re-install if re-run.
 """
 # future imports
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 # imports
 import os
 import warnings
-from typing import Callable, Optional, Union, List, Tuple
+from typing import Callable, List, Optional, Tuple, Union
+
 from pandas import DataFrame, concat
 
 # locals
 from turbopanda._fileio import read
 from turbopanda._metapanda import MetaPanda
-from turbopanda.utils import instance_check, belongs, intersect, insert_suffix, dictcopy
-
+from turbopanda.utils import belongs, dictcopy, insert_suffix, instance_check, intersect
 
 __all__ = ("cached", "cache", 'cached_chunk')
 

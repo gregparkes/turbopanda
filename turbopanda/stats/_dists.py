@@ -3,6 +3,7 @@
 """Defining different distributions."""
 
 import string
+
 from scipy import stats
 
 __all__ = ('scipy_continuous_distributions', 'scipy_discrete_distributions')

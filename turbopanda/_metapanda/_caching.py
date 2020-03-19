@@ -3,10 +3,12 @@
 """Provides an interface to caching meta information in Metapanda."""
 
 import warnings
+
 import pandas as pd
+
+from turbopanda._pipe import Pipe, PipeMetaPandaType
+from turbopanda.utils import dictmap, t_numpy
 from ._types import SelectorType
-from turbopanda._pipe import PipeMetaPandaType, Pipe
-from turbopanda.utils import t_numpy, dictmap
 
 __all__ = ('cache', 'cache_k', 'cache_pipe')
 

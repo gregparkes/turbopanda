@@ -4,8 +4,8 @@
 
 import sklearn
 from sklearn.base import is_classifier, is_regressor
-from turbopanda.utils import panderfy
 
+from turbopanda.utils import panderfy
 from ._default import model_types
 
 __all__ = ('skpackages', 'is_sklearn_model',

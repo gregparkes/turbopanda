@@ -2,14 +2,14 @@
 # -*- coding: utf-8 -*-
 """Provides an interface to writing out files in MetaPanda."""
 
-import pandas as pd
 import hashlib
 import json
 from typing import Optional
 
-from ._metadata import default_columns
-from turbopanda.utils import split_file_directory, union
+import pandas as pd
 
+from turbopanda.utils import split_file_directory, union
+from ._metadata import default_columns
 
 __all__ = ('write', '_write_csv', '_write_json', '_write_hdf', 'printf')
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Raising errors, by doing basic checks."""
+from typing import Any, List, Tuple, TypeVar, Union
+
 import numpy as np
 import pandas as pd
-from typing import List, Union, Any, Tuple, TypeVar
 
 __all__ = ("belongs", "instance_check", "check_list_type",
            "boolean_series_check", "is_twotuple", "is_iterable")

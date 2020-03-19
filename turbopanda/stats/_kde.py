@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 """Generates 1D kernel density approximations for continuous AND discrete applications."""
 
-import numpy as np
 from typing import Optional
+
+import numpy as np
+from scipy import optimize as so, stats
 from scipy.interpolate import make_interp_spline
-from scipy import stats
-from scipy import optimize as so
 
 
 def _iqr(a):

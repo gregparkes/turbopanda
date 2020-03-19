@@ -2,19 +2,19 @@
 # -*- coding: utf-8 -*-
 """Provides an interface to the MetaPanda object."""
 
+import hashlib
 import json
+import warnings
+from typing import Any, Dict, Optional, Tuple
+
 import numpy as np
 import pandas as pd
-import hashlib
-import warnings
-from typing import Any, Dict, Union, Tuple, Optional, List
-from pandas.core.groupby.generic import DataFrameGroupBy
 
-from turbopanda._pipe import Pipe, is_pipe_structure, PipeMetaPandaType
-from turbopanda.utils import split_file_directory, join
+from turbopanda._pipe import Pipe
+from turbopanda.utils import join, split_file_directory
+from ._drop_values import drop_columns
 from ._inspect import inspect
 from ._types import SelectorType
-from ._drop_values import drop_columns
 
 
 class MetaPanda(object):

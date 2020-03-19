@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Attempts to fit a learning curve to a basic model."""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-import numpy as np
 import itertools as it
-import pandas as pd
 from typing import Optional, Tuple
 
+import numpy as np
+import pandas as pd
 from sklearn.model_selection import RepeatedKFold, learning_curve, permutation_test_score
 
 from turbopanda._metapanda import MetaPanda, SelectorType

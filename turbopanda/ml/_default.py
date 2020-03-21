@@ -179,6 +179,14 @@ def param_types():
                                        'Options': "auto, sqrt, log2",
                                        'Suggested N': nan,
                                        'Scale': nan},
+                      'weights': {'Context': 'nn',
+                                  'DataType': 'category',
+                                  'Default': "uniform",
+                                  'Range Min': nan,
+                                  'Range Max': nan,
+                                  'Options': "uniform, distance",
+                                  'Suggested N': nan,
+                                  'Scale': nan}
                       }).T
 
 

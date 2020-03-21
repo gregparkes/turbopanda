@@ -57,15 +57,27 @@ def _get_default_params(model, param=None, ret="list"):
     return x
 
 
-def _make_parameter_grid(models, header="model"):
-    """
-    models can be one of:
-        tuple: list of model names, uses default parameters
-        dict: key (model name), value tuple/list (parameter names) / dict: key (parameter name), value (list of values)
+def make_parameter_grid(models, header="model"):
+    """Generates a sklearn-compatible parameter grid to feed into GridSearchCV.
+
+    Parameters
+    ----------
+    models : list/tuple/dict
+        models can be one of:
+            tuple: list of model names, uses default parameters
+            dict: key (model name), value tuple/list (parameter names) / dict: key (parameter name), value (list of values)
+        Accepts shorthand versions of model names
+    header : str, default='model'
+        The name of the start pipeline
+
+    Returns
+    -------
+    grid : list of dict
+        The parameter grid.
     """
     if isinstance(models, (list, tuple)):
         _p = [{header: [find_sklearn_model(model)[0]],
-               header + "__" + _get_default_param_name(model): broadsort(_get_default_params(model))} \
+               header + "__" + _get_default_param_name(model): broadsort(_get_default_params(model))}
               for model in models]
         return _p
     elif isinstance(models, dict):
@@ -194,10 +206,10 @@ def fit_grid(df: MetaPanda,
         # any basic regression model
         pipe = Pipeline([(header, LinearRegression())])
         # get paramgrid - the magic happens here!
-        pgrid = _make_parameter_grid(_models, header=header)
+        pgrid = make_parameter_grid(_models, header=header)
         # join default grid parameters to given grid_kws
         def_grid_params = {'scoring': 'neg_root_mean_squared_error',
-                           'n_jobs': -2, 'verbose': 2, 'return_train_score': True}
+                           'n_jobs': -2, 'verbose': verbose, 'return_train_score': True}
         def_grid_params.update(grid_kws)
         # create gridsearch
         gs = GridSearchCV(pipe, param_grid=pgrid, cv=rep, **def_grid_params)

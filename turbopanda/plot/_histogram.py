@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from turbopanda.stats import get_bins, univariate_kde
+from turbopanda.stats import get_bins, univariate_kde, auto_fit
 from turbopanda.utils import instance_check
 
 """ Helper methods for redundant code such as plotting, getting bin type, smoothing etc. """
@@ -31,7 +31,7 @@ def _plot_hist(_x, _ax, *args, **kwargs):
 def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
               bins: Optional[Union[int, np.ndarray]] = None,
               density: bool = True,
-              kde: str = "norm",
+              kde: str = "auto",
               stat: bool = False,
               ax=None,
               x_label: str = "",
@@ -51,8 +51,9 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
         If None, uses optimal algorithm to find best bin count
     density : bool, default=True
         If True, uses density approximation
-    kde : str, optional, default="norm"
+    kde : str, optional, default="auto"
         If None, does not draw a KDE plot
+        If 'auto': attempts to fit the best `continuous` distribution
         else, choose from available distributions in `scipy.stats`
     stat : bool, default=False
         If True, sets statistical variables in legend
@@ -104,11 +105,6 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
     # plot histogram
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 5))
-    if x_label == "":
-        if isinstance(X, pd.Series) and X.name is not None:
-            x_label = X.name
-        else:
-            x_label = "x-axis"
 
     if stat:
         stat_label = "mean: {:0.2f}, sd: {:0.3f},\n skew: {:0.3f} kurt: {:0.3f}".format(
@@ -120,7 +116,6 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
         # plot the histogram
         _plot_hist(_X, ax, bins=bins, density=density, rwidth=.9, *hist_args, **hist_kwargs)
 
-    ax.set_xlabel(x_label)
     ax.set_title(title)
 
     if density:
@@ -129,14 +124,38 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
         ax.set_ylabel("Counts")
 
     if kde is not None:
+        if kde == 'auto':
+            # uses slim parameters by default
+            auto_fitted = auto_fit(_X)
+            best_model_ = auto_fitted.loc[auto_fitted['r'].idxmax()]
+            # set kde to the name given
+            if best_model_['r'] > 0.95:
+                kde = best_model_.name
+            else:
+                kde = "norm"
         if hasattr(stats, kde):
             # fetches the kde if possible
-            x_kde, y_kde = univariate_kde(_X, bins, kde,
-                                          kde_range=1e-3, smoothen_kde=smoothen_kde,
-                                          verbose=verbose)
+            x_kde, y_kde, model = univariate_kde(_X,
+                                                 bins,
+                                                 kde,
+                                                 kde_range=1e-3,
+                                                 smoothen_kde=smoothen_kde,
+                                                 verbose=verbose,
+                                                 return_dist=True)
             # plot
             ax.plot(x_kde, y_kde, "-", color='r')
         else:
             raise ValueError("kde value '{}' not found in scipy.stats".format(kde))
+
+    if x_label == "":
+        if title is not None and kde is not None:
+            x_label = "{}({})".format(model.dist.name,
+                                      ", ".join(["{:0.2f}".format(a) for a in model.args]))
+        elif isinstance(X, pd.Series) and X.name is not None:
+            x_label = "{}({})".format(X.name, model.dist.name)
+        else:
+            x_label = "x-axis"
+
+    ax.set_xlabel(x_label)
 
     return ax

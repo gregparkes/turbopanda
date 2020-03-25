@@ -134,6 +134,7 @@ def _get_coefficient_matrix_multioutput(fitted_multi, X, y, cv):
         t_X.columns = n_col
 
 
+@deprecated("0.2.4", "0.2.6", ".ml extension", "MetaML is out of date, use the ml extension.")
 class MetaML(object):
     """Performs complex machine-learning operations on a MetaPanda object to run
     scikit-learn models.

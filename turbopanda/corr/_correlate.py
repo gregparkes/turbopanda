@@ -14,17 +14,27 @@ from typing import List, Optional, Union
 
 import numpy as np
 import pandas as pd
+from scipy import stats
 
 from turbopanda._deprecator import deprecated
 # locals
 from turbopanda._metapanda import MetaPanda, SelectorType
-from turbopanda.utils import belongs, difference, instance_check, is_column_boolean, is_column_float, remove_na, union
+from turbopanda.stats._lmfast import lm
+from turbopanda.utils import belongs, difference, instance_check, \
+    is_column_boolean, is_column_float, remove_na, union, is_dataframe_float
+
+
+from scipy.stats import pearsonr, spearmanr, kendalltau, pointbiserialr
+from ._corr_metrics import percbend, shepherd, skipped
+from ._stats_extra import compute_esci, power_corr
 
 # user define dataset type
 DataSetType = Union[pd.Series, pd.DataFrame, MetaPanda]
 
-
 __all__ = ('correlate', 'bicorr', 'partial_bicorr', 'row_to_matrix')
+
+
+"""Methods to handle continuous-continuous, continuous-boolean and boolean-boolean cases of correlation. """
 
 
 def _both_continuous(x, y):
@@ -32,11 +42,11 @@ def _both_continuous(x, y):
 
 
 def _continuous_bool(x, y):
-    return (is_column_float(x) and is_column_boolean(y)) or (is_column_float(y) and is_column_boolean(x))
+    return is_column_float(x) and is_column_boolean(y)
 
 
-def _get_continuous_bool_order(x, y):
-    return (x, y) if (is_column_float(x) and is_column_boolean(y)) else (y, x)
+def _bool_continuous(x, y):
+    return is_column_boolean(x) and is_column_float(y)
 
 
 def _boolbool(x, y):
@@ -55,14 +65,109 @@ def _row_to_matrix(rows: pd.DataFrame, y_column="r") -> pd.DataFrame:
     return square
 
 
-def _compute_residuals(C, x, y, Z):
-    """Given Z and x and y of continuous float, produce residuals e_x, e_y
+""" Internal bivariate methods. """
 
-    TODO: Implement residual calculations for continuous and dichotonomous for partial correlation
-         For continuous, use least-squares residuals. For bool-like, use logistic regression?
 
-    """
-    return NotImplemented
+def _bicorr_inner(x, y, tail='two-sided', method='spearman', verbose=0):
+    """Internal method for bicorrelation here"""
+    # convert to numpy
+    x_arr = np.asarray(x)
+    y_arr = np.asarray(y)
+
+    # Remove NA
+    x_arr, y_arr = remove_na(x_arr, y_arr, paired=True)
+    nx = x_arr.size
+
+    outliers = []
+    # Compute correlation coefficient
+    if _both_continuous(x, y):
+        # use method
+        if method == 'pearson':
+            r, pval = pearsonr(x_arr, y_arr)
+        elif method == 'spearman':
+            r, pval = spearmanr(x_arr, y_arr)
+        elif method == 'kendall':
+            r, pval = kendalltau(x_arr, y_arr)
+        elif method == 'percbend':
+            r, pval = percbend(x_arr, y_arr)
+        elif method == 'shepherd':
+            r, pval, outliers = shepherd(x_arr, y_arr)
+        elif method == 'skipped':
+            r, pval, outliers = skipped(x_arr, y_arr, method='spearman')
+        else:
+            raise ValueError('Method not recognized.')
+    elif _continuous_bool(x, y):
+        # sort them into order, it matters
+        r, pval = pointbiserialr(x_arr, y_arr.astype(np.uint8))
+        # override method
+        method = "biserial"
+    elif _bool_continuous(x, y):
+        # sort them into order, it matters
+        r, pval = pointbiserialr(x_arr.astype(np.uint8), y_arr)
+        # override method
+        method = "biserial"
+    elif _boolbool(x, y):
+        # use spearman
+        r, pval = spearmanr(x_arr.astype(np.uint8), y_arr.astype(np.uint8))
+        method = "spearman"
+    else:
+        raise TypeError(
+            "columns '{}':{} to '{}':{} combination not accepted for `bicorr`.".format(x.name, x.dtype, y.name,
+                                                                                       y.dtype))
+    assert not np.isnan(r), 'Correlation returned NaN. Check your data.'
+
+    if verbose > 0:
+        print("correlating {}:{}".format(x.name, y.name))
+
+    # Compute r2 and adj_r2
+    r2 = r ** 2
+    adj_r2 = 1 - (((1 - r2) * (nx - 1)) / (nx - 3))
+
+    # Compute the parametric 95% confidence interval and power
+    if r2 < 1:
+        ci = compute_esci(stat=r, nx=nx, ny=nx, eftype='r')
+        pr = round(power_corr(r=r, n=nx, power=None, alpha=0.05, tail=tail), 3)
+    else:
+        ci = [1., 1.]
+        pr = np.inf
+
+    # Create dictionary
+    sd_d = {'x': x.name, 'y': y.name, 'n': nx,
+            'r': round(r, 3),
+            'r2': round(r2, 3),
+            'adj_r2': round(adj_r2, 3),
+            'CI95_lower': ci[0], 'CI95_upper': ci[1],
+            'p-val': pval if tail == 'two-sided' else .5 * pval,
+            'power': pr,
+            'outliers': sum(outliers) if method in ('shepherd', 'skipped') else np.nan}
+
+    # Convert to DataFrame
+    _stm = pd.DataFrame.from_records(sd_d, index=[method])
+    return _stm
+
+
+def _partial_bicorr_inner(data, x, y, covar, tail='two-sided', method='spearman', verbose=0):
+    """Internal method for partial bi correlation here."""
+    # all columns select
+    if verbose > 0:
+        print("partial {}:{}\\{}".format(x, y, covar))
+    col = union(x, y, covar)
+    """ Calculate linear models here to get residuals for x, y to correlate together. """
+    # Drop rows with NaN
+    _data = data[col].dropna()
+    # use LM to generate predictions
+    px, r_x = lm(_data[covar], _data[x])
+    py, r_y = lm(_data[covar], _data[y])
+    # wrap residuals as series
+    # if one is a boolean operation, we must preserve structure
+    res_x = pd.Series(r_x, name=x)
+    res_y = pd.Series(r_y, name=y)
+    """ Perform bivariate correlate as normal. """
+    # calculate bicorrelation on residuals
+    return _bicorr_inner(res_x, res_y, method=method, tail=tail, verbose=0)
+
+
+""" Public bivariate methods. """
 
 
 def bicorr(x: pd.Series,
@@ -140,78 +245,17 @@ def bicorr(x: pd.Series,
        source matlab toolbox. Front. Psychol. 3, 606.
        https://doi.org/10.3389/fpsyg.2012.00606
     """
-    from scipy.stats import pearsonr, spearmanr, kendalltau, pointbiserialr
-    from ._corr_metrics import percbend, shepherd, skipped
-    from ._stats_extra import compute_esci, power_corr
-
+    # perform all checks in the public method.. rather than repeating them internally.
     # check type
-    if not isinstance(x, pd.Series) or not isinstance(y, pd.Series):
-        raise TypeError("x:{} or y:{} is not of type [pd.Series]".format(type(x), type(y)))
-    # convert to numpy
-    x_arr = np.asarray(x)
-    y_arr = np.asarray(y)
+    instance_check(x, pd.Series)
+    instance_check(x, pd.Series)
     # Check size
-    if x_arr.size != y_arr.size:
+    if x.shape[0] != y.shape[0]:
         raise ValueError('x and y must have the same length.')
+    belongs(method, ('pearson', 'spearman', 'kendall', 'biserial', 'percbend', 'shepherd', 'skipped'))
+    belongs(tail, ('one-sided', 'two-sided'))
 
-    # Remove NA
-    x_arr, y_arr = remove_na(x_arr, y_arr, paired=True)
-    nx = x_arr.size
-
-    outliers = []
-    # Compute correlation coefficient
-    if _both_continuous(x, y):
-        # use method
-        if method == 'pearson':
-            r, pval = pearsonr(x_arr, y_arr)
-        elif method == 'spearman':
-            r, pval = spearmanr(x_arr, y_arr)
-        elif method == 'kendall':
-            r, pval = kendalltau(x_arr, y_arr)
-        elif method == 'percbend':
-            r, pval = percbend(x_arr, y_arr)
-        elif method == 'shepherd':
-            r, pval, outliers = shepherd(x_arr, y_arr)
-        elif method == 'skipped':
-            r, pval, outliers = skipped(x_arr, y_arr, method='spearman')
-        else:
-            raise ValueError('Method not recognized.')
-    elif _continuous_bool(x, y):
-        # sort them into order, it matters
-        x_arr, y_arr = _get_continuous_bool_order(x_arr, y_arr)
-        r, pval = pointbiserialr(x_arr, y_arr.astype(np.uint8))
-        # override method
-        method = "biserial"
-    elif _boolbool(x, y):
-        # use spearman
-        r, pval = spearmanr(x_arr.astype(np.uint8), y_arr.astype(np.uint8))
-        method = "spearman"
-    else:
-        raise TypeError(
-            "columns '{}':{} to '{}':{} combination not accepted for `_bicorr`.".format(x.name, x.dtype, y.name,
-                                                                                        y.dtype))
-    assert not np.isnan(r), 'Correlation returned NaN. Check your data.'
-
-    # Compute r2 and adj_r2
-    r2 = r ** 2
-    adj_r2 = 1 - (((1 - r2) * (nx - 1)) / (nx - 3))
-
-    # Compute the parametric 95% confidence interval and power
-    if r2 < 1:
-        ci = compute_esci(stat=r, nx=nx, ny=nx, eftype='r')
-        pr = round(power_corr(r=r, n=nx, power=None, alpha=0.05, tail=tail), 3)
-    else:
-        ci = [1., 1.]
-        pr = np.inf
-
-    # Create dictionary
-    stats = {'x': x.name, 'y': y.name, 'n': nx, 'r': round(r, 3), 'r2': round(r2, 3), 'adj_r2': round(adj_r2, 3),
-             'CI95_lower': ci[0], 'CI95_upper': ci[1], 'p-val': pval if tail == 'two-sided' else .5 * pval, 'power': pr,
-             'outliers': sum(outliers) if method in ('shepherd', 'skipped') else np.nan}
-
-    # Convert to DataFrame
-    stats = pd.DataFrame.from_records(stats, index=[method])
-    return stats
+    return _bicorr_inner(x, y, tail, method)
 
 
 def partial_bicorr(data: pd.DataFrame,
@@ -282,83 +326,65 @@ def partial_bicorr(data: pd.DataFrame,
     .. [4] https://gist.github.com/fabianp/9396204419c7b638d38f
     .. [5] http://faculty.cas.usf.edu/mbrannick/regression/Partial.html
     """
+    # perform all checks in the public method..
     instance_check(data, pd.DataFrame)
     instance_check(x, str)
     instance_check(y, str)
     instance_check(covar, (str, list, tuple, pd.Index))
-    # Check that columns exist
-    col = union(x, y, covar)
-    # Drop rows with NaN
-    _data = data[col].dropna()
-    assert _data.shape[0] > 2, 'Data must have at least 3 non-NAN samples.'
+    belongs(tail, ('one-sided', 'two-sided'))
+    belongs(method, ('pearson', 'spearman', 'kendall', 'biserial', 'percbend', 'shepherd', 'skipped'))
 
-    # Standardize (= no need for an intercept in least-square regression)
-    C = (_data[col] - _data[col].mean(axis=0)) / _data[col].std(axis=0)
-    # PARTIAL CORRELATION - HANDLING SCENARIOS
-    cvar = np.atleast_2d(C[covar].values)
-    beta_x = np.linalg.lstsq(cvar, C[x].values, rcond=None)[0]
-    beta_y = np.linalg.lstsq(cvar, C[y].values, rcond=None)[0]
-    # determine residuals and wrap pandas
-    res_x = pd.Series(C[x].values - np.dot(cvar, beta_x), name=x)
-    res_y = pd.Series(C[y].values - np.dot(cvar, beta_y), name=y)
-    # calculate bicorrelation on residuals
-    return bicorr(res_x, res_y, method=method, tail=tail)
+    # perform a check to make sure every column in `covar` is continuous.
+    if not is_dataframe_float(data[covar]):
+        raise TypeError("`covar` variables in `partial_bicorr` all must be of type `float`/continuous.")
+
+    return _partial_bicorr_inner(data, x, y, covar, tail, method)
 
 
-def _corr_two_matrix_diff(data: pd.DataFrame,
-                          x: List[str],
-                          y: List[str],
-                          covar: Union[str, List[str]] = None,
-                          method: str = 'spearman') -> pd.DataFrame:
+""" Helper methods to convert from complex `correlate` function to bivariate examples (with partials). """
+
+
+def _corr_two_matrix_diff(data, x, y, covar=None, cartesian_Z=False, method='spearman', verbose=0):
     """
     Computes the correlation between two matrices X and Y of different columns lengths.
 
     Essentially computes multiple iterations of corr_matrix_vector.
     """
-    instance_check(data, pd.DataFrame)
-    instance_check(x, (list, tuple, pd.Index))
-    instance_check(y, (list, tuple, pd.Index))
-    instance_check(covar, (type(None), str, list, tuple, pd.Index))
-
     # create combinations
-    comb = list(it.product(x, y))
+    comb = it.product(x, y)
     # iterate and perform two_variable as before
     if covar is None:
-        result_k = [bicorr(data[xc], data[yc], method=method) for (xc, yc) in comb]
+        result_k = [_bicorr_inner(data[xc], data[yc], method=method, verbose=verbose) for (xc, yc) in comb]
     else:
-        result_k = [partial_bicorr(data, xc, yc, covar, method=method) for (xc, yc) in comb]
+        if cartesian_Z:
+            comb_Z = it.product(comb, covar)
+            result_k = [_partial_bicorr_inner(data, xc, yc, z, method=method, verbose=verbose) for (xc, yc), z in comb_Z]
+        else:
+            result_k = [_partial_bicorr_inner(data, xc, yc, covar, method=method, verbose=verbose) for xc, yc in comb]
 
     result = pd.concat(result_k, axis=0, sort=False).reset_index().rename(columns={"index": "method"})
     return result
 
 
-def _corr_matrix_singular(data: pd.DataFrame,
-                          covar: Union[str, List[str]] = None,
-                          method: str = "spearman") -> pd.DataFrame:
+def _corr_matrix_singular(data, covar=None, cartesian_Z=False, method="spearman", verbose=0):
     """Computes the correlation matrix on pairwise columns."""
-    # assign zeros/empty
-    instance_check(data, pd.DataFrame)
-    instance_check(covar, (type(None), str, list, tuple, pd.Index))
-
-    ac = []
+    # combinations with replacement diagonal
+    combs = it.combinations_with_replacement(range(data.shape[1]), 2)
     # iterate over i,j pairs
     if covar is None:
-        for i in range(data.shape[1]):
-            for j in range(i, data.shape[1]):
-                ac.append(
-                    bicorr(data.iloc[:, i], data.iloc[:, j],
-                           method=method)
-                )
+        result_k = [_bicorr_inner(data.iloc[:, i], data.iloc[:, j], method=method, verbose=verbose) for i, j in combs]
     else:
         # computes the symmetric difference
         _x = difference(data.columns, covar)
-        # iterate and append
-        for i in range(_x.shape[1]):
-            for j in range(i, _x.shape[1]):
-                ac.append(
-                    partial_bicorr(data, _x[i], _x[j], covar, method=method)
-                )
-    results = pd.concat(ac, axis=0, sort=False).reset_index().rename(columns={"index": "method"})
+        # determine if Z is cartesian or not
+        if cartesian_Z:
+            # modify combs to cartesianize over Z
+            combs_Z = it.product(combs, covar)
+            result_k = [_partial_bicorr_inner(data, _x[i], _x[j], z, method=method, verbose=verbose) for (i, j), z in combs_Z]
+        else:
+            result_k = [_partial_bicorr_inner(data, _x[i], _x[j], covar, method=method, verbose=verbose) for i, j in combs]
+
+    results = pd.concat(result_k, axis=0, sort=False).reset_index().rename(columns={"index": "method"})
     return results
 
 
@@ -366,12 +392,9 @@ def _corr_matrix_vector(data: pd.DataFrame,
                         x: List[str],
                         y: str,
                         covar: Union[str, List[str]] = None,
-                        method: str = "spearman") -> pd.DataFrame:
-    instance_check(data, pd.DataFrame)
-    instance_check(x, (list, tuple, pd.Index))
-    instance_check(y, str)
-    instance_check(covar, (type(None), str, list, tuple, pd.Index))
-
+                        cartesian_Z: bool = False,
+                        method: str = "spearman",
+                        verbose: int = 0) -> pd.DataFrame:
     # join together the list/strings of column names
     cols = union(x, y, covar)
     # extract data subset, no dropping yet though.
@@ -381,9 +404,13 @@ def _corr_matrix_vector(data: pd.DataFrame,
     if covar is None:
         _x = _data[x]
         _y = _data[y]
-        result_k = [bicorr(_x.iloc[:, i], _y, method=method) for i in range(_x.shape[1])]
+        result_k = [_bicorr_inner(_x.iloc[:, i], _y, method=method, verbose=verbose) for i in range(_x.shape[1])]
     else:
-        result_k = [partial_bicorr(_data, _xn, y, covar, method=method) for _xn in x]
+        if cartesian_Z:
+            xz_prod = it.product(x, covar)
+            result_k = [_partial_bicorr_inner(_data, _xn, y, _cov, method=method, verbose=verbose) for _xn, _cov in xz_prod]
+        else:
+            result_k = [_partial_bicorr_inner(_data, _xn, y, covar, method=method, verbose=verbose) for _xn in x]
 
     # concatenate, add method and return
     result = pd.concat(result_k, axis=0, sort=False).reset_index().rename(columns={"index": "method"})
@@ -393,44 +420,13 @@ def _corr_matrix_vector(data: pd.DataFrame,
 """##################### PUBLIC FUNCTIONS ####################################################### """
 
 
-@deprecated("0.2.4", '0.2.6', instead="")
-def correlate_mat(data, covar=None, method="spearman") -> pd.DataFrame:
-    """Correlates data matrix into row set. No additional parameters.
-
-    Parameters
-    ----------
-    data : pd.DataFrame / MetaPanda
-        The full dataset.
-    covar : (str, list, tuple, pd.Index), optional
-        set of covariate(s). Covariates are needed to compute partial correlations.
-            If None, uses standard correlation.
-    method : str, optional
-        Method to correlate with. Choose from:
-            'pearson' : Pearson product-moment correlation
-            'spearman' : Spearman rank-order correlation
-            'kendall' : Kendall’s tau (ordinal data)
-            'biserial' : Biserial correlation (continuous and boolean data only)
-            'percbend' : percentage bend correlation (robust)
-            'shepherd' : Shepherd's pi correlation (robust Spearman)
-            'skipped' : skipped correlation (robust Spearman, requires sklearn)
-
-    Returns
-    -------
-    R : pd.DataFrame
-        correlation rows (based on pingouin structure)
-    """
-    instance_check(data, (pd.DataFrame, MetaPanda))
-
-    args = dict(covar=covar, method=method)
-    return _corr_matrix_singular(data, **args) if isinstance(data, pd.DataFrame) \
-        else _corr_matrix_singular(data.df_, **args)
-
-
 def correlate(data: Union[pd.DataFrame, MetaPanda],
               x: Optional[SelectorType] = None,
               y: Optional[SelectorType] = None,
               covar: Optional[SelectorType] = None,
-              method: str = "spearman") -> pd.DataFrame:
+              cartesian_covar: bool = False,
+              method: str = "spearman",
+              verbose: int = 0) -> pd.DataFrame:
     """Correlates X and Y together to generate a list of correlations.
 
     If X/Y are MetaPandas, returns a MetaPanda object, else returns pandas.DataFrame
@@ -442,13 +438,16 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
     x : (str, list, tuple, pd.Index), optional
         Subset of input(s) for column names.
             if None, uses the full dataset. Y must be None in this case also.
-    y : (str, list, tuple, pd.Index)
+    y : (str, list, tuple, pd.Index), optional
         Subset of output(s) for column names.
             if None, uses the full dataset (from optional `x` subset)
     covar : (str, list, tuple, pd.Index), optional
         set of covariate(s). Covariates are needed to compute partial correlations.
             If None, uses standard correlation.
-    method : str, optional
+    cartesian_covar : bool, default=False
+        If True, and if covar is not None, separates every element in covar to individually control for
+        using the cartesian product
+    method : str, default="spearman"
         Method to correlate with. Choose from:
             'pearson' : Pearson product-moment correlation
             'spearman' : Spearman rank-order correlation
@@ -457,6 +456,9 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
             'percbend' : percentage bend correlation (robust)
             'shepherd' : Shepherd's pi correlation (robust Spearman)
             'skipped' : skipped correlation (robust Spearman, requires sklearn)
+    verbose : int, default=0
+        If > 0, prints out useful debugging messages
+
     Returns
     -------
     R : pd.DataFrame
@@ -498,7 +500,9 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
     instance_check(x, (type(None), str, list, tuple, pd.Index))
     instance_check(y, (type(None), str, list, tuple, pd.Index))
     instance_check(covar, (type(None), str, list, tuple, pd.Index))
+    instance_check(cartesian_covar, bool)
     belongs(method, ('pearson', 'spearman', 'kendall', 'biserial', 'percbend', 'shepherd', 'skipped'))
+
     # downcast to dataframe option
     df = data.df_ if isinstance(data, MetaPanda) else data
     # downcast if list/tuple/pd.index is of length 1
@@ -510,20 +514,38 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
         x = data.view(x)
     if isinstance(y, str) and isinstance(data, MetaPanda):
         y = data.view(y)
+    if isinstance(covar, str) and isinstance(data, MetaPanda):
+        covar = data.view(covar)
 
+    # perform a check to make sure every column in `covar` is continuous.
+    if covar is not None:
+        if not is_dataframe_float(data[covar]):
+            raise TypeError("`covar` variables in `correlate` all must be of type `float`/continuous.")
+
+    # execute various use cases based on the presense of x, y, and covar, respectively.
     if x is None and y is None:
-        return _corr_matrix_singular(df, covar=covar, method=method)
+        # here just perform matrix-based correlation
+        return _corr_matrix_singular(df, covar=covar, method=method,
+                                     cartesian_Z=cartesian_covar, verbose=verbose)
     elif isinstance(x, (list, tuple, pd.Index)) and y is None:
+        # use a subset of x, in union with covar
         cols = union(x, covar)
-        return _corr_matrix_singular(df[cols], covar=covar, method=method)
+        return _corr_matrix_singular(df[cols], covar=covar, method=method,
+                                     cartesian_Z=cartesian_covar, verbose=verbose)
     elif isinstance(x, (list, tuple, pd.Index)) and isinstance(y, str):
-        return _corr_matrix_vector(df, x, y, covar=covar, method=method)
+        # list of x, y str -> matrix-vector cartesian product
+        return _corr_matrix_vector(df, x, y, covar=covar, method=method,
+                                   cartesian_Z=cartesian_covar, verbose=verbose)
     elif isinstance(y, (list, tuple, pd.Index)) and isinstance(x, str):
-        return _corr_matrix_vector(df, y, x, covar=covar, method=method)
+        # list of y, x str -> matrix-vector cartesian product
+        return _corr_matrix_vector(df, y, x, covar=covar, method=method,
+                                   cartesian_Z=cartesian_covar, verbose=verbose)
     elif isinstance(x, (list, tuple, pd.Index)) and isinstance(y, (list, tuple, pd.Index)):
-        return _corr_two_matrix_diff(df, x, y, covar=covar, method=method)
+        # list of x, y -> cartesian product of x: y terms
+        return _corr_two_matrix_diff(df, x, y, covar=covar, method=method,
+                                     cartesian_Z=cartesian_covar, verbose=verbose)
     else:
-        raise ValueError("XC: {}; YC: {}; COVA: {} combination unknown.".format(x, y, covar))
+        raise ValueError("X: {}; Y: {}; Z: {} combination unknown.".format(x, y, covar))
 
 
 def row_to_matrix(rows: pd.DataFrame, piv_value='r'):
@@ -549,7 +571,7 @@ def row_to_matrix(rows: pd.DataFrame, piv_value='r'):
 #########################################################################################################
 
 
-@deprecated("0.2.4", "0.2.6", instead="`correlate`", reason="partial correlations are now factored into correlate() "
+@deprecated("0.2.4", "0.2.5", instead="`correlate`", reason="partial correlations are now factored into correlate() "
                                                             "with `covar` argument")
 def pcm(df: Union[pd.DataFrame, MetaPanda]) -> pd.DataFrame:
     """Partial correlation matrix.

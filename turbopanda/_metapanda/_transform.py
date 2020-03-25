@@ -5,13 +5,36 @@
 import itertools as it
 from typing import Callable, List, Optional, Tuple, Union
 
+import numpy as np
 import pandas as pd
 
 from turbopanda.str import common_substring_match
-from turbopanda.utils import belongs, instance_check, is_twotuple, listify, pairwise
+from turbopanda.utils import belongs, instance_check, is_twotuple, listify, pairwise, \
+    object_to_categorical
 from ._drop_values import drop_columns
 from ._inspect import inspect
 from ._types import SelectorType
+
+
+def downcast(self) -> "MetaPanda":
+    """Downcasts all numeric variables into lower-form variables.
+
+    Particularly useful if you wish to store booleans, lower-value integers, unsigned integers and floats.
+
+    Returns
+    -------
+    self
+    """
+    # transform by converting float, int64 columns to
+    self.transform(pd.to_numeric, selector=("float64", "int64"),
+                   errors='ignore', downcast="unsigned")
+    # convert potential object columns to categorical
+    self.transform(object_to_categorical, selector="object", method="transform")
+    # make 'boolean' columns uint8
+    self.transform(pd.Series.astype, selector="bool", dtype=np.uint8)
+    # finally, update the meta
+    self.update_meta()
+    return self
 
 
 def transform(self,

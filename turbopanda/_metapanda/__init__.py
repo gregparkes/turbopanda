@@ -70,6 +70,8 @@ class MetaPanda(object):
         Applies a pandas.Index function to `df_.columns`
     drop(selector)
         Drops the selected columns from `df_`
+    downcast()
+        Casts all variables in higher form to lower form if possible
     keep(selector)
         Keeps the selected columns from `df_` only
     filter_rows(func, selector=None, args)
@@ -185,7 +187,7 @@ class MetaPanda(object):
     # metadata operations
     from ._metadata import sort_columns, meta_split_category, meta_map, update_meta
     # transformation operations
-    from ._transform import transform, transform_k, aggregate, aggregate_k, eval
+    from ._transform import transform, transform_k, aggregate, aggregate_k, downcast
 
     """ ############################ STATIC FUNCTIONS ######################################## """
 

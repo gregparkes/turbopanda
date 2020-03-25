@@ -12,8 +12,7 @@ import matplotlib.pyplot as plt
 # imports
 import numpy as np
 
-from turbopanda.corr import bicorr
-from turbopanda.utils import belongs, remove_na
+from turbopanda.utils import belongs, remove_na, instance_check
 from ._gridplot import gridplot
 from ._histogram import histogram
 from ._save_fig import save
@@ -34,6 +33,7 @@ def missing(mdf: "MetaPanda"):
     -------
     None
     """
+
     def _data_polynomial_length(length):
         # calculate length based on size of DF
         # dimensions follow this polynomial
@@ -60,6 +60,7 @@ def hist_grid(mdf: "MetaPanda",
               selector,
               arrange: str = "square",
               plot_size: int = 3,
+              shared_dist: str = "auto",
               savepath: Optional[Union[str, bool]] = None):
     """
     Plots a grid of histograms comparing the distributions in a MetaPanda
@@ -74,8 +75,10 @@ def hist_grid(mdf: "MetaPanda",
     arrange : str
         Choose from ['square', 'row', 'column']. Square arranges the plot as square-like as possible. Row
         prioritises plots row-like, and column-wise for column.
-    plot_size : int
+    plot_size : int, default=3
         The size of each axes
+    shared_dist : str, default="auto"
+        Determines what KDE to fit to the data, set to None if you don't want
     savepath : None, bool, str
         saves the figure to file. If bool, uses the name in mdf, else uses given string. If None, no fig is saved.
 
@@ -83,6 +86,9 @@ def hist_grid(mdf: "MetaPanda",
     -------
     None
     """
+    instance_check(plot_size, int)
+    instance_check(shared_dist, (type(None), str))
+    instance_check(savepath, (type(None), str, bool))
     belongs(arrange, ["square", "row", "column"])
     # get selector
     selection = mdf.view(selector)
@@ -90,7 +96,7 @@ def hist_grid(mdf: "MetaPanda",
         fig, axes = gridplot(len(selection), arrange, ax_size=plot_size)
 
         for i, x in enumerate(selection):
-            _ = histogram(mdf[x].dropna(), ax=axes[i], title=x)
+            _ = histogram(mdf[x].dropna(), ax=axes[i], title=x, kde=shared_dist)
         fig.tight_layout()
 
         if isinstance(savepath, bool):
@@ -129,6 +135,8 @@ def scatter_grid(mdf: "MetaPanda",
     -------
     None
     """
+    from turbopanda.corr import bicorr
+
     belongs(arrange, ["square", "row", "column"])
     # get selector
     x_sel = mdf.view(x)

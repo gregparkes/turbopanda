@@ -25,7 +25,7 @@ class LinearModel(object):
         X : np.ndarray, pandas.DataFrame
             The inputs to the array
         y : np.ndarray, pandas.Series
-            The continuous response vector
+            The continuous/discrete response vector
         """
         self.is_fit = False
         self.X = X

@@ -10,10 +10,7 @@ import pandas as pd
 from scipy import stats
 
 from turbopanda._dependency import is_statsmodels_installed
-from turbopanda.corr import correlate
-from turbopanda.corr._correlate import _row_to_matrix
 from turbopanda.plot import gridplot
-from turbopanda.stats import cook_distance, vif
 from turbopanda.utils import instance_check, intersect
 from ._clean import ml_ready
 
@@ -159,6 +156,9 @@ def overview_plot(df, x, y, cv, yp, plot_names=None, plot_size=3):
     -------
     a bunch of plots. No Return.
     """
+    from turbopanda.corr._correlate import correlate, row_to_matrix
+    from turbopanda.stats import cook_distance, vif
+
     instance_check(plot_names, (type(None), tuple))
     instance_check(y, str)
     options_ = ('resid_fitted', 'score', 'actual_predicted', 'coef',

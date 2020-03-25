@@ -25,13 +25,52 @@ def _plot_hist(_x, _ax, *args, **kwargs):
         raise TypeError("np.ndarray type '{}' not recognized; must be float or int".format(_x.dtype))
 
 
+def _criteria_corr_qqplot(r):
+    if r > .99:
+        return "***"
+    elif r > .95:
+        return "**"
+    elif r > .9:
+        return "*"
+    elif r > .75:
+        return "~"
+    else:
+        return ".."
+
+
+def _assign_x_label(title, series_x_l, is_kde, auto_fitted, frozen_dist):
+    # this only executes if `x_label` is "".
+    if not is_kde:
+        # no frozen dist, no autokde
+        if series_x_l != '':
+            return series_x_l
+        elif title is not None:
+            return title
+        else:
+            return "x-axis"
+    else:
+        if auto_fitted is not None:
+            best_model_ = auto_fitted.loc[auto_fitted['r'].idxmax()]
+            _crit = _criteria_corr_qqplot(best_model_['r'])
+            _args = ", ".join(["{:0.2f}".format(a) for a in frozen_dist.args])
+            if series_x_l != '':
+                return "{}\n[{}{}({})]".format(series_x_l, frozen_dist.dist.name, _crit, _args)
+            else:
+                return "{}{}({})".format(frozen_dist.dist.name, _crit, _args)
+        else:
+            if series_x_l != '':
+                return "{}({})".format(series_x_l, frozen_dist.dist.name)
+            else:
+                return frozen_dist.dist.name
+
+
 """ The meat and bones """
 
 
 def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
+              kde: str = "auto",
               bins: Optional[Union[int, np.ndarray]] = None,
               density: bool = True,
-              kde: str = "auto",
               stat: bool = False,
               ax=None,
               x_label: str = "",
@@ -47,14 +86,15 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
     ----------
     X : np.ndarray/pd.Series (1d)
         The data column to draw.
+    kde : str/tuple of str, optional, default="auto"
+        If None, does not draw a KDE plot
+        If 'auto': attempts to fit the best `continuous` distribution
+        If list/tuple: uses 'auto' to fit the best distribution out of options
+        else, choose from available distributions in `scipy.stats`
     bins : int, optional
         If None, uses optimal algorithm to find best bin count
     density : bool, default=True
         If True, uses density approximation
-    kde : str, optional, default="auto"
-        If None, does not draw a KDE plot
-        If 'auto': attempts to fit the best `continuous` distribution
-        else, choose from available distributions in `scipy.stats`
     stat : bool, default=False
         If True, sets statistical variables in legend
     ax : matplotlib.ax object, optional, default=None
@@ -87,7 +127,7 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
     instance_check(stat, bool)
     instance_check(title, str)
     instance_check(x_label, str)
-    instance_check(kde, (str, type(None)))
+    instance_check(kde, (str, type(None), list, tuple))
     instance_check(kde_range, float)
     instance_check(smoothen_kde, bool)
 
@@ -99,7 +139,6 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
     if bins is None:
         # if X is float, use freedman_diaconis_bins determinant, else simply np.arange for integer input.
         bins = get_bins(_X)
-
     if kde:
         density = True
     # plot histogram
@@ -124,37 +163,29 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
         ax.set_ylabel("Counts")
 
     if kde is not None:
-        if kde == 'auto':
+        if kde == 'auto' or isinstance(kde, (list, tuple)):
             # uses slim parameters by default
-            auto_fitted = auto_fit(_X)
+            auto_fitted = auto_fit(_X, kde)
             best_model_ = auto_fitted.loc[auto_fitted['r'].idxmax()]
             # set kde to the name given
-            if best_model_['r'] > 0.95:
-                kde = best_model_.name
-            else:
-                kde = "norm"
-        if hasattr(stats, kde):
+            x_kde, y_kde, model = univariate_kde(_X, bins, best_model_.name, kde_range=1e-3, smoothen_kde=smoothen_kde,
+                                                 verbose=verbose, return_dist=True)
+        elif hasattr(stats, kde):
             # fetches the kde if possible
-            x_kde, y_kde, model = univariate_kde(_X,
-                                                 bins,
-                                                 kde,
-                                                 kde_range=1e-3,
-                                                 smoothen_kde=smoothen_kde,
-                                                 verbose=verbose,
-                                                 return_dist=True)
-            # plot
-            ax.plot(x_kde, y_kde, "-", color='r')
+            auto_fitted = None
+            x_kde, y_kde, model = univariate_kde(_X, bins, kde, kde_range=1e-3, smoothen_kde=smoothen_kde,
+                                                 verbose=verbose, return_dist=True)
         else:
             raise ValueError("kde value '{}' not found in scipy.stats".format(kde))
 
+        # plot
+        ax.plot(x_kde, y_kde, "-", color='r')
+    else:
+        auto_fitted = None
+        model = None
+
     if x_label == "":
-        if title is not None and kde is not None:
-            x_label = "{}({})".format(model.dist.name,
-                                      ", ".join(["{:0.2f}".format(a) for a in model.args]))
-        elif isinstance(X, pd.Series) and X.name is not None:
-            x_label = "{}({})".format(X.name, model.dist.name)
-        else:
-            x_label = "x-axis"
+        x_label = _assign_x_label(title, X.name, kde is not None, auto_fitted, model)
 
     ax.set_xlabel(x_label)
 

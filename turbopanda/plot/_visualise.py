@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 # imports
 import numpy as np
 
-from turbopanda.utils import belongs, remove_na, instance_check
+from turbopanda.utils import belongs, remove_na, instance_check, difference
 from ._gridplot import gridplot
 from ._histogram import histogram
 from ._save_fig import save
@@ -61,7 +61,8 @@ def hist_grid(mdf: "MetaPanda",
               arrange: str = "square",
               plot_size: int = 3,
               shared_dist: str = "auto",
-              savepath: Optional[Union[str, bool]] = None):
+              savepath: Optional[Union[str, bool]] = None,
+              **hist_kws):
     """
     Plots a grid of histograms comparing the distributions in a MetaPanda
     selector.
@@ -77,17 +78,24 @@ def hist_grid(mdf: "MetaPanda",
         prioritises plots row-like, and column-wise for column.
     plot_size : int, default=3
         The size of each axes
-    shared_dist : str, default="auto"
+    shared_dist : str/tuple of str/dict, default="auto"
         Determines what KDE to fit to the data, set to None if you don't want
+        If tuple/list: attempts using these specified distributions
+        If dict: maps column name (k) to distribution choice (v)
     savepath : None, bool, str
         saves the figure to file. If bool, uses the name in mdf, else uses given string. If None, no fig is saved.
+
+    Other Parameters
+    ----------------
+    hist_kws : dict
+        Keywords to pass to `turb.plot.histogram`
 
     Returns
     -------
     None
     """
     instance_check(plot_size, int)
-    instance_check(shared_dist, (type(None), str))
+    instance_check(shared_dist, (type(None), str, list, tuple, dict))
     instance_check(savepath, (type(None), str, bool))
     belongs(arrange, ["square", "row", "column"])
     # get selector
@@ -95,9 +103,19 @@ def hist_grid(mdf: "MetaPanda",
     if selection.size > 0:
         fig, axes = gridplot(len(selection), arrange, ax_size=plot_size)
 
-        for i, x in enumerate(selection):
-            _ = histogram(mdf[x].dropna(), ax=axes[i], title=x, kde=shared_dist)
-        fig.tight_layout()
+        if not isinstance(shared_dist, dict):
+            for i, x in enumerate(selection):
+                _ = histogram(mdf[x].dropna(), ax=axes[i], title=x, kde=shared_dist, **hist_kws)
+            fig.tight_layout()
+        else:
+            for i, (x, d) in enumerate(shared_dist.items()):
+                _ = histogram(mdf[x].dropna(), ax=axes[i], title=x, kde=d, **hist_kws)
+            # iterate over any 'remaining' columns in selection and handle appropriately
+            remaining = difference(selection, tuple(shared_dist.keys()))
+            if remaining.shape[0] > 0:
+                for i, x in enumerate(remaining):
+                    _ = histogram(mdf[x].dropna(), ax=axes[i+len(shared_dist)], title=x, kde="auto", **hist_kws)
+            fig.tight_layout()
 
         if isinstance(savepath, bool):
             save(fig, "hist", mdf.name_)

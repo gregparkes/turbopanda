@@ -4,17 +4,20 @@
 
 import re
 from typing import Tuple, Union
-
 from pandas import DataFrame, Index, Series
 
 from turbopanda.utils import set_like
+
 
 __all__ = ('strpattern', 'string_replace', 'reformat')
 
 
 def strpattern(pat, K):
     """Determines if pattern `pat` exists in list of str `K`."""
-    return set_like([s for s in K if re.search(pat, s)])
+    # compile pattern - improves performance
+    _p = re.compile(pat)
+    # iterate over and return
+    return set_like([s for s in K if re.search(_p, s)])
 
 
 def string_replace(strings: Union[Series, Index], operations: Tuple[str, str]) -> Series:

@@ -9,14 +9,9 @@ from scipy import optimize as so, stats
 from scipy.interpolate import make_interp_spline
 
 
-def _iqr(a):
-    """Calculate the IQR for an array of numbers."""
-    return stats.scoreatpercentile(np.asarray(a), 75) - stats.scoreatpercentile(np.asarray(a), 25)
-
-
-def _smooth_kde(_x, _bins, _mt, params):
-    xn = np.linspace(_bins.min(), _bins.max(), 300)
-    spl = make_interp_spline(_bins, _mt.pmf(_bins, *params), 2)
+def _smooth_kde(_bins, _mt, _n=300):
+    xn = np.linspace(_bins.min(), _bins.max(), _n)
+    spl = make_interp_spline(_bins, _mt.pmf(_bins), 2)
     return xn, spl(xn)
 
 
@@ -52,29 +47,83 @@ def freedman_diaconis_bins(a: np.ndarray) -> int:
     a = np.asarray(a)
     if len(a) < 2:
         return 1
-    h = 2 * _iqr(a) / (a.shape[0] ** (1 / 3))
+    h = 2 * (stats.scoreatpercentile(a, 75) - stats.scoreatpercentile(a, 25)) / (a.shape[0] ** (1 / 3))
     # fall back to sqrt(a) bins if iqr is 0
     if h == 0:
         return int(np.sqrt(a.size))
     else:
-        return int(np.ceil((np.nanmax(a) - np.nanmin(a)) / h))
+        return int(np.ceil((np.max(a) - np.min(a)) / h))
 
 
 def get_bins(x):
     """Gets the optimal number of bins for a continuous or discrete set of data."""
     # if X is float, use freedman_diaconis_bins determinant, else simply np.arange for integer input.
-    if x.dtype.kind == 'f' or (np.nanmax(x) - np.nanmin(x) > 100):
+    xmax = np.max(x)
+    xmin = np.min(x)
+
+    if x.dtype.kind == 'f' or (xmax - xmin > 100):
         bin_n = min(freedman_diaconis_bins(x), 50)
         _, bins = np.histogram(x, bin_n)
-    elif (x.dtype.kind == 'i' or x.dtype.kind == 'u') and (np.nanmax(x) - np.nanmin(x) <= 100):
+    elif (x.dtype.kind == 'i' or x.dtype.kind == 'u') and (xmax - xmin <= 100):
         # firstly we determine if the range is small, because if not we just use the above technique
-        bins = np.arange(np.nanmin(x), np.nanmax(x) + 2, step=1)
+        bins = np.arange(xmin, xmax + 2, step=1)
     else:
         raise TypeError("np.ndarray type '{}' not recognized; must be float or int".format(x.dtype))
     return bins
 
 
 """ Calculating the KDE distributions for continuous and discrete distributions"""
+
+
+def _get_discrete_single():
+    """These models have a single parameter and are easily fitted."""
+    return {
+        'bernoulli': np.mean, 'poisson': np.mean, 'geom': lambda x: 1. / np.mean(x)
+    }
+
+
+def _get_discrete_multiple():
+    """These models have more than one parameter, and require log-likelihood maximization; which is expensive."""
+    return {
+        # function to calculate + estimate initial parameters for n, p, loc
+        "binom": (_negative_binomial_loglikelihood, _clean_binomial,
+                  np.nanmax, lambda x: (np.bincount(x).argmax() + 1) / np.nanmax(x), np.nanmin),
+        "nbinom": (_negative_negbinomial_loglikelihood, _clean_binomial,
+                   lambda x: np.nanmean(x) / 2., lambda x: (np.bincount(x).argmax() + 1) / np.nanmax(x), np.nanmin)
+    }
+
+
+def fit_model(X, name, verbose=0, return_params=False):
+    """Given distribution name and X, return a fitted model with it's parameters."""
+    _model = getattr(stats, name)
+    # this should work.
+    if hasattr(_model, "fit"):
+        # it's continuous - use the fit method
+        params = _model.fit(X)
+        _fitted = _model(*params)
+    else:
+        # it's discrete, damn!
+        if name in _get_discrete_single():
+            # nice and easy.
+            params = [_get_discrete_single()[name](X)]
+        elif name in _get_discrete_multiple():
+            # this is where the fun begins...
+            # 0 is loglikelihood function, #1 is cleaner function, 2:k are parameters
+            var_ = _get_discrete_multiple()[name]
+            # guess good starting locations for optimization.
+            inits_ = [v(X) for v in var_[2:]]
+            # minimization function
+            params = var_[1](so.fmin(var_[0], inits_, args=(X,), ftol=1e-4, full_output=True, disp=False)[0])
+            if verbose:
+                print("initial guess: {}, minimized guess: {}".format(inits_, params))
+        else:
+            raise ValueError("discrete kde '{}' not found in {}".format(name, list(_get_discrete_single()) + list(_get_discrete_multiple())))
+        _fitted = _model(*params)
+
+    if return_params:
+        return _fitted, params
+    else:
+        return _fitted
 
 
 def univariate_kde(X: np.ndarray,
@@ -112,6 +161,8 @@ def univariate_kde(X: np.ndarray,
     y_kde : np.ndarray
         The kernel density approximation as a density score
     """
+
+    supported_disc_dists = list(_get_discrete_single()) + list(_get_discrete_multiple())
     # convert to numpy
     _X = np.asarray(X)
     if _X.ndim > 1:
@@ -119,56 +170,19 @@ def univariate_kde(X: np.ndarray,
     if bins is None:
         bins = get_bins(_X)
 
-    # get the scipy.stats module
-    _mt = getattr(stats, kde_name)
+    _model, _params = fit_model(_X, kde_name, verbose=verbose, return_params=True)
 
-    # these functions directly approximate the parameter to use for these distributions
-    discrete_kde_single_ = {
-        'bernoulli': np.mean, 'poisson': np.mean, 'geom': lambda x: 1. / np.mean(x)
-    }
-    # these functions approximate a close initial value problem (IVP) to solve.
-    discrete_kde_ests_ = {
-        # function to calculate + estimate initial parameters for n, p, loc
-        "binom": (_negative_binomial_loglikelihood, _clean_binomial,
-                  np.nanmax, lambda x: (np.bincount(x).argmax() + 1) / np.nanmax(x), np.nanmin),
-        "nbinom": (_negative_negbinomial_loglikelihood, _clean_binomial,
-                   lambda x: np.nanmean(x)/2., lambda x: (np.bincount(x).argmax() + 1) / np.nanmax(x), np.nanmin)
-    }
-
-    if hasattr(_mt, "fit"):
-        # fit mt with x
-        params = _mt.fit(_X)
-        model = _mt(*params)
-        # generate x_kde
-        x_kde = np.linspace(model.ppf(kde_range), model.ppf(1 - kde_range), 200)
-        y_kde = model.pdf(x_kde)
-    else:
-        params = []
-        # try to fit a model??
-        if kde_name in discrete_kde_single_.keys():
-            # single parameter discrete models - which take the data and get the 'mean' or whatever
-            params = [discrete_kde_single_[kde_name](_X)]
-        elif kde_name in discrete_kde_ests_.keys():
-            # 1 is loglikelihood function, 2 is cleaner function, 3:k are parameters
-            var_ = discrete_kde_ests_[kde_name]
-            # estimates using given functions
-            ests_ = [v(_X) for v in var_[2:]]
-            # minimization function
-            params = var_[1](so.fmin(var_[0], ests_, args=(_X,), ftol=1e-4, full_output=True, disp=False)[0])
-            if verbose:
-                print("estimated: {}, determined: {}".format(ests_, params))
-        else:
-            raise ValueError("discrete kde '{}' not found in {}".format(_kde_name,
-                                                                        list(discrete_kde_single_.keys()) + list(
-                                                                            discrete_kde_ests_.keys())))
-        model = _mt(*params)
-        # choice of smoothing..
+    if kde_name in supported_disc_dists:
         if smoothen_kde:
-            x_kde, y_kde = _smooth_kde(_X, bins, _mt, params)
+            x_kde, y_kde = _smooth_kde(bins, _model)
         else:
-            x_kde, y_kde = bins, _mt.pmf(bins, *params)
+            x_kde, y_kde = bins, _model.pmf(bins)
+    else:
+        # generate x_kde
+        x_kde = np.linspace(_model.ppf(kde_range), _model.ppf(1 - kde_range), 200)
+        y_kde = _model.pdf(x_kde)
 
     if return_dist:
-        return x_kde, y_kde, model
+        return x_kde, y_kde, _model
     else:
         return x_kde, y_kde

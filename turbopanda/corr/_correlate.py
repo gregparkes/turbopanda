@@ -53,9 +53,9 @@ def _boolbool(x, y):
     return is_column_boolean(x) and is_column_boolean(y)
 
 
-def _row_to_matrix(rows: pd.DataFrame, y_column="r") -> pd.DataFrame:
+def _row_to_matrix(rows: pd.DataFrame, x='x', y='y', piv="r") -> pd.DataFrame:
     """Takes the verbose row output and converts to lighter matrix format."""
-    square = rows.pivot_table(index="x", columns="y", values=y_column)
+    square = rows.pivot_table(index=x, columns=y, values=piv)
     # fillna
     square.fillna(0.0, inplace=True)
     # ready for transpose
@@ -548,13 +548,17 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
         raise ValueError("X: {}; Y: {}; Z: {} combination unknown.".format(x, y, covar))
 
 
-def row_to_matrix(rows: pd.DataFrame, piv_value='r'):
+def row_to_matrix(rows: pd.DataFrame, x="x", y="y", piv_value='r'):
     """Converts a row-output from `correlate` into matrix form.
 
     Parameters
     ----------
     rows : pd.DataFrame
         The output from `correlate`
+    x : str
+        The column to make the index
+    y : str
+        The column to make the columns
     piv_value : str, optional
         Which parameter to pivot on, by default is `r`, the coefficient.
 
@@ -563,7 +567,7 @@ def row_to_matrix(rows: pd.DataFrame, piv_value='r'):
     m : pd.DataFrame (p, p)
         The correlation matrix
     """
-    return _row_to_matrix(rows, y_column=piv_value)
+    return _row_to_matrix(rows, x=x, y=y, piv=piv_value)
 
 
 #########################################################################################################

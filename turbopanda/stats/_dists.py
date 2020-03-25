@@ -3,8 +3,11 @@
 """Defining different distributions."""
 
 import string
-from scipy import stats
+import numpy as np
 import pandas as pd
+from scipy import stats
+
+from ._kde import fit_model
 
 
 def _slim_continuous_dists():
@@ -31,17 +34,29 @@ def _scipy_discrete_distributions():
             hasattr(getattr(stats, s), 'pmf')]
 
 
-def _fit_cont_dist(name, data):
-    """Given name and data, fit parameters to the distribution."""
-    dn = getattr(stats, name)
-    params = dn.fit(data)
-    # return fitted model to this.
-    return dn(*params)
-
-
 def _get_shape_arg(name):
     """Given name of distribution, get number of parameters"""
     return getattr(stats, name).numargs
+
+
+def _get_distribution_set(option):
+    if isinstance(option, str):
+        opt_m = {'slim': _slim_continuous_dists, 'full': _scipy_continuous_distributions,
+                 'auto': _slim_continuous_dists}
+        return opt_m[option]()
+    elif isinstance(option, (list, tuple)):
+        return option
+    else:
+        raise TypeError("`option` must be of type [str, list, tuple], not {}".format(type(option)))
+
+
+def _get_qqplot_score_correlate(data, distributions):
+    score_list = [stats.probplot(data, dist=fit_model(data, d))[-1] for d in distributions]
+    df = pd.DataFrame(score_list, columns=('slope', 'intercept', 'r'), index=distributions)
+    df['shape_args'] = [_get_shape_arg(d) for d in distributions]
+    # correction for R maybe useful
+    df['r_corrected'] = (df['r'] ** 2) - (df['shape_args'] / 16.)
+    return df
 
 
 def auto_fit(data, option="slim"):
@@ -62,22 +77,24 @@ def auto_fit(data, option="slim"):
     df : DataFrame
         Results dataframe of each fitted model.
     """
-    if data.ndim > 1:
-        data = data.flatten()
+    _data = np.asarray(data)
 
-    if isinstance(option, str):
-        opt_m = {'slim': _slim_continuous_dists, 'full': _scipy_continuous_distributions}
-        dists = opt_m[option]()
-    elif isinstance(option, (tuple, list)):
-        dists = option
-    else:
-        raise TypeError("`option` must be of type [str, list, tuple], not {}".format(type(option)))
+    if _data.ndim > 1:
+        _data = _data.flatten()
 
-    # use qqplot to find best conditions
-    _param_scores = [stats.probplot(data, dist=_fit_cont_dist(d, data))[-1] for d in dists]
+    dists = _get_distribution_set(option)
     # make as dataframe
-    df = pd.DataFrame(_param_scores, columns=['slope','intercept','r'], index=dists)
-    df['shape_args'] = [_get_shape_arg(d) for d in dists]
-    # correction for R maybe useful
-    df['r_corrected'] = (df['r']**2) - (df['shape_args']/16.)
-    return df
+    return _get_qqplot_score_correlate(_data, dists)
+
+
+def auto_fit_voted(dataset, option="slim"):
+    """Fits the best distribution to a group of $k$-vectors, assuming they all belong to the same distribution.
+
+    This is mechanism by majority voting between distributions.
+
+    Parameters
+    ----------
+    dataset : list of np.ndarray (n,)/pd.Series or pd.DataFrame (n,k)
+        The data columns to calculate on.
+    """
+    return NotImplemented

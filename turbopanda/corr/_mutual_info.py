@@ -7,19 +7,30 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
-from turbopanda.utils import instance_check
+from turbopanda.utils import instance_check, remove_na
 
 __all__ = ('entropy', 'conditional_entropy', 'continuous_mutual_info')
 
 
 def _estimate_density(X, Y=None, Z=None, r=10000):
-    """Estimates the density of X using binning."""
+    """Estimates the density of X using binning, accepts np.ndarray. """
     if Y is None and Z is None:
-        return np.histogram(X, bins=r, density=True)[0]
+        _X = remove_na(X)
+        return np.histogram(_X, bins=r, density=True)[0]
     elif Z is None:
-        return np.histogram2d(X, Y, bins=(r, r), density=True)[0]
+        _X, _Y = remove_na(X, Y, paired=True)
+        return np.histogram2d(_X, _Y, bins=(r, r), density=True)[0]
     else:
         return np.histogramdd(np.vstack((X, Y, Z)).T, bins=(r, r, r), density=True)[0]
+
+
+def _estimate_entropy(X, Y=None, Z=None):
+    if Z is not None:
+        # prevent memory implosion.
+        D = _estimate_density(X, Y, Z, r=1000)
+    else:
+        D = _estimate_density(X, Y)
+    return -np.sum(D * np.log2(D))
 
 
 def entropy(X, Y=None, Z=None):
@@ -53,15 +64,10 @@ def entropy(X, Y=None, Z=None):
     # divide X into bins first
     # bin range
     instance_check(X, np.ndarray)
+    instance_check(Y, (type(None), np.ndarray))
+    instance_check(Z, (type(None), np.ndarray))
 
-    if Z is not None:
-        # prevent memory implosion.
-        D = _estimate_density(X, Y, Z, r=1000)
-    else:
-        D = _estimate_density(X, Y)
-
-    H = -np.sum(D * np.log2(D))
-    return H
+    return _estimate_entropy(X, Y, Z)
 
 
 def conditional_entropy(X, Y):
@@ -85,8 +91,11 @@ def conditional_entropy(X, Y):
     H : float
         H(X|Y) the entropy of X given Y
     """
-    H_Y = entropy(Y)
-    H_XY = entropy(X, Y)
+    _X = np.asarray(X)
+    _Y = np.asarray(Y)
+    # cast entropy and return
+    H_Y = _estimate_entropy(_Y)
+    H_XY = _estimate_entropy(_X, _Y)
     return H_XY - H_Y
 
 
@@ -115,14 +124,20 @@ def continuous_mutual_info(X, Y, Z=None):
     MI : float
         I(X; Y) or I(X; Y|Z)
     """
+    _X = np.asarray(X)
+    _Y = np.asarray(Y)
+
     if Z is None:
-        H_X = entropy(X)
-        H_Y = entropy(Y)
-        H_XY = entropy(X, Y)
+        # calculate
+        H_X = _estimate_entropy(_X)
+        H_Y = _estimate_entropy(_Y)
+        H_XY = _estimate_entropy(_X, _Y)
         return H_X + H_Y - H_XY
     else:
-        H_XZ = entropy(X, Z)
-        H_YZ = entropy(Y, Z)
-        H_XYZ = entropy(X, Y, Z)
-        H_Z = entropy(Z)
+        _Z = np.asarray(Z)
+        # calculate entropies.
+        H_XZ = _estimate_entropy(_X, _Z)
+        H_YZ = _estimate_entropy(_Y, _Z)
+        H_XYZ = _estimate_entropy(_X, _Y, _Z)
+        H_Z = _estimate_entropy(_Z)
         return H_XZ + H_YZ - H_XYZ - H_Z

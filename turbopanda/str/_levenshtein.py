@@ -4,9 +4,35 @@
 
 import numpy as np
 import pandas as pd
+from numba import jit
 
 
-def _levenshtein_ratio_and_distance(s, t, ratio_calc=True):
+@jit(nopython=True)
+def _fill_matrix(d, s, t):
+    rows = d.shape[0]
+    cols = d.shape[1]
+    # fill sides
+    for col in range(1, cols):
+        d[col, 0] = col
+    for row in range(1, rows):
+        d[0, row] = row
+
+    # iterate over and calculate.
+    for col in range(1, cols):
+        for row in range(1, rows):
+            if s[row - 1] == t[col - 1]:
+                cost = 0  # If the characters are the same in the two strings in a given position [i,j] then cost is 0
+            else:
+                # to align the results with those of the Python Levenshtein package, if we choose to calculate the ratio
+                # the cost of a substitution is 2. If we calculate just distance, then the cost of a substitution is 1.
+                cost = 2
+            d[row][col] = min(d[row - 1][col] + 1,  # Cost of deletions
+                              d[row][col - 1] + 1,  # Cost of insertions
+                              d[row - 1][col - 1] + cost)  # Cost of substitutions
+    return d
+
+
+def _ratio_and_distance(s, t, ratio_calc=True):
     """ levenshtein_ratio_and_distance:
         Calculates levenshtein distance between two strings.
         If ratio_calc = True, the function computes the
@@ -19,32 +45,18 @@ def _levenshtein_ratio_and_distance(s, t, ratio_calc=True):
     rows = len(s) + 1
     cols = len(t) + 1
     distance = np.zeros((rows, cols), dtype=int)
+    # fill sides
+    # distance[0, :] = np.arange(0, cols, 1, dtype=int)
+    # distance[:, 0] = np.arange(0, rows, 1, dtype=int)
+    # fill the matrix with values, using JIT.
+    distance = _fill_matrix(distance, s, t)
 
-    # Populate matrix of zeros with the indeces of each character of both strings
-    for i in range(1, rows):
-        for k in range(1, cols):
-            distance[i][0] = i
-            distance[0][k] = k
-
-    # Iterate over the matrix to compute the cost of deletions,insertions and/or substitutions
-    for col in range(1, cols):
-        for row in range(1, rows):
-            if s[row - 1] == t[col - 1]:
-                cost = 0  # If the characters are the same in the two strings in a given position [i,j] then cost is 0
-            else:
-                # to align the results with those of the Python Levenshtein package, if we choose to calculate the ratio
-                # the cost of a substitution is 2. If we calculate just distance, then the cost of a substitution is 1.
-                cost = 2 if ratio_calc else 1
-            distance[row][col] = min(distance[row - 1][col] + 1,  # Cost of deletions
-                                     distance[row][col - 1] + 1,  # Cost of insertions
-                                     distance[row - 1][col - 1] + cost)  # Cost of substitutions
     if ratio_calc:
         # Computation of the Levenshtein Distance Ratio
-        ratio = ((len(s) + len(t)) - distance[-1][-1]) / (len(s) + len(t))
+        ratio = ((rows + cols - 2) - distance[-1][-1]) / (rows + cols - 2)
         return ratio
     else:
-        # This is the minimum number of edits needed to convert string a to string b
-        return "The strings are {} edits away".format(distance[-1][-1])
+        return distance[-1][-1]
 
 
 def _levenshtein_matrix(columns):
@@ -54,7 +66,7 @@ def _levenshtein_matrix(columns):
     lev_m = np.zeros((len(columns), len(columns)))
     for i in range(len(columns)):
         for j in range(i, len(columns)):
-            lev_m[i, j] = _levenshtein_ratio_and_distance(columns[i], columns[j], True)
+            lev_m[i, j] = _ratio_and_distance(columns[i], columns[j], True)
     lev_m = lev_m + lev_m.T - np.eye(len(columns))
     return pd.DataFrame(lev_m, columns=columns, index=columns)
 

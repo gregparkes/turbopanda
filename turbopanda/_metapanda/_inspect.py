@@ -25,6 +25,8 @@ def inspect(df, meta, selectors, s=None, join_t='union', axis=1, mode='view'):
     """Handles basic selection using the `get_selector`."""
     if s is None:
         return df.columns if axis == 1 else df.index
+    elif isinstance(s, (list, tuple)) and len(s) == 0:
+        return pd.Index([], name="colnames")
     elif axis == 1:
         if isinstance(s, (tuple, list)):
             if len(s) <= 1:
@@ -42,6 +44,7 @@ def view(self, *selector: SelectorType) -> pd.Index:
     """View a selection of columns in `df_`.
 
     Select merely returns the columns of interest selected using this selector.
+
     Selections of columns can be done by:
         type [object, int, float, numpy.dtype*, pandas.CategoricalDtype]
         callable (function) that returns [bool list] of length p
@@ -50,9 +53,10 @@ def view(self, *selector: SelectorType) -> pd.Index:
         list/tuple of the above
 
     .. note:: `view` *preserves* the order in which columns appear within the DataFrame.
+
     Parameters
     ----------
-    selector : str or tuple args
+    *selector : selector or tuple args
         See above for what constitutes an *appropriate selector*.
     Warnings
     --------

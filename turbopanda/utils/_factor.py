@@ -45,7 +45,7 @@ def _square_factors(n: int) -> Tuple[int, int]:
     Parameters
     -------
     n : int
-        An *even* integer that is factorizable.
+        An integer that is factorizable, ideally with an integer square-root.
 
     Returns
     -------
@@ -55,7 +55,8 @@ def _square_factors(n: int) -> Tuple[int, int]:
     if not isinstance(n, (int, np.int, np.int64)):
         raise TypeError("'n' must of type [int, np.int, np.int64]")
     arr = np.sort(np.asarray(_factor(n)))
-    return arr[arr.shape[0] // 2], arr[-1] // arr[arr.shape[0] // 2]
+    med_index = arr.shape[0] // 2
+    return arr[med_index], arr[-1] // arr[med_index]
 
 
 def _diag_factors(n: int) -> Tuple[int, int]:
@@ -75,7 +76,8 @@ def _diag_factors(n: int) -> Tuple[int, int]:
     if not isinstance(n, (int, np.int, np.int64)):
         raise TypeError("'n' must of type [int, np.int, np.int64]")
     arr = np.sort(np.asarray(_factor(n)))
-    return arr[arr.shape[0] // 4], arr[-1] // arr[arr.shape[0] // 4]
+    quarter_index = arr.shape[0] // 4
+    return arr[quarter_index], arr[-1] // arr[quarter_index]
 
 
 def nearest_factors(n: int,

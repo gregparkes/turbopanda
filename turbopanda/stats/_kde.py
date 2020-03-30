@@ -93,6 +93,15 @@ def _get_discrete_multiple():
     }
 
 
+def _problem_distributions():
+    return ('argus', 'betaprime', 'erlang', 'cosine', 'exponnorm', 'foldcauchy',
+            'foldnorm', 'genexpon', 'gausshyper', 'invgauss', 'levy_stable',
+            'ksone', 'ncf', 'nct', 'ncx2', 'norminvgauss', 'powerlognorm',
+            'rdist', 'recipinvgauss', 'rv_continuous', 'rv_histogram',
+            'skewnorm', 'tukeylambda', 'wrapcauchy', 'semicircular', 'vonmises',
+            'vonmises_line')
+
+
 def fit_model(X, name, verbose=0, return_params=False):
     """Given distribution name and X, return a fitted model with it's parameters."""
     _model = getattr(stats, name)
@@ -117,7 +126,8 @@ def fit_model(X, name, verbose=0, return_params=False):
             if verbose:
                 print("initial guess: {}, minimized guess: {}".format(inits_, params))
         else:
-            raise ValueError("discrete kde '{}' not found in {}".format(name, list(_get_discrete_single()) + list(_get_discrete_multiple())))
+            raise ValueError("discrete kde '{}' not found in {}".format(name, list(_get_discrete_single()) + list(
+                _get_discrete_multiple())))
         _fitted = _model(*params)
 
     if return_params:
@@ -128,11 +138,11 @@ def fit_model(X, name, verbose=0, return_params=False):
 
 def univariate_kde(X: np.ndarray,
                    bins: Optional[np.ndarray] = None,
-                   kde_name: Optional[str] = 'norm',
+                   kde_name: str = 'norm',
                    kde_range: float = 1e-3,
                    smoothen_kde: bool = True,
                    verbose: int = 0,
-                   return_dist : bool = False):
+                   return_dist: bool = False):
     """Determines a univariate KDE approximation on a 1D sample, either continuous or discrete.
 
     .. note:: If x is multi-dimensional, the array is flattened.
@@ -145,6 +155,7 @@ def univariate_kde(X: np.ndarray,
         A range relating to the desired number of bins
     kde_name : str, optional, default='norm'
         The name relating to a scipy.stats.<kde_name> distribution
+        If 'freeform': fits the best KDE to the data points.
     kde_range : float, default=1e-3
         A range to use for continuous distributions
     smoothen_kde : bool, default=True
@@ -170,17 +181,22 @@ def univariate_kde(X: np.ndarray,
     if bins is None:
         bins = get_bins(_X)
 
-    _model, _params = fit_model(_X, kde_name, verbose=verbose, return_params=True)
-
-    if kde_name in supported_disc_dists:
-        if smoothen_kde:
-            x_kde, y_kde = _smooth_kde(bins, _model)
-        else:
-            x_kde, y_kde = bins, _model.pmf(bins)
-    else:
-        # generate x_kde
-        x_kde = np.linspace(_model.ppf(kde_range), _model.ppf(1 - kde_range), 200)
+    if kde_name == 'freeform':
+        _model = stats.gaussian_kde(_X)
+        x_kde = np.linspace(_X.min(), _X.max(), 200)
         y_kde = _model.pdf(x_kde)
+    else:
+        _model, _params = fit_model(_X, kde_name, verbose=verbose, return_params=True)
+
+        if kde_name in supported_disc_dists:
+            if smoothen_kde:
+                x_kde, y_kde = _smooth_kde(bins, _model)
+            else:
+                x_kde, y_kde = bins, _model.pmf(bins)
+        else:
+            # generate x_kde
+            x_kde = np.linspace(_model.ppf(kde_range), _model.ppf(1 - kde_range), 200)
+            y_kde = _model.pdf(x_kde)
 
     if return_dist:
         return x_kde, y_kde, _model

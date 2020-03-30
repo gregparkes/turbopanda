@@ -26,7 +26,7 @@ from turbopanda.utils import belongs, dictcopy, insert_suffix, instance_check, i
 __all__ = ("cached", "cache", 'cached_chunk')
 
 
-def _stack_rows(rows):
+def _stack_rows(rows: List[DataFrame]) -> "MetaPanda":
     return MetaPanda(concat(rows, axis=0, sort=False, ignore_index=True))
 
 
@@ -39,7 +39,7 @@ def _set_index_def(df, values=('Unnamed:_0', 'Unnamed: 0', 'colnames', 'index', 
 
 
 def cached(func: Callable,
-           filename: Optional[str] = 'example1.json',
+           filename: str = 'example1.json',
            verbose: int = 0,
            *args,
            **kwargs) -> "MetaPanda":
@@ -127,7 +127,7 @@ def cached(func: Callable,
 def cached_chunk(func: Callable,
                  param_name: str,
                  param_values: Union[List, Tuple],
-                 filename: Optional[str] = 'example1.json',
+                 filename: str = 'example1.json',
                  verbose: int = 0,
                  *args, **kwargs) -> "MetaPanda":
     """Provides chunked automatic {.json, .csv} caching for `turb.MetaPanda` or `pd.DataFrame`.
@@ -211,7 +211,7 @@ def cached_chunk(func: Callable,
         return mpf
 
 
-def cache(filename: Optional[str] = "example1.json") -> Callable:
+def cache(filename: str = "example1.json") -> Callable:
     """Provides automatic {.json, .csv} decorator caching for `turb.MetaPanda` or `pd.DataFrame`.
 
     .. note:: this is a decorator function, not to be called directly.

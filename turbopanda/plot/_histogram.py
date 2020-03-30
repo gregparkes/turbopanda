@@ -25,7 +25,7 @@ def _plot_hist(_x, _ax, *args, **kwargs):
         raise TypeError("np.ndarray type '{}' not recognized; must be float or int".format(_x.dtype))
 
 
-def _criteria_corr_qqplot(r):
+def _criteria_corr_qqplot(r: float) -> str:
     if r > .99:
         return "***"
     elif r > .95:
@@ -60,8 +60,10 @@ def _assign_x_label(title, series_x_l, is_kde, auto_fitted, frozen_dist):
         else:
             if series_x_l != '':
                 return "{}({})".format(series_x_l, frozen_dist.dist.name)
-            else:
+            elif frozen_dist is not None:
                 return frozen_dist.dist.name
+            else:
+                return "x-axis"
 
 
 """ The meat and bones """
@@ -72,7 +74,7 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
               bins: Optional[Union[int, np.ndarray]] = None,
               density: bool = True,
               stat: bool = False,
-              ax=None,
+              ax: Optional = None,
               x_label: str = "",
               title: str = "",
               kde_range: float = 1e-3,
@@ -89,6 +91,7 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
     kde : str/tuple of str, optional, default="auto"
         If None, does not draw a KDE plot
         If 'auto': attempts to fit the best `continuous` distribution
+        If 'freeform': fits the best KDE to the points
         If list/tuple: uses 'auto' to fit the best distribution out of options
         else, choose from available distributions in `scipy.stats`
     bins : int, optional
@@ -170,7 +173,7 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
             # set kde to the name given
             x_kde, y_kde, model = univariate_kde(_X, bins, best_model_.name, kde_range=1e-3, smoothen_kde=smoothen_kde,
                                                  verbose=verbose, return_dist=True)
-        elif hasattr(stats, kde):
+        elif (kde == 'freeform') or hasattr(stats, kde):
             # fetches the kde if possible
             auto_fitted = None
             x_kde, y_kde, model = univariate_kde(_X, bins, kde, kde_range=1e-3, smoothen_kde=smoothen_kde,
@@ -185,7 +188,8 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
         model = None
 
     if x_label == "":
-        x_label = _assign_x_label(title, X.name, kde is not None, auto_fitted, model)
+        x_label = _assign_x_label(title, X.name if isinstance(X, pd.Series) else "", kde is not None, auto_fitted,
+                                  model if not kde == "freeform" else None)
 
     ax.set_xlabel(x_label)
 

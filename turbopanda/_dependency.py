@@ -3,7 +3,7 @@
 """Handles the dependencies within MetaPanda."""
 
 __all__ = ('is_numpy_installed', 'is_scipy_installed', 'is_pandas_installed',
-           'is_matplotlib_installed', 'is_sklearn_installed')
+           'is_matplotlib_installed', 'is_sklearn_installed', 'is_numba_installed')
 
 
 def is_numpy_installed(raise_error: bool = False):
@@ -17,6 +17,20 @@ def is_numpy_installed(raise_error: bool = False):
     if raise_error and not is_installed:  # pragma: no cover
         raise IOError("numpy needs to be installed. Please use `pip "
                       "install numpy`.")
+    return is_installed
+
+
+def is_numba_installed(raise_error: bool = False):
+    """Determines whether NumPy is installed."""
+    try:
+        import numba  # noqa
+        is_installed = True
+    except IOError:  # pragma: no cover
+        is_installed = False
+    # Raise error (if needed) :
+    if raise_error and not is_installed:  # pragma: no cover
+        raise IOError("numba needs to be installed. Please use `pip "
+                      "install numba`.")
     return is_installed
 
 

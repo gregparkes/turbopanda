@@ -59,7 +59,11 @@ class MetaPanda(object):
     search(selector)
         View the intersection of search terms, for columns in `df_`.
     view_not(selector)
-        Views the non-selected columns in `df_`
+        Views the non-selected columns in `df_`.
+    select(sel_str)
+        Views the selection of columns using an eval-like string
+    patsy(X, y=None)
+        Describes a statistical model in basic patsy language
     copy(None)
         Creates a copy of this instance
     apply(f_name, f_args, f_kwargs)
@@ -166,7 +170,7 @@ class MetaPanda(object):
     """ ########################### IMPORTED FUNCTIONS ####################################### """
 
     # inspecting columns
-    from ._inspect import view_not, view, search
+    from ._inspect import view_not, view, search, select
     # dropping rows
     from ._drop_values import drop, keep, filter_rows
     # shadowed columns
@@ -182,6 +186,8 @@ class MetaPanda(object):
     from ._compute import compute_k, compute, _apply_pipe
     # reshaping operations with strings
     from ._string_reshape import expand, shrink, split_categories
+    # patsy-like functionality
+    from ._patsy import patsy
     # renaming columns
     from ._name_axis import rename_axis, add_suffix, add_prefix
     # metadata operations

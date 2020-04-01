@@ -2,9 +2,12 @@
 # -*- coding: utf-8 -*-
 """Operations for handling the edit distance of strings using the levenshtein method."""
 
+import itertools as it
 import numpy as np
 import pandas as pd
 from numba import jit
+
+from typing import Optional, List
 
 
 @jit(nopython=True)
@@ -32,7 +35,7 @@ def _fill_matrix(d, s, t):
     return d
 
 
-def _ratio_and_distance(s, t, ratio_calc=True):
+def _ratio_and_distance(s: str, t: str, ratio_calc: bool = True) -> float:
     """ levenshtein_ratio_and_distance:
         Calculates levenshtein distance between two strings.
         If ratio_calc = True, the function computes the
@@ -59,29 +62,67 @@ def _ratio_and_distance(s, t, ratio_calc=True):
         return distance[-1][-1]
 
 
-def _levenshtein_matrix(columns):
-    """
-    Calculates the pairwise levenshtein distance between every column element i, j
-    """
-    lev_m = np.zeros((len(columns), len(columns)))
-    for i in range(len(columns)):
-        for j in range(i, len(columns)):
-            lev_m[i, j] = _ratio_and_distance(columns[i], columns[j], True)
-    lev_m = lev_m + lev_m.T - np.eye(len(columns))
-    return pd.DataFrame(lev_m, columns=columns, index=columns)
+def _levenshtein_comb(X: List[str], with_replacement=True) -> pd.DataFrame:
+    if with_replacement:
+        comb = tuple(it.combinations_with_replacement(X, 2))
+    else:
+        comb = tuple(it.combinations(X, 2))
+
+    L = [_ratio_and_distance(a, b, True) for a, b in comb]
+    res = pd.DataFrame(comb, columns=['x', 'y'])
+    res['L'] = L
+    return res
 
 
-def levenshtein(columns):
+def _levenshtein_product(X: List[str], Y: List[str]) -> pd.DataFrame:
+    prod = tuple(it.product(X, Y))
+    L = np.asarray([_ratio_and_distance(a, b, True) for a, b in prod])
+    res = pd.DataFrame(prod, columns=['x', 'y'])
+    res['L'] = L
+    return res
+
+
+def _mirror_matrix_lev(D):
+    X = D.pivot("x","y","L").fillna(0.)
+    # add to transpose, remove + 1 from diagonal
+    X += X.T - np.eye(X.shape[0])
+    return X
+
+
+def levenshtein(X: List[str],
+                Y: Optional[List[str]] = None,
+                as_matrix: bool = False,
+                with_replacement: bool = True) -> pd.DataFrame:
     """Determines the levenshtein matrix distance between every pair of column names.
+
+    If Y is present, performs cartesian_product of X & Y terms, else performs cartesian_product of X & X
 
     Parameters
     ----------
-    columns : list-like
+    X : list of str
         string column names
+    Y : list of str, optional
+        string column names
+    as_matrix : bool, default=False
+        If True, returns DataFrame in matrix-form.
+    with_replacement : bool, default=True
+        If true, returns diagonal elements x_i = x_i.
 
     Returns
     -------
-    L : DataFrame (n, n)
-        The levenshtein distance matrix, where n is the number of column elements
+    L : DataFrame (n x p, 3) or (n, p)
+        The levenshtein distance, where n is the number of X elements, p is the number of y elements
     """
-    return _levenshtein_matrix(columns)
+    if as_matrix:
+        with_replacement = True
+
+    if Y is None:
+        res = _levenshtein_comb(X, with_replacement)
+        if as_matrix:
+            res = _mirror_matrix_lev(res)
+    else:
+        res = _levenshtein_product(X, Y)
+        if as_matrix:
+            res = res.pivot("x","y","L")
+
+    return res

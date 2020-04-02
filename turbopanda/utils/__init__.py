@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """Provides a host of utility functions."""
 
-from ._array_checks import *
 from ._bool_series import *
 from ._convert import *
 from ._error_raise import *
@@ -12,5 +11,6 @@ from ._panderize import panderfy
 from ._remove_na import remove_na
 from ._sets import *
 from ._sorting import broadsort, zfilter
+from ._duplicates import remove_dup_cols
 # import statements here
 from ._typegroups import *

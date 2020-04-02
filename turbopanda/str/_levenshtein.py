@@ -76,7 +76,7 @@ def _levenshtein_comb(X: List[str], with_replacement=True) -> pd.DataFrame:
 
 def _levenshtein_product(X: List[str], Y: List[str]) -> pd.DataFrame:
     prod = tuple(it.product(X, Y))
-    L = np.asarray([_ratio_and_distance(a, b, True) for a, b in prod])
+    L = [_ratio_and_distance(a, b, True) for a, b in prod]
     res = pd.DataFrame(prod, columns=['x', 'y'])
     res['L'] = L
     return res

@@ -9,7 +9,7 @@ import itertools as it
 import matplotlib.pyplot as plt
 import numpy as np
 
-from turbopanda.utils import belongs, nearest_factors
+from turbopanda.utils import belongs, nearest_factors, instance_check
 
 
 def _clean_axes_objects(n, axes):
@@ -71,6 +71,10 @@ def gridplot(n_plots: int,
     axes : list of matplotlib.ax.Axes
         A list of axes to use.
     """
+    instance_check(n_plots, int)
+    belongs(arrange, ['square', 'row', 'column'])
+    instance_check(ax_size, int)
+
     if n_plots == 1:
         fig, ax = plt.subplots(figsize=(ax_size, ax_size))  #
         # wrap ax as a list to iterate over.

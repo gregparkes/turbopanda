@@ -10,19 +10,6 @@ import pytest
 import turbopanda as turb
 
 
-def test_merge():
-    # test RNA
-    rna_unsc = turb.read("../data/rna.csv", 'refseq')
-    rna_unsc.rename_axis([("Unnamed:_0", "refseq_id")])
-    # test prot
-    prot_unsc = turb.read("../data/prot.csv", "uniprot", sep="\t")
-    # integrate hgnc
-    hgnc = turb.read('../data/hgnc.csv', name="HGNC", index_col=0)
-    # merge
-    with pytest.raises(ValueError):
-        M = turb.merge([hgnc, rna_unsc, prot_unsc], name="sdf_unsc")
-
-
 def test_caching():
     rna_unsc = turb.read("../data/rna.csv", 'refseq')
 

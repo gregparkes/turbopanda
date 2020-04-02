@@ -12,7 +12,9 @@ from ._bool_series import is_column_int, is_n_value_column
 ArrayLike = Union[np.ndarray, pd.Series, pd.DataFrame]
 
 
-__all__ = ('listify', 'switcheroo', 'integer_to_boolean', 'object_to_categorical', 'boolean_to_integer', 'standardize')
+__all__ = ('listify', 'switcheroo', 'integer_to_boolean',
+           'object_to_categorical', 'boolean_to_integer',
+           'float_to_integer', 'standardize')
 
 
 def listify(a):
@@ -32,6 +34,18 @@ def integer_to_boolean(ser: pd.Series) -> pd.Series:
     """ Convert an integer series into boolean if possible """
     return ser.astype(np.bool) if \
         (is_column_int(ser) and is_n_value_column(ser, 2)) else ser
+
+
+def float_to_integer(ser: pd.Series) -> pd.Series:
+    """ Convert a float series into an integer one if possible """
+    try:
+        int_ser = ser.astype(int)
+        if (ser == int_ser).all():
+            return int_ser
+        else:
+            return ser
+    except ValueError:
+        return ser
 
 
 def object_to_categorical(ser: pd.Series,

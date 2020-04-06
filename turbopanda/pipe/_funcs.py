@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Provides access to functions which can be directly fed into pandas.DataFrame.pipe."""
+"""Provides access to functions which can be directly fed into pandas.DataFrame.pipe.
+
+
+"""
 
 import pandas as pd
-from typing import Callable, List
+from typing import Callable, List, TypeVar, Optional
+from sklearn.preprocessing import scale
 
 from turbopanda.utils import float_to_integer
 
-
 __all__ = ('all_float_to_int', 'downcast_all', 'all_low_cardinality_to_categorical',
-           'clean1')
+           'zscore', 'clean1', 'clean2')
 
 
 def _multi_assign(df: pd.DataFrame,
@@ -18,22 +21,27 @@ def _multi_assign(df: pd.DataFrame,
     """Performs a multi-assignment transformation."""
     # creates a copy of the dataframe
     df_to_use = df.copy()
+    cond = condition(df_to_use)
+    if len(cond) == 0:
+        return df
+    else:
+        return (df_to_use.assign(
+            **{
+                col: transform_fn(df_to_use[col]) for col in cond
+            }
+        ))
 
-    return (df_to_use.assign(
-        **{
-            col: transform_fn(df_to_use[col]) for col in condition(df_to_use)
-        }
-    ))
 
-
-def all_float_to_int(df):
+def all_float_to_int(df: pd.DataFrame) -> pd.DataFrame:
     """Attempts to cast all float columns into an integer dtype."""
     df_to_use = df.copy()
     condition = lambda x: list(x.select_dtypes(include=["float"]).columns)
     return _multi_assign(df_to_use, float_to_integer, condition)
 
 
-def downcast_all(df, target_type, initial_type=None):
+def downcast_all(df: pd.DataFrame,
+                 target_type: TypeVar,
+                 initial_type: Optional[TypeVar] = None) -> pd.DataFrame:
     """Attempts to downcast all columns in a pandas.DataFrame to reduce memory."""
     if initial_type is None:
         initial_type = target_type
@@ -45,19 +53,35 @@ def downcast_all(df, target_type, initial_type=None):
     return _multi_assign(df_to_use, transform_fn, condition)
 
 
-def all_low_cardinality_to_categorical(df: pd.DataFrame) -> pd.DataFrame:
+def all_low_cardinality_to_categorical(df: pd.DataFrame,
+                                       threshold: float = 0.5) -> pd.DataFrame:
     """Casts all low cardinality columns to type 'category' """
     df_to_use = df.copy()
     transform_fn = lambda x: x.astype("category")
     n_entre = df_to_use.shape[0]
-    # objects = df_to_use.select_dtypes(include=["object"]).nunique()
-    condition = lambda x: (
-        x.select_dtypes(include=["object"]).nunique()[
-            lambda x: x.div(n_entre).lt(0.5)
-        ]
-    ).index
+    # check to see that the condition actually has object types to convert.
+    if df.select_dtypes(include=['object']).shape[1] == 0:
+        return df
+    else:
+        # objects = df_to_use.select_dtypes(include=["object"]).nunique()
+        condition = lambda x: (
+            x.select_dtypes(include=["object"]).nunique()[
+                lambda y: y.div(n_entre).lt(threshold)
+            ]
+        ).index
 
-    return _multi_assign(df_to_use, transform_fn, condition)
+        return _multi_assign(df_to_use, transform_fn, condition)
+
+
+def zscore(df: pd.DataFrame) -> pd.DataFrame:
+    """Standardizes using z-score all float-value columns."""
+    df_to_use = df.copy()
+    # transform_fn = lambda x: pd.Series(scale(x), name=x.name)
+    condition = lambda x: list(x.select_dtypes(include=["float"]).columns)
+    return _multi_assign(df_to_use, scale, condition)
+
+
+""" Some global cleaning functions... """
 
 
 def clean1(df: pd.DataFrame) -> pd.DataFrame:
@@ -66,10 +90,25 @@ def clean1(df: pd.DataFrame) -> pd.DataFrame:
 
     cleaned = (
         df_to_use.pipe(all_low_cardinality_to_categorical)
-        .pipe(all_float_to_int)
-        .pipe(downcast_all, "float")
-        .pipe(downcast_all, "integer")
-        .pipe(downcast_all, target_type="unsigned", initial_type="integer")
+            .pipe(all_float_to_int)
+            .pipe(downcast_all, "float")
+            .pipe(downcast_all, "integer")
+            .pipe(downcast_all, target_type="unsigned", initial_type="integer")
+    )
+
+    return cleaned
+
+
+def clean2(df: pd.DataFrame) -> pd.DataFrame:
+    """A cleaning method for DataFrames in saving memory and dtypes, including standardization"""
+    df_to_use = df.copy()
+
+    cleaned = (
+        df_to_use.pipe(zscore)
+            .pipe(all_low_cardinality_to_categorical)
+            .pipe(downcast_all, "float")
+            .pipe(downcast_all, "integer")
+            .pipe(downcast_all, target_type="unsigned", initial_type="integer")
     )
 
     return cleaned

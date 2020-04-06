@@ -35,5 +35,8 @@ def patsy(self, X, y: Optional[str] = None):
     s = _x_full
     if y is not None:
         s = y + " ~ " + _x_full
+    else:
+        # remove intercept term added.
+        s += " - 1"
 
     return s

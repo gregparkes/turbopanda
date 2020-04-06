@@ -26,7 +26,7 @@ from .corr import correlate
 # import these functions so to not lose functionality...
 from .dev import cache, cached
 
-from . import corr, dev, ml, plot, stats, str, utils
+from . import corr, dev, ml, plot, stats, str, utils, pipe
 
 __version__ = "0.2.4"
 __name__ = "turbopanda"

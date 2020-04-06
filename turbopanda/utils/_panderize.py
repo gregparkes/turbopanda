@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 
-def panderfy(func: Callable) -> Union[pd.Series, pd.DataFrame]:
+def panderfy(func: Callable):
     """A decorator to convert a list-like output into a pandas.Series or pandas.DataFrame."""
     # check it is string
     if not callable(func):

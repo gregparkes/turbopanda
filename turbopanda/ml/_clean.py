@@ -10,6 +10,7 @@ from sklearn.preprocessing import normalize, power_transform, quantile_transform
 
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.utils import belongs, instance_check, union
+from turbopanda._deprecator import deprecated
 
 
 def ml_ready(df: "MetaPanda",
@@ -68,7 +69,6 @@ def ml_ready(df: "MetaPanda",
     if isinstance(std_func, str):
         belongs(std_func, tuple(std_funcs_.keys()))
 
-
     _df = df.copy()
     # 2. eliminate columns with only one unique value in - only for boolean/category options
     elim_cols = _df.view(lambda z: z.nunique() <= 1)
@@ -105,6 +105,8 @@ def ml_ready(df: "MetaPanda",
         return __df, _x, np.asarray(__df[y]), xcols
 
 
+@deprecated("0.2.5", "0.2.7", instead="There is no alternative at present.",
+            reason="Function is clunky, can do better")
 def make_polynomial(df: "MetaPanda",
                     x: SelectorType = None,
                     degree: int = 2,

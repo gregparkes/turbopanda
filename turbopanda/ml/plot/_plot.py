@@ -7,14 +7,14 @@ import numpy as np
 
 from turbopanda.plot import color_qualitative, legend
 from turbopanda.utils import belongs, dictzip, instance_check, set_like, switcheroo
-from ._package import find_model_family
+from turbopanda.ml._package import find_model_family
 
 
-def best_model_plot(cv_results: "MetaPanda",
-                    y_var: str = "test",
-                    minimize: bool = True,
-                    score: str = "RMSE",
-                    **box_kws):
+def best_model(cv_results: "MetaPanda",
+               y_var: str = "test",
+               minimize: bool = True,
+               score: str = "RMSE",
+               **box_kws):
     """Determines the best model (min or max) and plots the boxplot of all resulting best models.
 
     Parameters

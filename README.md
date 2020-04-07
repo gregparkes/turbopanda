@@ -1,6 +1,6 @@
 # turbopanda: Turbo-charging the Pandas library in an integrative, meta-orientated style
 
-**Current version: 0.2.4**
+**Current version: 0.2.5**
 
 The aim of this library is extend the functionality of the `pandas` library package,
  which is extensively used for data munging,
@@ -14,11 +14,11 @@ There are a number of areas that the Pandas library is
   lacklustre from a user standpoint - we'll cover a few of these in more detail and then
   explain TurboPandas' response to these particular issues.
       
-### Known Issues
+### Known Issues with `pandas 0.2.5`:
 
 Here we will cover some personal and more established gripes with `pandas`:
 
-#### The verbose **selection of column-data**
+#### The verbose selection of columns
 
 In Pandas, the main accessor-based methods
 have very clunky notation of accessing subsets of column-data using the `.loc` and `.iloc`
@@ -45,13 +45,13 @@ How we fix this in `turbopanda` is as follows:
 # mdf is our turbopanda.MetaPanda object
 import turbopanda as turb
 mdf = turb.read("some_data.csv")
-subset = mdf['something_interesting_pattern']
+subset = mdf['some_interesting_pattern']
 ```
 
 where this returns a `pandas.DataFrame` with the selected columns. We expand this functionality
 to include a wide range of accepted arguments for **flexible column selection**.
 
-#### Dishonest **data typing**
+#### Dishonest data typing
 
 Pandas aims to keep itself
 low-level as possible (and as close to NumPy) in order to maximise the performance aspect of
@@ -71,7 +71,7 @@ x = pd.Series([0, 1, 0, 1, np.nan, 0, 0])
 In `turbopanda`, metadata is calculated for the columns, including the *true data type*
 that can be determined, ignoring missing data.
 
-#### The ineffectiveness of **multi-indexing**
+#### The ineffectiveness of multi-indexing
 
 Multi-indexing in `pandas` is a huge pain. The attractiveness of providing intuitive data-grouping
 is offsetted completely by the effective inability to access subsets of this data easily,
@@ -104,10 +104,15 @@ The downstream effect of these issues is the poor handling *heterogenous*
  selecting column subgroups is less than optimal and
  highly verbose, whilst giving you considerable control. 
  
+ #### Disclaimer
+ 
  Finally it is worth mentioning that these issues are not necessarily the fault of the development
  team involved in the `pandas` project. The work is phenomenal and very good, and many of these
  issues can be argued to be outside the remit of `pandas` and its' objectives,
   hence why `turbopanda` is here.
+  
+**NEW**: From `pandas` version `1.0.1`, the introduction of *proper* typing should solve some of these problems,
+but column selection is still disgusting.
 
 ## How to use: The Basics
 
@@ -142,30 +147,24 @@ here you see the `__repr__` of the object presents the dataset in terms
 The raw pandas object can be accessed through the `df_` attribute:
 
 ```python
-g.head()
+g.head(2)
 ```
 
 | - | **Protein_IDs** | **Majority_protein_IDs** | **Protein_names** | **...** |
 | --- | --------------------- | -------------------------- | ------------------- | ---------------- |
 | 0 | Q96IC2;Q96IC2-2;H3BM72;H3BV93;H3BSC5 | Q96IC2;Q96IC2-2;H3BM72;H3BV93;H3BSC5 | Putative RNA exonuclease NEF-sp | ... |
 | 1 | H0YGH4;P01023;H0YGH6;F8W7L3 | H0YGH4;P01023 | Alpha-2-macroglobulin | ... |
-| 2 | A8K2U0;F5H2W3;H0YGG5;F5H2Z2;F5GXP1 | A8K2U0;F5H2W3;H0YGG5;F5H2Z2 | Alpha-2-macroglobulin-like protein 1 | ... |
-| 3 | Q9NRG9;Q9NRG9-2;F8VZ44;H3BU82;F8VUB6 | Q9NRG9;Q9NRG9-2;F8VZ44;H3BU82 | Aladin | ... |
-| 4 | Q86V21;Q86V21-2;E7EW25;F5H790;F8W8B5;Q86V21-3;... | Q86V21;Q86V21-2;E7EW25;F5H790 | Acetoacetyl-CoA synthetase | ... |
 
 Whereas **metadata** can be accessed through the `meta_` which is automatically created upon instantiation:
 
 ```python
-g.meta_.head()
+g.meta_.head(2)
 ```
 
-| - | **mytypes** | **is_unique** | **potential_id** | **potential_stacker** |
-| --- | -------- | -------- |---------- | --------- |
-| Protein_IDs | object | True | True | True |
-| Majority_protein_IDs | object | True | True | True |
-| Protein_names | object | False | True | True |
-| Gene_names | object | False | True | True |
-| Intensity_G1_1 | float64 | False | False | False |
+| - | **true_type** | **is_unique** | **potential_id**
+| --- | -------- | -------- |---------- |
+| Protein_IDs | object | True | True |
+| Majority_protein_IDs | object | True | True |
 
 ### Accessing column subsets
 
@@ -269,8 +268,6 @@ There are very few packages in the Python ecosystem that consider both *continuo
 fitting in a seamless fashion with other well known packages such as `pandas`. We attempt to rectify this
 to give users powerful methods to statistically analyse the data they present to it.
 
-
-
 ### AOB
 
 Further details can be found by exploring the 
@@ -322,6 +319,7 @@ We would like to acknowledge the following sources for inspiration for much of t
 
 - pandas dev team: [Github](https://github.com/pandas-dev/pandas)
 - `pingouin` [python library][3]
+- `statsmodels` and `patsy` libraries for inspiration on how to formulate design matrices.
 - Wikipedia for many topics
 
 ## References

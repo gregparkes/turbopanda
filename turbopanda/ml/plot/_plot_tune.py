@@ -8,7 +8,8 @@ import numpy as np
 from turbopanda._pipe import Pipe
 from turbopanda.plot import color_qualitative, gridplot
 from turbopanda.utils import belongs, difference, set_like
-from ._default import model_types, param_types
+
+from turbopanda.ml._default import model_types, param_types
 
 
 def _basic_p(comp):
@@ -84,7 +85,7 @@ def _model_selection_parameters(cv_results,
         plot.set_ylabel("%s %s" % (y_name, score))
 
 
-def parameter_tune_plot(cv_results, y='test', arrange='square'):
+def parameter_tune(cv_results, y='test', arrange='square'):
     """Iterates over every model type in `cv_results` and plots the best parameter. cv_results is MetaPanda
 
     Generates a series of plots for each model type, plotting the parameters.

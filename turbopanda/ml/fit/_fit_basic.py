@@ -8,12 +8,14 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import RepeatedKFold, cross_val_predict, cross_validate
 
+# internal functions, objects.
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.dev import cached
 from turbopanda.utils import insert_suffix, instance_check, listify, union
-from ._clean import ml_ready
-from ._package import find_sklearn_model, is_sklearn_model
-from ._plot_overview import overview_plot
+
+from turbopanda.ml._clean import ml_ready
+from turbopanda.ml._package import find_sklearn_model, is_sklearn_model
+from turbopanda.ml.plot._plot_overview import overview
 
 
 def _extract_coefficients_from_model(cv, x, pkg_name):
@@ -37,15 +39,15 @@ def _extract_coefficients_from_model(cv, x, pkg_name):
         return []
 
 
-def fit_basic(df: MetaPanda,
-              x: SelectorType,
-              y: str,
-              cv: Tuple[int, int] = (5, 10),
-              model: str = "LinearRegression",
-              cache: Optional[str] = None,
-              plot: bool = False,
-              verbose: int = 0,
-              **model_kws):
+def basic(df: "MetaPanda",
+          x: SelectorType,
+          y: str,
+          cv: Tuple[int, int] = (5, 10),
+          model: str = "LinearRegression",
+          cache: Optional[str] = None,
+          plot: bool = False,
+          verbose: int = 0,
+          **model_kws):
     """Performs a rudimentary fit model with no parameter searching.
 
     This function helps to provide a broad overview of how successful a given model is on the
@@ -123,7 +125,8 @@ def fit_basic(df: MetaPanda,
     # make data set machine learning ready.
     _df, _x, _y, _xcols = ml_ready(df, x, y)
     if verbose > 0:
-        print("full dataset: {}/{} -> ML: {}/{}({},{})".format(df.n_, df.p_, _df.shape[0], _df.shape[1], _x.shape[1], 1))
+        print(
+            "full dataset: {}/{} -> ML: {}/{}({},{})".format(df.n_, df.p_, _df.shape[0], _df.shape[1], _x.shape[1], 1))
 
     # function 1: performing cross-validated fit.
     def _perform_cv_fit(_x: np.ndarray,
@@ -136,19 +139,19 @@ def fit_basic(df: MetaPanda,
         # generate repeatedkfold.
         rep = RepeatedKFold(n_splits=_k, n_repeats=_repeats)
         # cv cross-validate and wrap.
-        cv = pd.DataFrame(cross_validate(_lm, _x, _y, cv=rep, scoring="neg_root_mean_squared_error",
-                                         return_estimator=True, return_train_score=True, n_jobs=-2))
+        score_mat = pd.DataFrame(cross_validate(_lm, _x, _y, cv=rep, scoring="neg_root_mean_squared_error",
+                                                return_estimator=True, return_train_score=True, n_jobs=-2))
         # append results to cv
-        cv['k'] = np.repeat(np.arange(_k), _repeats)
+        score_mat['k'] = np.repeat(np.arange(_k), _repeats)
         # extract coefficients
-        coef = _extract_coefficients_from_model(cv, _xcols, package_name)
+        coef = _extract_coefficients_from_model(score_mat, _xcols, package_name)
         # integrate coefficients
         if not isinstance(coef, (list, tuple)):
-            cv = cv.join(coef.add_prefix("w__"))
+            score_mat = score_mat.join(coef.add_prefix("w__"))
         # drop estimator
-        cv.drop("estimator", axis=1, inplace=True)
+        score_mat.drop("estimator", axis=1, inplace=True)
         # wrap as metapanda and return
-        return MetaPanda(cv)
+        return MetaPanda(score_mat)
 
     # function 2: performing cross-validated predictions.
     def _perform_prediction_fit(_df: pd.DataFrame,
@@ -174,6 +177,6 @@ def fit_basic(df: MetaPanda,
         _yp = _perform_prediction_fit(_df, _x, _y, y, k, lm)
 
     if plot:
-        overview_plot(df, x, y, _cv, _yp)
+        overview(df, x, y, _cv, _yp)
     # return both.
     return _cv, _yp

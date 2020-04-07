@@ -6,7 +6,7 @@ from typing import Any, List, Tuple, TypeVar, Union
 import numpy as np
 import pandas as pd
 
-__all__ = ("belongs", "instance_check", "check_list_type",
+__all__ = ("belongs", "instance_check", "check_list_type", "nonnegative",
            "boolean_series_check", "is_twotuple", "is_iterable")
 
 
@@ -18,6 +18,23 @@ def belongs(elem: Any, home: Union[List[Any], Tuple[Any, ...]], raised=True):
         else:
             return False
     return True
+
+
+def nonnegative(a: Union[float, int], raised=True):
+    """Check whether value a is nonnegative number. """
+    if not isinstance(a, (float, int, np.float, np.int)):
+        if raised:
+            raise TypeError("object '{}' must be of type [float, int], not type '{}'".format(a, type(a)))
+        else:
+            return False
+    else:
+        if a < 0:
+            if raised:
+                raise AttributeError("object '{}' must be non-negative.".format(a))
+            else:
+                return False
+        else:
+            return True
 
 
 def instance_check(a: object, i: TypeVar, raised=True):

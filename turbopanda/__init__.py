@@ -18,7 +18,6 @@ del hard_dependencies, dependency, missing_dependencies
 # folder extensions.
 from ._fileio import read
 from ._merge import merge
-# from ._metaml import MetaML
 # import Objects and critical global functions
 from ._metapanda import MetaPanda
 from ._pipe import Pipe
@@ -28,7 +27,7 @@ from .dev import cache, cached
 
 from . import corr, dev, ml, plot, stats, str, utils, pipe
 
-__version__ = "0.2.4"
+__version__ = "0.2.5"
 __name__ = "turbopanda"
 __doc__ = """turbopanda: Turbo-charging the Pandas library in an integrative, meta-orientated style.
 

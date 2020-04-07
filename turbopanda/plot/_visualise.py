@@ -7,12 +7,15 @@ from __future__ import absolute_import, division, print_function
 
 import itertools as it
 from typing import Optional, Union
-
 import matplotlib.pyplot as plt
 # imports
 import numpy as np
+from pandas import DataFrame
 
-from turbopanda.utils import belongs, remove_na, instance_check, difference
+from turbopanda._metapanda import MetaPanda, SelectorType
+from turbopanda._deprecator import deprecated
+from turbopanda.utils import belongs, remove_na, instance_check, difference, nonnegative
+
 from ._gridplot import gridplot
 from ._histogram import histogram
 from ._save_fig import save
@@ -20,6 +23,7 @@ from ._save_fig import save
 __all__ = ("scatter_grid", "missing", "hist_grid")
 
 
+@deprecated("0.2.5", "0.2.7", instead="No replacement.", reason="There are other libraries that perform this function better")
 def missing(mdf: "MetaPanda"):
     """
     Plots the missing data as a greyscale heatmap.
@@ -56,8 +60,8 @@ def missing(mdf: "MetaPanda"):
     ax.set_yticklabels(mdf.df_.columns)
 
 
-def hist_grid(mdf: "MetaPanda",
-              selector,
+def hist_grid(mdf: Union[DataFrame, "MetaPanda"],
+              subset: SelectorType,
               arrange: str = "square",
               plot_size: int = 3,
               shared_dist: str = "auto",
@@ -71,7 +75,7 @@ def hist_grid(mdf: "MetaPanda",
     --------
     mdf : turb.MetaPanda
         The dataset
-    selector : str or list/tuple of str
+    subset : str or list/tuple of str
         Contains either types, meta column names, column names or regex-compliant strings
     arrange : str
         Choose from ['square', 'row', 'column']. Square arranges the plot as square-like as possible. Row
@@ -94,40 +98,48 @@ def hist_grid(mdf: "MetaPanda",
     -------
     None
     """
+    # checks
     instance_check(plot_size, int)
     instance_check(shared_dist, (type(None), str, list, tuple, dict))
     instance_check(savepath, (type(None), str, bool))
+    nonnegative(plot_size)
     belongs(arrange, ["square", "row", "column"])
+    # make a metapanda if we have a dataframe.
+    _mdf = MetaPanda(mdf) if isinstance(mdf, DataFrame) else mdf
+
     # get selector
-    selection = mdf.view(selector)
+    selection = _mdf.view(subset)
+    # assuming we've selected something...
     if selection.size > 0:
         fig, axes = gridplot(len(selection), arrange, ax_size=plot_size)
 
         if not isinstance(shared_dist, dict):
             for i, x in enumerate(selection):
-                _ = histogram(mdf[x].dropna(), ax=axes[i], title=x, kde=shared_dist, **hist_kws)
+                _ = histogram(_mdf[x].dropna(), ax=axes[i], title=x, kde=shared_dist, **hist_kws)
             fig.tight_layout()
         else:
             for i, (x, d) in enumerate(shared_dist.items()):
-                _ = histogram(mdf[x].dropna(), ax=axes[i], title=x, kde=d, **hist_kws)
+                _ = histogram(_mdf[x].dropna(), ax=axes[i], title=x, kde=d, **hist_kws)
             # iterate over any 'remaining' columns in selection and handle appropriately
             remaining = difference(selection, tuple(shared_dist.keys()))
             if remaining.shape[0] > 0:
                 for i, x in enumerate(remaining):
-                    _ = histogram(mdf[x].dropna(), ax=axes[i+len(shared_dist)], title=x, kde="auto", **hist_kws)
+                    _ = histogram(_mdf[x].dropna(), ax=axes[i+len(shared_dist)], title=x, kde="auto", **hist_kws)
             fig.tight_layout()
 
         if isinstance(savepath, bool):
-            save(fig, "hist", mdf.name_)
+            save(fig, "hist", _mdf.name_)
         elif isinstance(savepath, str):
-            save(fig, "hist", mdf.name_, fp=savepath)
+            save(fig, "hist", _mdf.name_, fp=savepath)
 
 
-def scatter_grid(mdf: "MetaPanda",
-                 x,
-                 y,
+def scatter_grid(mdf: Union[DataFrame, "MetaPanda"],
+                 x: SelectorType,
+                 y: SelectorType,
                  arrange: str = "square",
                  plot_size: int = 3,
+                 best_fit: bool = True,
+                 best_fit_deg: int = 1,
                  savepath: Optional[Union[bool, str]] = None):
     """
     Plots a grid of scatter plots comparing each column for MetaPanda
@@ -146,6 +158,10 @@ def scatter_grid(mdf: "MetaPanda",
         prioritises plots row-like, and column-wise for column.
     plot_size : int
         The size of each axes
+    best_fit : bool
+        If True, draws a line of best fit
+    best_fit_deg : int, default=1
+        The degree of the line of best fit, can draw polynomial
     savepath : None, bool, str
         saves the figure to file. If bool, uses the name in mdf, else uses given string.
 
@@ -155,10 +171,21 @@ def scatter_grid(mdf: "MetaPanda",
     """
     from turbopanda.corr import bicorr
 
+    # checks
+    instance_check(plot_size, int)
+    instance_check(savepath, (type(None), str, bool))
+    instance_check(best_fit, bool)
+    instance_check(best_fit_deg, int)
+    nonnegative(best_fit_deg)
+    nonnegative(plot_size)
     belongs(arrange, ["square", "row", "column"])
+
+    # make a metapanda if we have a dataframe.
+    _mdf = MetaPanda(mdf) if isinstance(mdf, DataFrame) else mdf
+
     # get selector
-    x_sel = mdf.view(x)
-    y_sel = mdf.view(y)
+    x_sel = _mdf.view(x)
+    y_sel = _mdf.view(y)
     # create a product between x and y and plot
     prod = list(it.product(x_sel, y_sel))
 
@@ -166,14 +193,16 @@ def scatter_grid(mdf: "MetaPanda",
         fig, axes = gridplot(len(prod), arrange, ax_size=plot_size)
         for i, (_x, _y) in enumerate(prod):
             # pair x, y
-            __x, __y = remove_na(mdf[_x].values, mdf[_y].values, paired=True)
+            __x, __y = remove_na(_mdf[_x].values, _mdf[_y].values, paired=True)
             axes[i].scatter(__x.flatten(), __y, alpha=.5)
             # line of best fit
-            xn = np.linspace(__x.min(), __x.max(), 100)
-            z = np.polyfit(__x.flatten(), __y, deg=1)
-            axes[i].plot(xn, np.polyval(z, xn), 'k--')
+            if best_fit:
+                xn = np.linspace(__x.min(), __x.max(), 100)
+                z = np.polyfit(__x.flatten(), __y, deg=best_fit_deg)
+                axes[i].plot(xn, np.polyval(z, xn), 'k--')
+
             # spearman correlation
-            pair_corr = bicorr(mdf[_x], mdf[_y]).loc['spearman', 'r']
+            pair_corr = bicorr(_mdf[_x], _mdf[_y]).loc['spearman', 'r']
             axes[i].set_title("r={:0.3f}".format(pair_corr))
             axes[i].set_xlabel(_x)
             axes[i].set_ylabel(_y)
@@ -181,6 +210,6 @@ def scatter_grid(mdf: "MetaPanda",
         fig.tight_layout()
 
         if isinstance(savepath, bool):
-            save(fig, "scatter", mdf.name_)
+            save(fig, "scatter", _mdf.name_)
         elif isinstance(savepath, str):
-            save(fig, "scatter", mdf.name_, fp=savepath)
+            save(fig, "scatter", _mdf.name_, fp=savepath)

@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Provides access to functions which can be directly fed into pandas.DataFrame.pipe.
-
-
 """
 
 import pandas as pd
 from typing import Callable, List, TypeVar, Optional
-from sklearn.preprocessing import scale
+from sklearn.preprocessing import scale, power_transform
 
 from turbopanda.utils import float_to_integer
+from ._conditions import select_float
 
 __all__ = ('all_float_to_int', 'downcast_all', 'all_low_cardinality_to_categorical',
-           'zscore', 'clean1', 'clean2')
+           'zscore', 'yeo_johnson', 'clean1', 'clean2')
 
 
 def _multi_assign(df: pd.DataFrame,
@@ -34,9 +33,7 @@ def _multi_assign(df: pd.DataFrame,
 
 def all_float_to_int(df: pd.DataFrame) -> pd.DataFrame:
     """Attempts to cast all float columns into an integer dtype."""
-    df_to_use = df.copy()
-    condition = lambda x: list(x.select_dtypes(include=["float"]).columns)
-    return _multi_assign(df_to_use, float_to_integer, condition)
+    return _multi_assign(df.copy(), float_to_integer, select_float)
 
 
 def downcast_all(df: pd.DataFrame,
@@ -75,17 +72,28 @@ def all_low_cardinality_to_categorical(df: pd.DataFrame,
 
 def zscore(df: pd.DataFrame) -> pd.DataFrame:
     """Standardizes using z-score all float-value columns."""
-    df_to_use = df.copy()
-    # transform_fn = lambda x: pd.Series(scale(x), name=x.name)
-    condition = lambda x: list(x.select_dtypes(include=["float"]).columns)
-    return _multi_assign(df_to_use, scale, condition)
+    return _multi_assign(df.copy(), scale, select_float)
+
+
+def yeo_johnson(df: pd.DataFrame) -> pd.DataFrame:
+    """Performs Yeo-Johnson transformation to all float-value columns. """
+    # transformation function is sklearn.power_transform
+    return _multi_assign(df.copy(), power_transform, select_float)
 
 
 """ Some global cleaning functions... """
 
 
 def clean1(df: pd.DataFrame) -> pd.DataFrame:
-    """A cleaning method for DataFrames in saving memory and dtypes."""
+    """A cleaning method for DataFrames in saving memory and dtypes.
+
+    Performs:
+    - all low cardinality to categorical
+    - all float to int
+    - downcast all float
+    - downcast all int
+    - downcast all to unsigned, where int
+    """
     df_to_use = df.copy()
 
     cleaned = (
@@ -100,7 +108,14 @@ def clean1(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def clean2(df: pd.DataFrame) -> pd.DataFrame:
-    """A cleaning method for DataFrames in saving memory and dtypes, including standardization"""
+    """A cleaning method for DataFrames in saving memory and dtypes, including standardization.
+
+    Performs [in order]:
+    - zscore-transformation, if float
+    - downcast all float
+    - downcast all int
+    - downcast all int to unsigned, if possible
+    """
     df_to_use = df.copy()
 
     cleaned = (

@@ -12,22 +12,22 @@ from sklearn.model_selection import RepeatedKFold, learning_curve, permutation_t
 
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.utils import instance_check
-from ._clean import ml_ready
-from ._package import find_sklearn_model
-from ._plot_learning import learning_curve_plot
+from turbopanda.ml._clean import ml_ready
+from turbopanda.ml._package import find_sklearn_model
+from turbopanda.ml.plot._plot_learning import learning_curve
 
 
-def fit_learning(df: "MetaPanda",
-                 x: SelectorType,
-                 y: str,
-                 train_n: Optional[np.ndarray] = None,
-                 permute_n: int = 0,
-                 cv: Tuple[int, int] = (5, 20),
-                 model: str = "LinearRegression",
-                 cache: Optional[str] = None,
-                 plot: bool = False,
-                 verbose: int = 0,
-                 **model_kws) -> "MetaPanda":
+def learning(df: "MetaPanda",
+             x: SelectorType,
+             y: str,
+             train_n: Optional[np.ndarray] = None,
+             permute_n: int = 0,
+             cv: Tuple[int, int] = (5, 20),
+             model: str = "LinearRegression",
+             cache: Optional[str] = None,
+             plot: bool = False,
+             verbose: int = 0,
+             **model_kws) -> "MetaPanda":
     """Fits a basic model to generate cross-validated training/test scores for different training set sizes.
 
     A cross-validation generator splits the whole dataset `k` times in training and test data. Subsets of the training set with
@@ -141,9 +141,9 @@ def fit_learning(df: "MetaPanda",
     results['N'] = vars_[0]
     R = MetaPanda(results)
     if plot and permute_n > 0:
-        learning_curve_plot(R, perm_scorez_)
+        learning_curve(R, perm_scorez_)
     elif plot:
-        learning_curve_plot(R)
+        learning_curve(R)
     # return as MetaPanda
     if permute_n > 0:
         return R, perm_score_, perm_scorez_, pval

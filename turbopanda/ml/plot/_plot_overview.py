@@ -3,18 +3,21 @@
 """Provides plot_overview for data returned from `fit_basic`."""
 
 import itertools as it
+from typing import List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy import stats
 
+from turbopanda._metapanda import SelectorType
 from turbopanda._dependency import is_statsmodels_installed
 from turbopanda.plot import gridplot
 from turbopanda.utils import instance_check, intersect
-from ._clean import ml_ready
+from turbopanda.ml._clean import ml_ready
 
-__all__ = ('coefficient_plot', 'overview_plot')
+
+__all__ = ('coefficient', 'overview')
 
 
 def _is_coefficients(cv):
@@ -53,7 +56,7 @@ def _actual_vs_predicted(plot, y, yp):
     plot.set_ylabel("Fitted Values")
 
 
-def coefficient_plot(cv, plot=None):
+def coefficient(cv, plot=None):
     """Plots the coefficients from a cv results."""
     if _is_coefficients(cv):
         coef = cv['w__']
@@ -129,7 +132,13 @@ def _cooks(plot, cooks):
 """ ######################### PUBLIC FUNCTIONS ######################### """
 
 
-def overview_plot(df, x, y, cv, yp, plot_names=None, plot_size=3):
+def overview(df: "MetaPanda",
+             x: SelectorType,
+             y: str,
+             cv: "MetaPanda",
+             yp: "MetaPanda",
+             plot_names: Optional[List[str]] = None,
+             plot_size: int = 3):
     """Presents an overview of the results of a machine learning basic run.
 
     Parameters
@@ -196,7 +205,7 @@ def overview_plot(df, x, y, cv, yp, plot_names=None, plot_size=3):
         _actual_vs_predicted(ax[next(I)], _y, yp)
     if "coef" in overlap_:
         # plot 4. coefficient plot
-        coefficient_plot(cv, ax[next(I)])
+        coefficient(cv, ax[next(I)])
     if "correlation" in overlap_ and (1 < len(_xcols) < 50):
         # plot 5. correlation matrix
         corr = correlate(df, x)

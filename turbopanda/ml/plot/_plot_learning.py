@@ -9,11 +9,11 @@ import numpy as np
 from turbopanda.plot import gridplot, histogram
 
 
-def learning_curve_plot(cv_results,
-                        perm=None,
-                        plot_size=3,
-                        score="RMSE",
-                        inverse_score=True):
+def learning_curve(cv_results,
+                   perm=None,
+                   plot_size=3,
+                   score="RMSE",
+                   inverse_score=True):
     """Plot a learning curve of the parameters from a call to `fit_learning`.
 
     Parameters

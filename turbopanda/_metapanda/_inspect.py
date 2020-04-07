@@ -44,6 +44,9 @@ def inspect(df, meta, selectors, s=None, join_t='union', axis=1, mode='view'):
         raise ValueError("cannot use argument [selector] with axis=0, for rows")
 
 
+""" Public methods here """
+
+
 def view(self, *selector: SelectorType, **selector_kwargs) -> pd.Index:
     """View a selection of columns in `df_`.
 
@@ -167,7 +170,7 @@ def view_not(self, *selector: SelectorType) -> pd.Index:
     return sel
 
 
-def select(self, sc) -> pd.Index:
+def select(self, sc: str) -> pd.Index:
     """View a subset of columns using a flexible `eval`-like string.
 
     Select merely returns the columns of interest selected using this selector.
@@ -215,9 +218,9 @@ def select(self, sc) -> pd.Index:
     >>> mdf.select("~float")
     Index(['b'], dtype='object', name='colnames')
 
-    Multiple terms can be joined together, include regex-expressions NOT including `&` or `|`,
-    in addition to pre-cached strings:
-    >>> mdf.select("")
+    Multiple terms can be joined together, include regex-expressions NOT including `&` or `|`, for
+    instance if we wanted to select all float columns containing names x1, x2 or x3:
+    >>> mdf.select("float & x[1-3]")
     """
     instance_check(sc, str)
 

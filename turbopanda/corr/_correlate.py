@@ -16,7 +16,6 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-from turbopanda._deprecator import deprecated
 # locals
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.stats._lmfast import lm
@@ -568,64 +567,3 @@ def row_to_matrix(rows: pd.DataFrame, x="x", y="y", piv_value='r'):
         The correlation matrix
     """
     return _row_to_matrix(rows, x=x, y=y, piv=piv_value)
-
-
-#########################################################################################################
-# EXTRACTS TAKEN FROM PINGOUIN LIBRARY..
-#########################################################################################################
-
-
-@deprecated("0.2.4", "0.2.5", instead="`correlate`", reason="partial correlations are now factored into correlate() "
-                                                            "with `covar` argument")
-def pcm(df: Union[pd.DataFrame, MetaPanda]) -> pd.DataFrame:
-    """Partial correlation matrix.
-
-    Adapted from the `pingouin` library, made by Raphael Vallat.
-
-    .. [1] https://github.com/raphaelvallat/pingouin/blob/master/pingouin/correlation.py
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        The dataframe matrix to calculate on.
-
-    Returns
-    ----------
-    pcormat : :py:class:`pandas.DataFrame`
-        Partial correlation matrix.
-    Notes
-    -----
-    This function calculates the pairwise partial correlations for each pair of
-    variables in a :py:class:`pandas.DataFrame` given all the others. It has
-    the same behavior as the pcor function in the `ppcor` R package.
-    Note that this function only returns the raw Pearson correlation
-    coefficient. If you want to calculate the test statistic and p-values, or
-    use more robust estimates of the correlation coefficient, please refer to
-    the :py:func:`pingouin.pairwise_corr` or :py:func:`pingouin.partial_corr`
-    functions. The :py:func:`pingouin.pcorr` function uses the inverse of
-    the variance-covariance matrix to calculate the partial correlation matrix
-    and is therefore much faster than the two latter functions which are based
-    on the residuals.
-
-    References
-    ----------
-    .. [2] https://cran.r-project.org/web/packages/ppcor/index.html
-    Examples
-    --------
-    >>> import turbopanda as turb
-    >>> data = turb.read('example.json')
-    >>> turb.pcm(data)
-                 X         M         Y      Mbin      Ybin
-    X     1.000000  0.392251  0.059771 -0.014405 -0.149210
-    M     0.392251  1.000000  0.545618 -0.015622 -0.094309
-    Y     0.059771  0.545618  1.000000 -0.007009  0.161334
-    Mbin -0.014405 -0.015622 -0.007009  1.000000 -0.076614
-    Ybin -0.149210 -0.094309  0.161334 -0.076614  1.000000
-    """
-    df = df.df_ if isinstance(df, MetaPanda) else df
-    V = df.cov()  # Covariance matrix
-    Vi = np.linalg.pinv(V)  # Inverse covariance matrix
-    D = np.diag(np.sqrt(1 / np.diag(Vi)))
-    pcor = -1 * (D @ Vi @ D)  # Partial correlation matrix
-    pcor[np.diag_indices_from(pcor)] = 1
-    return pd.DataFrame(pcor, index=V.index, columns=V.columns)

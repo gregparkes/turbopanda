@@ -100,7 +100,8 @@ def _get_selector_item(df: DataFrame,
         # if we begin with ~, reverse the str search as NOT
         # check if the key is in the meta_ column names, only if a boolean column
         if (selector in meta) and (meta[selector].dtype == bool):
-            return df.columns[meta[selector]]
+            # UPDATE: this should fix some merging issues.
+            return meta[meta[selector]].index
         elif selector in cached:
             # recursively go down the stack, and fetch the string selectors from that.
             return get_selector(df, meta, cached, cached[selector], raise_error)

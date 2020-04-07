@@ -204,7 +204,7 @@ def set_like(x: SetLike = None) -> Index:
     if isinstance(x, str):
         return Index([x])
     if isinstance(x, (list, tuple)):
-        if len(x) <= 0:
+        if len(x) == 0:
             return Index([])
         else:
             return Index(sorted(set(x), key=x.index))

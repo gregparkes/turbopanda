@@ -16,13 +16,13 @@ from ._fileio import read
 # locals
 from ._metapanda import MetaPanda
 from ._pipe import PipeMetaPandaType
-from .utils import belongs, check_list_type, get_file_expanded, instance_check, intersect
+from .utils import belongs, check_list_type, get_file_expanded, instance_check, intersect, union
 
 # custom types
 DataSetType = Union[Series, DataFrame, MetaPanda]
 
 
-def _has_majority_index_overlap(df1, df2):
+def _has_majority_index_overlap(df1: DataFrame, df2: DataFrame) -> bool:
     """Checks whether the indices overlap in majority. Bool"""
     ins = intersect(df1.index, df2.index)
     return ins.shape[0] > (np.mean((df1.shape[0], df2.shape[0])) // 2)
@@ -110,7 +110,7 @@ def _single_merge(sdf1: DataSetType,
             shared_param = pair[0] if pair[0] == pair[1] else None
 
             # handling whether we have a shared param or not.
-            merge_extra = dict(how=how, suffixes=('_x', '_y'))
+            merge_extra = dict(how=how, suffixes=('__%s' % n1, '__%s' % n2))
             merge_shared = dict(on=shared_param) if shared_param is not None else \
                 dict(left_on=pair[0], right_on=pair[1])
 
@@ -122,11 +122,14 @@ def _single_merge(sdf1: DataSetType,
             # drop any columns with 'counter' in
             if 'counter' in df_m.columns:
                 df_m.drop('counter', axis=1, inplace=True)
+            elif "counter__%s" % n1 in df_m.columns:
+                df_m.drop("counter__%s" % n1, axis=1, inplace=True)
+            elif "counter__%s" % n2 in df_m.columns:
+                df_m.drop("counter__%s" % n2, axis=1, inplace=True)
             # rename
-            df_m.rename(columns=dict(zip(df_m.columns.tolist(), d1.columns.tolist())), inplace=True)
+            # df_m.rename(columns=dict(zip(df_m.columns.tolist(), d1.columns.tolist())), inplace=True)
 
         # create a copy metapanda, and set new attributes.
-
         mpf = MetaPanda(df_m, name=new_name, with_clean=False, with_warnings=False)
         # tack on extras
         mpf._select = {**s1, **s2}
@@ -213,13 +216,17 @@ def merge(mdfs: Union[str, List[DataSetType]],
     # do some additional things if the return type is a MetaPanda object.
     if check_list_type(mdfs, MetaPanda, raised=False):
         # remove duplicated columns
+        non_dup_columns = union(*[ds.columns for ds in mdfs])
         nmdf._df = nmdf.df_.loc[:, ~nmdf.columns.duplicated()]
 
         # add on a meta_ column indicating the source of every feature.
-        col_sources = concat([Series(ds.name_, index=ds.columns.copy()) for ds in mdfs],
+        col_sources = concat([Series(ds.name_,
+                                     index=intersect(ds.columns, non_dup_columns))
+                              for ds in mdfs],
                              axis=0, sort=False)
-        # define new column as a categorical
-        nmdf.meta_["datasets"] = col_sources.astype("category")
+        col_sources.name = "datasets"
+        # JOIN on the column to the dataframe - otherwise it throws a bloody error
+        nmdf._meta = nmdf.meta_.join(col_sources.astype("category"))
         # join together sources into a list
         nmdf.source_ = [mdf.source_ for mdf in mdfs]
         # override name if given

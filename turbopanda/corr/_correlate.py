@@ -20,7 +20,8 @@ from scipy import stats
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.stats._lmfast import lm
 from turbopanda.utils import belongs, difference, instance_check, \
-    is_column_boolean, is_column_float, remove_na, union, is_dataframe_float
+    is_column_boolean, is_column_float, remove_na, union, is_dataframe_float, \
+    disallow_instance_pair
 
 
 from scipy.stats import pearsonr, spearmanr, kendalltau, pointbiserialr
@@ -248,11 +249,11 @@ def bicorr(x: pd.Series,
     # check type
     instance_check(x, pd.Series)
     instance_check(x, pd.Series)
+    belongs(tail, ("one-sided", "two-sided"))
+    belongs(method, ('pearson', 'spearman', 'kendall', 'biserial', 'percbend', 'shepherd', 'skipped'))
     # Check size
     if x.shape[0] != y.shape[0]:
         raise ValueError('x and y must have the same length.')
-    belongs(method, ('pearson', 'spearman', 'kendall', 'biserial', 'percbend', 'shepherd', 'skipped'))
-    belongs(tail, ('one-sided', 'two-sided'))
 
     return _bicorr_inner(x, y, tail, method)
 

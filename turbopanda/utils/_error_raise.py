@@ -6,7 +6,7 @@ from typing import Any, List, Tuple, TypeVar, Union
 import numpy as np
 import pandas as pd
 
-__all__ = ("belongs", "instance_check", "check_list_type", "nonnegative",
+__all__ = ("belongs", "instance_check", "disallow_instance_pair", "check_list_type", "nonnegative",
            "boolean_series_check", "is_twotuple", "is_iterable")
 
 
@@ -56,6 +56,13 @@ def instance_check(a: object, i: TypeVar, raised=True):
                 raise TypeError("object '{}' is not of type None".format(a))
             else:
                 return False
+    return True
+
+
+def disallow_instance_pair(a: object, i: TypeVar, b: object, j: TypeVar):
+    """Defines a pair of objects whereby their types are not allowed as a pair for the function."""
+    if instance_check(a, i, raised=False) and instance_check(b, j, raised=False):
+        raise TypeError("instance of type '{}' with type '{}' pair disallowed".format(i, j))
     return True
 
 

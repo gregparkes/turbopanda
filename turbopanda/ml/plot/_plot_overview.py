@@ -12,6 +12,7 @@ from scipy import stats
 
 from turbopanda._metapanda import SelectorType
 from turbopanda._dependency import is_statsmodels_installed
+
 from turbopanda.plot import gridplot
 from turbopanda.utils import instance_check, intersect
 from turbopanda.ml._clean import ml_ready
@@ -209,7 +210,7 @@ def overview(df: "MetaPanda",
     if "correlation" in overlap_ and (1 < len(_xcols) < 50):
         # plot 5. correlation matrix
         corr = correlate(df, x)
-        _cmatrix = _row_to_matrix(corr)
+        _cmatrix = row_to_matrix(corr)
         _basic_correlation_matrix(ax[next(I)], _cmatrix)
     if "vif" in overlap_ and len(_xcols) > 1:
         # plot 6. variance inflation factor for each explanatory variable

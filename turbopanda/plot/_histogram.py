@@ -70,7 +70,7 @@ def _assign_x_label(title, series_x_l, is_kde, auto_fitted, frozen_dist):
 
 
 def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
-              kde: str = "auto",
+              kde: Optional[str] = "auto",
               bins: Optional[Union[int, np.ndarray]] = None,
               density: bool = True,
               stat: bool = False,

@@ -9,7 +9,7 @@ import pandas as pd
 from sklearn.preprocessing import normalize, power_transform, quantile_transform, scale
 
 from turbopanda._metapanda import MetaPanda, SelectorType
-from turbopanda.utils import belongs, instance_check, union
+from turbopanda.utils import belongs, instance_check, union, intersect
 from turbopanda._deprecator import deprecated
 
 
@@ -73,7 +73,7 @@ def ml_ready(df: "MetaPanda",
     # 2. eliminate columns with only one unique value in - only for boolean/category options
     elim_cols = _df.view(lambda z: z.nunique() <= 1)
     # 1. standardize float columns only
-    std_cols = _df.search(x, float)
+    std_cols = intersect(_df.view(x), _df.view(float))
     if len(std_cols) > 0 and x_std:
         _df.transform(std_funcs_[std_func], selector=std_cols, whole=True)
     # 5. standardize y if selected
@@ -140,8 +140,8 @@ def make_polynomial(df: "MetaPanda",
     # make a copy
     _xc = df.columns if x is None else x
     # make 'machine learning ready'
-    select = df.search(_xc, float)
-    _df, _x, _xcol = ml_ready(df, select)
+    selection = intersect(df.view(_xc), df.view(float))
+    _df, _x, _xcol = ml_ready(df, selection)
     # define object and fit
     pf = PolynomialFeatures(degree=degree, **poly_kws)
     pf.fit(_x)

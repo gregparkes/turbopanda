@@ -7,13 +7,14 @@ from typing import Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 
+from turbopanda._deprecator import deprecated
 from ._bool_series import is_column_int, is_n_value_column
 
 ArrayLike = Union[np.ndarray, pd.Series, pd.DataFrame]
 
 
 __all__ = ('listify', 'switcheroo', 'integer_to_boolean',
-           'object_to_categorical', 'boolean_to_integer',
+           'object_to_categorical', 'boolean_to_integer', 'power_scale',
            'float_to_integer', 'standardize')
 
 
@@ -23,6 +24,12 @@ def listify(a):
         return a
     else:
         return [a]
+
+
+def power_scale(ser: pd.Series, factor: float = 2.) -> pd.Series:
+    """Scales every value in ser by factor amount."""
+    return np.power(ser, factor)
+
 
 
 def switcheroo(ser: pd.Series) -> pd.Series:
@@ -67,6 +74,7 @@ def boolean_to_integer(ser: pd.Series) -> pd.Series:
     return ser.astype(np.uint8) if (ser.dtype == np.bool) else ser
 
 
+@deprecated("0.2.5", "0.2.7", instead=".pipe.zscore")
 def standardize(x: ArrayLike) -> ArrayLike:
     """
     Performs z-score standardization on vector x.

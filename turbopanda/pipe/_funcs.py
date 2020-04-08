@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 """Provides access to functions which can be directly fed into pandas.DataFrame.pipe.
 """
-
+import numpy as np
 import pandas as pd
 from typing import Callable, List, TypeVar, Optional
 from sklearn.preprocessing import scale, power_transform
 
-from turbopanda.utils import float_to_integer
+from turbopanda.utils import float_to_integer, power_scale
 from ._conditions import select_float
 
 __all__ = ('all_float_to_int', 'downcast_all', 'all_low_cardinality_to_categorical',
@@ -68,6 +68,9 @@ def all_low_cardinality_to_categorical(df: pd.DataFrame,
         ).index
 
         return _multi_assign(df_to_use, transform_fn, condition)
+
+
+""" global standardization functions... """
 
 
 def zscore(df: pd.DataFrame) -> pd.DataFrame:

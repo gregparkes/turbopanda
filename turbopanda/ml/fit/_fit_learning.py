@@ -8,13 +8,13 @@ from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import RepeatedKFold, learning_curve, permutation_test_score
+from sklearn.model_selection import RepeatedKFold, permutation_test_score, learning_curve
 
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.utils import instance_check
 from turbopanda.ml._clean import ml_ready
 from turbopanda.ml._package import find_sklearn_model
-from turbopanda.ml.plot._plot_learning import learning_curve
+from turbopanda.ml.plot._plot_learning import learning_curve as lcurve
 
 
 def learning(df: "MetaPanda",
@@ -22,7 +22,7 @@ def learning(df: "MetaPanda",
              y: str,
              train_n: Optional[np.ndarray] = None,
              permute_n: int = 0,
-             cv: Tuple[int, int] = (5, 20),
+             cv: Tuple[int, int] = (5, 15),
              model: str = "LinearRegression",
              cache: Optional[str] = None,
              plot: bool = False,
@@ -42,10 +42,11 @@ def learning(df: "MetaPanda",
         A list of selected column names for x or MetaPanda `selector`.
     y : str
         A selected y column.
-    train_n : array-like, with shape (n_ticks,) dtype float or int, optional
+    train_n : int/array-like, with shape (n_ticks,) dtype float or int, optional
         Relative or absolute numbers of training examples that will be used to generate
         learning curve related data.
         If None: uses `linspace(.1, .9, 8)`
+        If int: uses `linspace(.1, .9, n)`
     permute_n : int (default 0)
         The number of times to permute y, if > 0, then does full permutation analysis (making 4th plot)
     cv : int/tuple, optional (5, 10)
@@ -56,7 +57,7 @@ def learning(df: "MetaPanda",
     cache : str, optional
         If not None, stores the resulting model parts in JSON and reloads if present.
     plot : bool, optional
-        If True, produces `overview_plot` inplace.
+        If True, produces `.plot.learning_curve` inplace.
     verbose : int, optional
         If > 0, prints out statements depending on level.
 
@@ -94,10 +95,10 @@ def learning(df: "MetaPanda",
     """
     # perform checks
     instance_check(y, str)
-    instance_check(train_n, (type(None), list, tuple, np.ndarray))
+    instance_check(train_n, (type(None), int, list, tuple, np.ndarray))
     instance_check(permute_n, int)
     instance_check(cv, (int, tuple))
-    instance_check(cache, (type(None), str))
+    # instance_check(cache, (type(None), str))
     instance_check(plot, bool)
 
     if isinstance(cv, tuple):
@@ -110,6 +111,8 @@ def learning(df: "MetaPanda",
     lm.set_params(**model_kws)
     if train_n is None:
         train_n = np.linspace(.1, .9, 8)
+    elif isinstance(train_n, int):
+        train_n = np.linspace(.1, .9, train_n)
     # ml ready
     _df, _x, _y, _xcols = ml_ready(df, x, y)
     if verbose > 0:
@@ -118,8 +121,8 @@ def learning(df: "MetaPanda",
 
     rep = RepeatedKFold(n_splits=k, n_repeats=repeats)
     vars_ = learning_curve(lm, _x, _y, train_sizes=train_n,
-                           cv=rep, scoring="neg_root_mean_squared_error",
-                           n_jobs=-2, verbose=verbose, return_times=True)
+                   cv=rep, scoring="neg_root_mean_squared_error",
+                   n_jobs=-2, verbose=verbose, return_times=True)
     # permutation analysis if permute_n > 0
     if permute_n > 0:
         perm_score_, perm_scorez_, pval = permutation_test_score(lm, _x, _y, cv=rep, n_permutations=permute_n,
@@ -141,9 +144,9 @@ def learning(df: "MetaPanda",
     results['N'] = vars_[0]
     R = MetaPanda(results)
     if plot and permute_n > 0:
-        learning_curve(R, perm_scorez_)
+        lcurve(R, perm_scorez_)
     elif plot:
-        learning_curve(R)
+        lcurve(R)
     # return as MetaPanda
     if permute_n > 0:
         return R, perm_score_, perm_scorez_, pval

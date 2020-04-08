@@ -95,6 +95,11 @@ def is_column_discrete(ser: Union[pd.Series, np.ndarray]) -> bool:
         raise TypeError("type '{}' not recognized for column, needs implementation".format(ser.dtype.kind))
 
 
+def is_column_numeric(ser: Union[pd.Series, np.ndarray]) -> bool:
+    """Checks whether the 1d array is of type float or int."""
+    return ser.dtype.kind == 'f' or ser.dtype.kind == 'u' or ser.dtype.kind == 'i'
+
+
 """ Dataframe checks using MetaPanda """
 
 

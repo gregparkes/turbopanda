@@ -91,7 +91,7 @@ def learning_curve(cv_results,
     axes[2].xaxis.set_major_locator(plt.MaxNLocator(3))
     # permutation option
     if perm is not None:
-        histogram(perm, bins=None, kde=True, ax=axes[3], x_label=score, title="Permutations")
+        histogram(perm, bins=None, kde=None, ax=axes[3], x_label=score, title="Permutations")
 
     fig.tight_layout()
     plt.show()

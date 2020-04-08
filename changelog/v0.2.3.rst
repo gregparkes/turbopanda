@@ -1,0 +1,33 @@
+.. include:: _commands.rst
+
+Version 0.2.3
+=============
+**28th Feb 2020**
+
+Changelog
+---------
+`turbopanda.dev`
+................
+- |Feature| Added `cached_chunk` function to chunk up grid searching
+
+`turbopanda.merge`
+..................
+- |Enhancement| `merge` now accepts filename-like arguments and loads in files automatically, if possible using *glob*
+
+`turbopanda.metapanda`
+...........................
+- |Enhancement| Added `options_` property
+- |Fix| `add_prefix`, `add_suffix` now correctly change on column axis
+
+`turbopanda.ml`
+...............
+- |Feature| Added `best_model_plot` to output the best choice
+- |Feature| Added `ml_ready` function to prepare dataframes for ML
+
+`turbopanda.stats`
+..................
+- |Feature| Added `LinearModel` class to keep a bunch of parameters ready
+
+`turbopanda.utils`
+..................
+- |Enhancement| Added `strpattern`, `broadsort` to aid with string operations and sorting, respectively

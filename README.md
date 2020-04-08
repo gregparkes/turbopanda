@@ -233,47 +233,6 @@ This takes every column of type `float` and applies a square-function
   representing a given column, and expects the return type to be
    the same size as before.
 
-## New updates
-
-Here we cover some of the more exotic and latest 
-changes to the `turbopanda` framework.
-
-### From v0.2.1: Merging support
-
-With turbopanda merging has never been easier. Now if there are any columns between two datasets $X$ and $Y$ 
-that share values, you can use `turb.merge` to join together $k$ datasets into one along their columns:
-
-```python
-import turbopanda as turb
-df1 = pd.DataFrame([...]) # size (n, p)
-df2 = pd.DataFrame([...]) # size (m, q)
-result = turb.merge([df1, df2], how='inner', name="new_df")
-```
-
-Unlike the pandas version, turbopanda does not require the user to specify which column(s) the dataframes
-decide to join on, but this information can be conveyed to the user using the `verbose` keyword if they
-wish to know which two columns were used, as well as the number of columns/rows potentially dropped in the
-process.
-
-### From v0.2.3: Statistical Support
-
-`turbopanda` also supports a limited number of useful statistical functions, including 
-automatic fitting of continuous distributions to sets of data, *correlation* between 
-heterogeneous data columns, *mutual information* and entropy calculations, as well as
-model checking operations such as `cook_distance` and variance inflationary factors.
-
-### From v0.2.4: Distribution fitting
-
-There are very few packages in the Python ecosystem that consider both *continuous* and *discrete* distribution
-fitting in a seamless fashion with other well known packages such as `pandas`. We attempt to rectify this
-to give users powerful methods to statistically analyse the data they present to it.
-
-### AOB
-
-Further details can be found by exploring the 
-[examples](https://github.com/gregparkes/turbopanda/blob/master/examples/) 
-section of this repository.
-
 ## Installation
 
 `turbopanda` requires the following [dependencies](environment.yml):

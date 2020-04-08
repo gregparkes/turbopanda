@@ -1,0 +1,43 @@
+.. include:: _commands.rst
+
+Version 0.2.5
+=============
+**7th Apr 2020**
+
+Changelog
+---------
+
+`turbopanda.corr`
+.................
+- Removed `pcm`
+
+`turbopanda.merge`
+..................
+
+`turbopanda.metapanda`
+......................
+
+`turbopanda.ml`
+...............
+- |Efficiency| Folder reorganized into *.fit* and *.plot* submodules
+
+`turbopanda.pipe`
+.................
+- |Feature| Added `yeo_johnson`, `zscore` operations
+
+`turbopanda.plot`
+.................
+- |Enhancement| `hist_grid`, `scatter_grid` now also accept DataFrame as arguments
+
+`turbopanda.stats`
+..................
+
+`turbopanda.str`
+................
+- |Feature| Added `common_substrings` which encompasses single and cartesian product-like input
+- `common_substring_match` and its pairwise form are now deprecated
+
+`turbopanda.utils`
+..................
+- |Feature| `nonnegative` check for integers, `disallow_instance_pair` to prevent weird pair combinations for input
+- `zfilter`, `standardize` is now deprecated

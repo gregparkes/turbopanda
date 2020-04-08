@@ -1,0 +1,39 @@
+
+.. include:: _commands.rst
+
+Version 0.2.2
+=============
+**5th Feb 2020**
+
+Changelog
+---------
+`turbopanda.dev`
+................
+- |MajorFeature| Added `cache`, `cached` functions to save model states
+- |Feature| Added `bleep` function as decorator
+
+`turbopanda.metapanda`
+...........................
+- Moved `MetaPanda` into a separate submodule.
+- |API| Deprecated and removed the `rename` function
+- |Feature| Added `aggregate_k` method to perform grouped aggregations
+- |Feature| Added `info` function over from pandas
+
+`turbopanda.ml`
+...............
+- Branch created
+- |Feature| Added `overview_plot` function to plot results of ML
+- |Feature| Added `fit_basic` function to fit basic linear models to data
+
+`turbopanda.plot`
+.................
+- Added palette options
+
+`turbopanda.stats`
+..................
+- Branch created
+- |MajorFeature| Added `continuous_mutual_info`, `entropy` functions to determine the best way to estimate mutual information.
+
+`turbopanda.utils`
+..................
+- |Enhancement| Added `listify` function to handle instances of a single value needing to be in listform

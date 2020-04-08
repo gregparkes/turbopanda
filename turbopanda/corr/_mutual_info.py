@@ -6,34 +6,28 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
+from typing import Optional
 
+from turbopanda.stats import density
 from turbopanda.utils import instance_check, remove_na
 
 __all__ = ('entropy', 'conditional_entropy', 'continuous_mutual_info')
 
 
-def _estimate_density(X, Y=None, Z=None, r=10000):
-    """Estimates the density of X using binning, accepts np.ndarray. """
-    if Y is None and Z is None:
-        _X = remove_na(X)
-        return np.histogram(_X, bins=r, density=True)[0]
-    elif Z is None:
-        _X, _Y = remove_na(X, Y, paired=True)
-        return np.histogram2d(_X, _Y, bins=(r, r), density=True)[0]
-    else:
-        return np.histogramdd(np.vstack((X, Y, Z)).T, bins=(r, r, r), density=True)[0]
-
-
-def _estimate_entropy(X, Y=None, Z=None):
+def _estimate_entropy(X: np.ndarray,
+                      Y: Optional[np.ndarray] = None,
+                      Z: Optional[np.ndarray] = None) -> float:
     if Z is not None:
         # prevent memory implosion.
-        D = _estimate_density(X, Y, Z, r=1000)
+        D = density(X, Y, Z, r=1000)
     else:
-        D = _estimate_density(X, Y)
+        D = density(X, Y)
     return -np.sum(D * np.log2(D))
 
 
-def entropy(X, Y=None, Z=None):
+def entropy(X: np.ndarray,
+            Y: Optional[np.ndarray] = None,
+            Z: Optional[np.ndarray] = None) -> float:
     """Calculates shannon entropy given X.
 
     Uses log2 for density normalization. `X`, `Y` and `Z` must all be continuous.
@@ -70,7 +64,8 @@ def entropy(X, Y=None, Z=None):
     return _estimate_entropy(X, Y, Z)
 
 
-def conditional_entropy(X, Y):
+def conditional_entropy(X: np.ndarray,
+                        Y: np.ndarray) -> float:
     """Calculates conditional entropy H(X|Y) using :math:`\log_2` Shannon entropy.
 
     .. math:: H(X|Y) = H(X, Y) - H(Y)
@@ -99,7 +94,9 @@ def conditional_entropy(X, Y):
     return H_XY - H_Y
 
 
-def continuous_mutual_info(X, Y, Z=None):
+def continuous_mutual_info(X: np.ndarray,
+                           Y: np.ndarray,
+                           Z: Optional[np.ndarray] = None) -> float:
     """Given random continuous variables `X`, `Y`, determines the mutual information within.
 
     Entropy is estimated using Shannon entropy method. Provides for conditional calculations.

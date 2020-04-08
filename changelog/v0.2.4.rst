@@ -1,0 +1,59 @@
+.. include:: _commands.rst
+
+Version 0.2.4
+=============
+**11th Mar 2020**
+
+Changelog
+---------
+- Added `numba` as a requirement
+- More example notebooks for users to follow
+
+`turbopanda.corr`
+.................
+- |Fix| `partial_bicorr` now uses logistic regression for residuals with a categorical y
+
+`turbopanda.merge`
+..................
+- |Feature| Added `row_to_matrix` function
+- |Fix| `merge` should now properly handle non-MetaPanda input cases
+- |Fix| `merge` removes counter columns properly now
+- Added extra tests
+
+`turbopanda.metapanda`
+......................
+- |MajorFeature| Added `select` function which provides flexible eval-like arguments to get appropriate subgroup
+- |Feature| Added `patsy` in conjunction with the library for statsmodels projects
+- |Enhancement| Added `select_crit_` property
+- |Fix| Finally fixed the `__getitem__` function for bracket selection to properly return correct dataframe
+- `search` is now deprecated
+
+`turbopanda.ml`
+...............
+- |Feature| Added `fit_learning` function to get learning curve estimates
+- |Enhancement| Added `clean` functionality to ML data
+- `make_polynomial` is now deprecated
+
+`turbopanda.pipe`
+.................
+- Branch created
+
+`turbopanda.plot`
+.................
+- |Enhancement| `histogram` now incorporates auto-distribution fitting (both discrete and continuous)
+- |Enhancement| `histogram` accepts *auto* keyword argument to automatically fit
+- |API| `shape_multiplot` renamed to `gridplot`
+
+`turbopanda.stats`
+..................
+- |MajorFeature| Added `univariate_kde` function which fits a 1d KDE to data
+
+`turbopanda.str`
+................
+- Branch created
+- |Feature| Added `levenshtein` function to determine edit distance
+- |Efficiency| Filling matrices with `levenshtein` now uses JIT for modest speedup
+
+`turbopanda.utils`
+..................
+- |Enhancement| `set_like` now always preserves the order of values

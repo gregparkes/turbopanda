@@ -3,7 +3,7 @@
 """Operations for handling the longest common substring match problem."""
 
 import itertools as it
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np

@@ -27,6 +27,7 @@ Changelog
 
 `turbopanda.plot`
 .................
+- |Feature| Added `scatter` for normal and density-based scatter plots
 - |Enhancement| `hist_grid`, `scatter_grid` now also accept DataFrame as arguments
 
 `turbopanda.stats`
@@ -40,4 +41,5 @@ Changelog
 `turbopanda.utils`
 ..................
 - |Feature| `nonnegative` check for integers, `disallow_instance_pair` to prevent weird pair combinations for input
+- |Enhancement| `instance_check` now performs checks on groups of objects using the same type check
 - `zfilter`, `standardize` is now deprecated

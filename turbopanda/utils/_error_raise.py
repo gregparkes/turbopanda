@@ -37,8 +37,7 @@ def nonnegative(a: Union[float, int], raised=True):
             return True
 
 
-def instance_check(a: object, i: TypeVar, raised=True):
-    """Check that a is an instance of type i."""
+def _instance_check_element(a: object, i: TypeVar, raised: bool = True):
     if isinstance(i, str):
         if not hasattr(a, i):
             if raised:
@@ -57,6 +56,24 @@ def instance_check(a: object, i: TypeVar, raised=True):
             else:
                 return False
     return True
+
+
+def instance_check(a: Union[object, Tuple], i: TypeVar, raised: bool = True):
+    """Check that a is an instance of type i.
+
+    Parameters
+    ----------
+    a : object or tuple of object
+        If list/tuple, performs check on all in a
+    i : type or list of type
+        Passed into isinstance which accepts type or list/tuple of type
+    raised : bool
+        If True, raises error, else just returns false
+    """
+    if isinstance(a, tuple):
+        return all([_instance_check_element(x, i) for x in a])
+    else:
+        return _instance_check_element(a, i, raised)
 
 
 def disallow_instance_pair(a: object, i: TypeVar, b: object, j: TypeVar):

@@ -113,6 +113,7 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
         If discrete-distribution, applies smoothing function to KDE if True
     verbose : int, default=0
         If > 0, prints out useful messages
+
     Other Parameters
     ----------------
     args ; list

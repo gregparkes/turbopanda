@@ -108,8 +108,7 @@ def grid(df: MetaPanda,
     instance_check(cv, (int, tuple))
     instance_check(models, (tuple, list, dict))
     instance_check(cache, (type(None), str))
-    instance_check(plot, bool)
-    instance_check(chunks, bool)
+    instance_check((plot, chunks), bool)
 
     if isinstance(cv, tuple):
         k, repeats = cv

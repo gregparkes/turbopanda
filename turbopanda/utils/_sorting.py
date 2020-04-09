@@ -26,7 +26,7 @@ def broadsort(a: Union[List, Tuple, np.ndarray]) -> List:
     a_s : list/tuple
         sorted list of a
     """
-    instance_check(a, (list, tuple, np.ndarray))
+    instance_check(a, (list, np.ndarray))
 
     try:
         a_s = sorted(a)

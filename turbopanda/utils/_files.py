@@ -22,7 +22,6 @@ def _is_filepath_object(f):
 
 def get_file_expanded(files: List[str]) -> List:
     """Given a list of filenames, get the associated found files."""
-    instance_check(files, (list, tuple))
     return join(*[glob.glob(f) for f in files if _is_filepath_object(f)])
 
 

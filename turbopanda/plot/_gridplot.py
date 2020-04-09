@@ -71,9 +71,8 @@ def gridplot(n_plots: int,
     axes : list of matplotlib.ax.Axes
         A list of axes to use.
     """
-    instance_check(n_plots, int)
+    instance_check((n_plots, ax_size), int)
     belongs(arrange, ['square', 'row', 'column'])
-    instance_check(ax_size, int)
 
     if n_plots == 1:
         fig, ax = plt.subplots(figsize=(ax_size, ax_size))  #

@@ -33,9 +33,8 @@ def density(X: np.ndarray,
         The density in binned-dimensions
     """
     instance_check(X, np.ndarray)
-    instance_check(Y, (type(None), np.ndarray))
-    instance_check(Z, (type(None), np.ndarray))
-    instance_check(r, (type(None),int))
+    instance_check((Y, Z), (type(None), np.ndarray))
+    instance_check(r, (type(None), int))
 
     if r is None:
         r = freedman_diaconis_bins(X)

@@ -248,7 +248,6 @@ def bicorr(x: pd.Series,
     # perform all checks in the public method.. rather than repeating them internally.
     # check type
     instance_check(x, pd.Series)
-    instance_check(x, pd.Series)
     belongs(tail, ("one-sided", "two-sided"))
     belongs(method, ('pearson', 'spearman', 'kendall', 'biserial', 'percbend', 'shepherd', 'skipped'))
     # Check size
@@ -328,8 +327,7 @@ def partial_bicorr(data: pd.DataFrame,
     """
     # perform all checks in the public method..
     instance_check(data, pd.DataFrame)
-    instance_check(x, str)
-    instance_check(y, str)
+    instance_check((x, y), str)
     instance_check(covar, (str, list, tuple, pd.Index))
     belongs(tail, ('one-sided', 'two-sided'))
     belongs(method, ('pearson', 'spearman', 'kendall', 'biserial', 'percbend', 'shepherd', 'skipped'))

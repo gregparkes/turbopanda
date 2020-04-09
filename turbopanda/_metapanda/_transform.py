@@ -259,8 +259,7 @@ def aggregate_k(self,
       >>> aggregate_k("sum", names=("C","D","E"), selectors=("c[1-3]","d[1-3]","e[1-3]"))
     """
     # checks
-    instance_check(names, (type(None), list, tuple))
-    instance_check(selectors, (type(None), list, tuple))
+    instance_check((names, selectors), (type(None), list, tuple))
 
     names = listify(names)
     selectors = listify(selectors)

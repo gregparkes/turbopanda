@@ -93,8 +93,8 @@ def cached(func: Callable,
     # check it is string
     instance_check(filename, str)
     instance_check(verbose, int)
-    if not callable(func):
-        raise ValueError('function is not callable')
+    instance_check(func, "__call__")
+
     # check that file ends with json or csv
     belongs(filename.rsplit(".", 1)[-1], ("json", "csv"))
 

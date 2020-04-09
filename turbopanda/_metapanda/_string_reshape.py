@@ -37,8 +37,7 @@ def expand(self, column: str, sep: str = ",") -> "MetaPanda":
     --------
     shrink : Expands out a 'unstacked' id column to a shorter-form DataFrame.
     """
-    instance_check(column, str)
-    instance_check(sep, str)
+    instance_check((column, sep), str)
 
     if column not in self.df_.columns:
         raise ValueError("column '{}' not found in df".format(column))

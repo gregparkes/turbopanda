@@ -5,9 +5,14 @@ from typing import Any, List, Tuple, TypeVar, Union
 
 import numpy as np
 import pandas as pd
+from functools import reduce
+import operator
+
+from ._sets import join
+
 
 __all__ = ("belongs", "instance_check", "disallow_instance_pair", "check_list_type", "nonnegative",
-           "boolean_series_check", "is_twotuple", "is_iterable")
+           "boolean_series_check", "is_twotuple", "arrays_equal_size", "is_iterable")
 
 
 def belongs(elem: Any, home: Union[List[Any], Tuple[Any, ...]], raised=True):
@@ -74,6 +79,12 @@ def instance_check(a: Union[object, Tuple], i: TypeVar, raised: bool = True):
         return all([_instance_check_element(x, i) for x in a])
     else:
         return _instance_check_element(a, i, raised)
+
+
+def arrays_equal_size(a, b, *arrays):
+    """Check that arrays a, b, ...n, are equal dimensions."""
+    arrs = tuple(map(np.asarray, join((a, b), arrays)))
+    return reduce(operator.add, map(lambda x: x.shape[0], arrs)) // len(arrs) == arrs[0].shape[0]
 
 
 def disallow_instance_pair(a: object, i: TypeVar, b: object, j: TypeVar):

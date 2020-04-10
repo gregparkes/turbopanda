@@ -123,7 +123,7 @@ def fit_model(X, name, verbose=0, return_params=False):
             inits_ = [v(X) for v in var_[2:]]
             # minimization function
             params = var_[1](so.fmin(var_[0], inits_, args=(X,), ftol=1e-4, full_output=True, disp=False)[0])
-            if verbose:
+            if verbose > 0:
                 print("initial guess: {}, minimized guess: {}".format(inits_, params))
         else:
             raise ValueError("discrete kde '{}' not found in {}".format(name, list(_get_discrete_single()) + list(

@@ -5,7 +5,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from turbopanda.plot import color_qualitative, legend
+from turbopanda.plot import color_qualitative, legend_line
 from turbopanda.utils import belongs, dictzip, instance_check, set_like, switcheroo
 from turbopanda.ml._package import find_model_family
 
@@ -85,7 +85,7 @@ def best_model(cv_results: "MetaPanda",
     for tick in ax.get_xmajorticklabels():
         tick.set_horizontalalignment('right')
     # generate legend
-    ax.legend(legend(mapping), list(mapping.keys()), bbox_to_anchor=(1.03, 1.03))
+    ax.legend(legend_line(mapping), list(mapping.keys()), bbox_to_anchor=(1.03, 1.03))
     plt.show()
 
     return fig

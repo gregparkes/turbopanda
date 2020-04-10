@@ -4,33 +4,45 @@
 
 import numpy as np
 import matplotlib
+import itertools as it
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 from typing import Union, List, Tuple, Optional
 from pandas import Series
+from warnings import warn
 
-from turbopanda.stats import density
-from turbopanda.utils import remove_na, instance_check
+from turbopanda.utils import remove_na, instance_check, arrays_equal_size, belongs
 from turbopanda.stats._kde import freedman_diaconis_bins
+from turbopanda.plot._palette import palette_mixed, darken, lighten
+from turbopanda.plot._widgets import legend_line
 
 
-def _select_best_size(x, a=1.4, b=21):
+def _marker_set():
+    return 'o', '^', 'x', 'd', '8', 'p', 'h', '+', 'v', '*'
+
+
+def _select_best_size(x: int, a: float = 1.4, b: float = 21.) -> float:
     # given n points, determines which size of point to use based on math rule
     """Rule is : b - a*log(x) where best options found are b=21, a=1.4"""
     # cases=(1e1, 50, 1e2, 200, 500, 1e3, 3000, 1e4, 20000, 50000, 1e5)
     return b - a * np.log(x)
 
 
-def _negsigmoid(x, a=.9):
+def _negsigmoid(x: float, a: float = .9) -> float:
     b = 1 - a
     return ((a - b) / (1. + np.exp(x))) + b
 
 
-def _glf(x, a=1., k=.2, c=1., b=1.2, nu=1., q=1.):
+def _glf(x: float, a: float = 1., k: float = .2, c: float = 1.,
+         b: float = 1.2, nu: float = 1., q: float = 1.) -> float:
     # generalized logistic function (see https://en.wikipedia.org/wiki/Generalised_logistic_function)
     return a + (k - a) / (c + q * np.exp(-b * x)) ** (1 / nu)
 
 
-def _select_best_alpha(n, glf_range=(-2, 8), measured_range=(1e1, 1e5)):
+def _select_best_alpha(n: int,
+                       glf_range: Tuple[float, float] = (-1., 9.),
+                       measured_range: Tuple[float, float] = (1e1, 1e5)):
     # given n points, determines the best alpha to use
     """Follows a generalized logistic function Y(t)=A + (K - A) / (C + Q * exp(-B * t))**(1/nu)"""
     # clip x to the measured range
@@ -40,18 +52,107 @@ def _select_best_alpha(n, glf_range=(-2, 8), measured_range=(1e1, 1e5)):
     return _glf(interp_n)
 
 
+def _draw_line_best_fit(x, y, c, ax, deg):
+    data_color = c if isinstance(c, str) else "k"
+    # get line color as a bit darker
+    if data_color != "k":
+        line_color = darken(data_color)
+    else:
+        line_color = lighten(data_color)
+
+    xln = 3 if deg == 1 else 200
+    z = np.polyfit(x, y, deg=deg)
+    xl = np.linspace(x.min(), x.max(), xln)
+    ax.plot(xl, np.polyval(z, xl), color=line_color, linestyle="--")
+
+
+def _associate_legend(c, ax):
+
+    names = np.unique(c)
+    cols = palette_mixed(len(names))
+    leg = legend_line(dict(zip(names, cols)))
+    # add to ax
+    ax.legend(leg, names, loc='best')
+
+
+def _make_colorbar(data, ax, cmap):
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="4%", pad=0.05)
+    norm = matplotlib.colors.Normalize(data.min(), data.max())
+    cbar = plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax)
+    if isinstance(data, Series):
+        cbar.set_label(data.name)
+
+
+def _reconfigure_color_array(c):
+    """Given c array, reconfigure into an array that ax.scatter(c=c) will accept."""
+    if c.dtype.kind == 'b':
+        # convert to 'string' type and use below code.
+        c = c.astype(np.str)
+
+    if c.dtype.kind == "U":
+        # i.e we have a string array
+        names = np.unique(c)
+        # map a qualitative 'name' to each value
+        colors = palette_mixed(len(names))
+        # create new color array
+        c2 = np.zeros_like(c)
+        for n, col in zip(names, colors):
+            c2[c == n] = col
+        cmode = "discrete"
+        return c2, cmode
+    else:
+        cmode = "continuous"
+        return c, cmode
+
+
+def _draw_scatter(x, y, c, s, m, alpha, ax, **kwargs):
+    if isinstance(m, str):
+        return ax.scatter(x, y, c=c, s=s, marker=m, alpha=alpha, **kwargs)
+    else:
+        scatters = []
+        names = np.unique(m)
+        marks = tuple(it.islice(it.cycle(_marker_set()), 0, len(names)))
+        for v, mark in zip(names, marks):
+            # handle cases where c, s are standalone and/or arrays
+            if isinstance(c, str) and isinstance(s, float):
+                scatters.append(
+                    ax.scatter(x[m == v], y[m == v],
+                               c=c, s=s, alpha=alpha, marker=mark, **kwargs))
+            elif (not isinstance(c, str)) and isinstance(s, float):
+                scatters.append(
+                    ax.scatter(x[m == v], y[m == v],
+                               c=c[m == v], s=s, alpha=alpha, marker=mark, **kwargs))
+            elif isinstance(c, str) and (not isinstance(s, float)):
+                scatters.append(
+                    ax.scatter(x[m == v], y[m == v],
+                               c=c, s=s[m == v],
+                               alpha=alpha, marker=mark, **kwargs))
+            elif (not isinstance(c, str)) and (not isinstance(s, float)):
+                scatters.append(ax.scatter(x[m == v], y[m == v],
+                                           c=c[m == v], s=s[m == v],
+                                           alpha=alpha, marker=mark, **kwargs))
+        return scatters
+
+
 def scatter(X: Union[np.ndarray, Series, List, Tuple],
             Y: Union[np.ndarray, Series, List, Tuple],
-            c: Union[str, np.ndarray, Series, List, Tuple] = 'blue',
+            c: Union[str, np.ndarray, Series, List, Tuple] = 'k',
+            marker: Union[str, np.ndarray, Series, List, Tuple] = 'o',
+            s: Optional[Union[float, np.ndarray, Series, List, Tuple]] = None,
             dense: bool = False,
             fit_line: bool = False,
-            ax=None,
+            ax: Optional[matplotlib.axes.Axes] = None,
             alpha: Optional[float] = None,
-            s: Optional[float] = None,
+            cmap: str = "viridis",
+            legend: Optional[str] = 'c',
             with_jitter: bool = False,
             x_label: str = "x-axis",
             y_label: str = "y-axis",
+            x_scale: str = "linear",
+            y_scale: str = "linear",
             title: str = "",
+            with_grid: bool = False,
             fit_line_degree: int = 1,
             **scatter_kws):
     """Generates a scatterplot, with some useful features added to it.
@@ -62,8 +163,17 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
         The data column to draw on the x-axis. Flattens if np.ndarray
     Y : list/tuple/np.ndarray/pd.Series (1d)
         The data column to draw on the y-axis. Flattens if np.ndarray
-    c : str/np.ndarray/pd.Series (1d)
-        The colour of the points
+    c : str/list/tuple/np.ndarray/pd.Series (1d), default='blue'
+        The colour of the points.
+        If array, colors must be a categorical/valid float type, uses cmap
+    marker : str/list/tuple/np.ndarray/pd.Series (1d), default='o'
+        The marker style of the points.
+        If type=list/array, array must be a categorical/str-like type to map to matplotlib markers
+        If dense=True, treats each marker as a circle, ignores this input
+    s : float/list/tuple/np.ndarray/pd.Series (1d), optional
+        Size of each point.
+        If dense=True, this value is set automatically.
+        If type=list/array, array must be array of floats
     dense : bool
         If True, draws the uniform densities instead of the actual points
     fit_line : bool
@@ -72,16 +182,24 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
         If None, creates one.
     alpha : float, optional
         Sets the alpha for colour. If dense is True, this value is set automatically
-    s : float, optional
-        Size of the points. If dense is True, this value is set automatically
+    cmap : str, default="viridis"
+        The default colormap for continuous-valued c.
+    legend : str, optional, default='c'
+        Choose from {None, 'c', 'marker', 's'} Corresponding to each data pool
     with_jitter : bool, default=False
         If True, and dense=True, adds some jitter to the uniform points
     x_label : str, default="x-axis"
         If X is not a pandas.Series, this is used
     y_label : str, default="y-axis"
         If Y is not a pandas.Series, this is used
+    x_scale : str, default="linear"
+        Choose from {'linear', 'log', 'symlog', 'logit'}, see `matplotlib.ax.set_xscale`
+    y_scale : str, default="linear"
+        Choose from {'linear', 'log', 'symlog', 'logit'}, see `matplotlib.ax.set_yscale`
     title : str, default=""
         Optional title at the top of the axes
+    with_grid : bool, default=False
+        If True, draws a grid
     fit_line_degree : int, default=1
         If fit_line=True, Determines the degree to which a line is fitted to the data,
          allows polynomials
@@ -96,16 +214,42 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
     ax : matplotlib.ax object
         Allows further modifications to the axes post-scatter
     """
+
     instance_check((X, Y), (list, tuple, np.ndarray, Series))
-    instance_check(s, (type(None), int, float))
+    instance_check((c, marker), (str, list, tuple, np.ndarray, Series))
+    instance_check(s, (type(None), float, list, tuple, np.ndarray, Series))
     instance_check(alpha, (type(None), float))
     instance_check(ax, (type(None), matplotlib.axes.Axes))
-    instance_check((dense, with_jitter, fit_line), bool)
-    instance_check((x_label, y_label, title), str)
+    instance_check((dense, with_jitter, fit_line, with_grid), bool)
+    instance_check((x_label, y_label, title, x_scale, y_scale), str)
     instance_check(fit_line_degree, int)
+
+    arrays_equal_size(X, Y)
+    if isinstance(marker, str):
+        belongs(marker, _marker_set())
+
+    # warn the user if n is large to maybe consider dense option?
+    if X.shape[0] > 15000 and not dense:
+        warn("Data input size: {} is large, consider setting dense=True".format(X.shape[0]), UserWarning)
 
     # get subset where missing values from either are dropped
     _X, _Y = remove_na(np.asarray(X), np.asarray(Y), paired=True)
+    # reconfigure colors if qualitative
+    if isinstance(s, (list, tuple)) and not dense:
+        s = np.asarray(s)
+        arrays_equal_size(X, Y, s)
+    if isinstance(marker, (list, tuple)) and not dense:
+        marker = np.asarray(marker)
+        arrays_equal_size(X, Y, marker)
+
+    if not isinstance(c, str):
+        _c = np.asarray(c)
+        arrays_equal_size(X, Y, _c)
+        # do some prep work on the color variable.
+        _c, _cmode = _reconfigure_color_array(_c)
+    else:
+        _c = c
+        _cmode = "static"
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 5))
@@ -113,6 +257,7 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
     if dense:
         # alpha, s are set in this case
         alpha = 0.8
+        marker = "o"
         # perform density plotting
         bins_x = min(freedman_diaconis_bins(_X), 50)
         bins_y = min(freedman_diaconis_bins(_Y), 50)
@@ -121,8 +266,8 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
         # create a mesh
         xp, yp = np.meshgrid(xs[:-1], ys[:-1])
         if with_jitter:
-            xp += np.random.rand(xx.shape[0], xx.shape[1]) / (_X.max() - _X.min())
-            yp += np.random.rand(yy.shape[0], yy.shape[1]) / (_Y.max() - _Y.min())
+            xp += np.random.rand(*xp.shape) / (_X.max() - _X.min())
+            yp += np.random.rand(*yp.shape) / (_Y.max() - _Y.min())
     else:
         if alpha is None:
             alpha = _select_best_alpha(_X.shape[0])
@@ -132,14 +277,22 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
         yp = _Y
 
     # draw
-    ax.scatter(xp, yp, c=c, s=s, alpha=alpha, **scatter_kws)
+    scat = _draw_scatter(xp, yp, _c, s, marker,
+                            alpha, ax, cmap=cmap, **scatter_kws)
 
-    # maybe fit line?
+    # optionally fit a line of best fit
     if fit_line:
-        xln = 3 if fit_line_degree == 1 else 200
-        z = np.polyfit(_X, _Y, deg=fit_line_degree)
-        xl = np.linspace(_X.min(), _X.max(), xln)
-        ax.plot(xl, np.polyval(z, xl), color=c, linestyle="--")
+        _draw_line_best_fit(_X, _Y, _c, ax, fit_line_degree)
+
+    if with_grid:
+        ax.grid()
+
+    # associate legend if colour map is used
+    if _cmode == "discrete":
+        _associate_legend(c, ax)
+    elif _cmode == "continuous":
+        # add colorbar
+        _make_colorbar(c, ax, cmap)
 
     # apply x-label, y-label, title
     if isinstance(X, Series):
@@ -152,6 +305,8 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
     else:
         ax.set_ylabel(y_label)
 
+    ax.set_xscale(x_scale)
+    ax.set_yscale(y_scale)
     ax.set_title(title)
 
     return ax

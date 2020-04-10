@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Handles matplotlib colors and generates useful palettes."""
-
 import itertools as it
 from typing import List, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from matplotlib import cm
+from matplotlib import colors
+from random import shuffle
 
 from turbopanda.utils import instance_check
+
+
+def _tuple_to_hex(t):
+    return "#%02x%02x%02x" % (int(t[0]), int(t[1]), int(t[2]))
 
 
 def _colormap_to_hex(cm_array: np.ndarray):
@@ -36,6 +41,73 @@ def _colormap_to_hex(cm_array: np.ndarray):
                     cm_array.iterrows()]
         else:
             raise ValueError("dimension of 'cm_array' must be 3 or 4, not {}".format(cm_array.shape[1]))
+
+
+def lighten(c, frac_change=.3):
+    """Given a color name, returns a slightly lighter version of that color"""
+    x = np.asarray(colors.to_rgba(c))
+    other = np.array([frac_change, frac_change, frac_change, 0])
+    clipped = np.clip(x + other, 0., 1.)
+    # convert to hex str and return
+    return colors.rgb2hex(clipped)
+
+
+def darken(c, frac_change=.3):
+    """Given a color name, returns a slightly lighter version of that color"""
+    x = np.asarray(colors.to_rgba(c))
+    other = np.array([frac_change, frac_change, frac_change, 0])
+    clipped = np.clip(x - other, 0., 1.)
+    # convert to hex str and return
+    return colors.rgb2hex(clipped)
+
+
+""" Qualitative methods """
+
+
+def palette_black(n):
+    """Returns a qualitiative set of black-white colors"""
+    options_ = ["k", "dimgray", "gray", "darkgray",
+                "silver", "lightgray", "gainsboro",
+                "whitesmoke", "w"]
+    return list(it.islice(it.cycle(options_), 0, n))
+
+
+def palette_red(n):
+    """Returns a qualitiative set of red colors"""
+    options_ = ["r", "maroon", "firebrick", "indianred",
+                "lightcoral", "rosybrown"]
+    return list(it.islice(it.cycle(options_), 0, n))
+
+
+def palette_green(n):
+    """Returns a qualitiative set of green colors"""
+    options_ = ["g", "olivedrab", "yellowgreen", "darkolivegreen",
+                "lawngreen", "sage", "lightsage", "darksage", "palegreen",
+                "forestgreen", "limegreen", "springgreen"]
+    return list(it.islice(it.cycle(options_), 0, n))
+
+
+def palette_blue(n):
+    """Returns a qualitiative set of blue colors"""
+    options_ = ["b", "steelblue", "dodgerblue", "cyan",
+                "c", "deepskyblue", "powderblue", "navy", "slateblue",
+                "skyblue", "midnightblue", "royalblue"]
+    return list(it.islice(it.cycle(options_), 0, n))
+
+
+def palette_pair():
+    """Returns a palette-pair (2 colors), as (darker, lighter)"""
+    options_ = [("k", "gray"), ('maroon', 'r'), ('gold', 'r'), ('g', 'yellowgreen'), ('b', 'skyblue'),
+                ('orange', 'navajowhite'), ('darkorchid', 'plum'), ('sienna', 'sandybrown'),
+                ("magenta", 'pink')]
+    return list(it.islice(it.cycle(options_), 0, 1))
+
+
+def palette_mixed(n):
+    """Returns a qualitiative set of mixed-spectrum default colors"""
+    options_ = ['b', 'r', 'g', 'silver', 'orange',
+                'purple', 'pink', 'gold']
+    return list(it.islice(it.cycle(options_), 0, n))
 
 
 def color_qualitative(n: Union[int, List, Tuple],

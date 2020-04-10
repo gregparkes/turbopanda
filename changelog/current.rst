@@ -6,6 +6,7 @@ Version 0.2.5
 
 Changelog
 ---------
+- Added scatterpoints example notebook
 
 `turbopanda.corr`
 .................
@@ -29,6 +30,8 @@ Changelog
 .................
 - |Feature| Added `scatter` for normal and density-based scatter plots
 - |Enhancement| `hist_grid`, `scatter_grid` now also accept DataFrame as arguments
+- Added a bunch of functions to the palette selection
+- Split `legend` into `legend_line` and `legend_scatter`
 
 `turbopanda.stats`
 ..................
@@ -40,6 +43,7 @@ Changelog
 
 `turbopanda.utils`
 ..................
+- |Feature| `array_equal_sizes` check for k arrays of equal dimensions
 - |Feature| `nonnegative` check for integers, `disallow_instance_pair` to prevent weird pair combinations for input
 - |Enhancement| `instance_check` now performs checks on groups of objects using the same type check
 - `zfilter`, `standardize` is now deprecated

@@ -3,12 +3,13 @@
 """Creates custom legends."""
 
 import pandas as pd
+import matplotlib as mpl
 from matplotlib.lines import Line2D
 
 from turbopanda.utils import is_twotuple
 
 
-def legend(group_to_colors, lw=3.):
+def legend_line(group_to_colors, lw=3.):
     """
     Given a mapping of grouped-labels to RGB, create a legend object to be handled.
 
@@ -34,3 +35,11 @@ def legend(group_to_colors, lw=3.):
     else:
         raise TypeError("type '{}' not recognized for `legend`".format(type(group_to_colors)))
     return custom_lines
+
+
+def legend_scatter(markers, colors, labels, msize=15):
+    """Given a mapping of markers, colors and labels, returns a scatterplot legend."""
+    custom_scats = [Line2D([0], [0], color="w", marker=m, label=l,
+                           markerfacecolor=c, markersize=msize)
+                    for m, c, l in zip(markers, colors, labels)]
+    return custom_scats

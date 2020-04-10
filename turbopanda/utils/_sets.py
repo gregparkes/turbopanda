@@ -7,8 +7,6 @@ from typing import Callable, Dict, Iterable, List, Set, Tuple, Union
 
 from pandas import Index, Series
 
-from ._error_raise import instance_check
-
 SetLike = Union[type(None), str, Set, Index, List, Tuple, Series]
 
 __all__ = ("dictsplit", "dict_to_tuple", "dictzip", "dictmap", "dictchunk", "join", 'pairwise',
@@ -196,8 +194,6 @@ def set_like(x: SetLike = None) -> Index:
         Set-like result.
     """
     acc_types = (type(None), str, list, tuple, Series, Index, set)
-
-    instance_check(x, acc_types)
 
     if x is None:
         return Index([])

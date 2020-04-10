@@ -70,7 +70,7 @@ def _assign_x_label(title, series_x_l, is_kde, auto_fitted, frozen_dist):
 
 
 def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
-              kde: Optional[str] = "auto",
+              kde: Optional[str] = "freeform",
               bins: Optional[Union[int, np.ndarray]] = None,
               density: bool = True,
               stat: bool = False,
@@ -88,10 +88,10 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
     ----------
     X : np.ndarray/pd.Series (1d)
         The data column to draw.
-    kde : str/tuple of str, optional, default="auto"
+    kde : str/tuple of str, optional, default="freeform"
         If None, does not draw a KDE plot
-        If 'auto': attempts to fit the best `continuous` distribution
         If 'freeform': fits the best KDE to the points
+        If 'auto': attempts to fit the best `continuous` distribution
         If list/tuple: uses 'auto' to fit the best distribution out of options
         else, choose from available distributions in `scipy.stats`
     bins : int, optional

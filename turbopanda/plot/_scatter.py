@@ -15,7 +15,7 @@ from warnings import warn
 from turbopanda.utils import remove_na, instance_check, arrays_equal_size, belongs
 from turbopanda.stats._kde import freedman_diaconis_bins
 from turbopanda.plot._palette import palette_mixed, darken, lighten
-from turbopanda.plot._widgets import legend_line
+from turbopanda.plot._widgets import legend_scatter
 
 
 def _marker_set():
@@ -66,11 +66,17 @@ def _draw_line_best_fit(x, y, c, ax, deg):
     ax.plot(xl, np.polyval(z, xl), color=line_color, linestyle="--")
 
 
-def _associate_legend(c, ax):
+def _associate_legend(raw_c, palette_c, marker, ax):
+    names = np.unique(raw_c)
+    cols = np.unique(palette_c)
 
-    names = np.unique(c)
-    cols = palette_mixed(len(names))
-    leg = legend_line(dict(zip(names, cols)))
+    if isinstance(marker, str):
+        markers = [marker] * len(names)
+    else:
+        mnames = np.unique(marker)
+        markers = tuple(it.islice(it.cycle(_marker_set()), 0, len(mnames)))
+
+    leg = legend_scatter(markers, cols, names)
     # add to ax
     ax.legend(leg, names, loc='best')
 
@@ -139,13 +145,13 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
             Y: Union[np.ndarray, Series, List, Tuple],
             c: Union[str, np.ndarray, Series, List, Tuple] = 'k',
             marker: Union[str, np.ndarray, Series, List, Tuple] = 'o',
-            s: Optional[Union[float, np.ndarray, Series, List, Tuple]] = None,
+            s: Optional[Union[int, float, np.ndarray, Series, List, Tuple]] = None,
             dense: bool = False,
             fit_line: bool = False,
             ax: Optional[matplotlib.axes.Axes] = None,
             alpha: Optional[float] = None,
             cmap: str = "viridis",
-            legend: Optional[str] = 'c',
+            legend: bool = True,
             with_jitter: bool = False,
             x_label: str = "x-axis",
             y_label: str = "y-axis",
@@ -170,7 +176,7 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
         The marker style of the points.
         If type=list/array, array must be a categorical/str-like type to map to matplotlib markers
         If dense=True, treats each marker as a circle, ignores this input
-    s : float/list/tuple/np.ndarray/pd.Series (1d), optional
+    s : int/float/list/tuple/np.ndarray/pd.Series (1d), optional
         Size of each point.
         If dense=True, this value is set automatically.
         If type=list/array, array must be array of floats
@@ -184,8 +190,8 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
         Sets the alpha for colour. If dense is True, this value is set automatically
     cmap : str, default="viridis"
         The default colormap for continuous-valued c.
-    legend : str, optional, default='c'
-        Choose from {None, 'c', 'marker', 's'} Corresponding to each data pool
+    legend : bool, default=True
+        Draws a legend if the 'c' variable is discrete
     with_jitter : bool, default=False
         If True, and dense=True, adds some jitter to the uniform points
     x_label : str, default="x-axis"
@@ -217,10 +223,10 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
 
     instance_check((X, Y), (list, tuple, np.ndarray, Series))
     instance_check((c, marker), (str, list, tuple, np.ndarray, Series))
-    instance_check(s, (type(None), float, list, tuple, np.ndarray, Series))
+    instance_check(s, (type(None), int, float, list, tuple, np.ndarray, Series))
     instance_check(alpha, (type(None), float))
     instance_check(ax, (type(None), matplotlib.axes.Axes))
-    instance_check((dense, with_jitter, fit_line, with_grid), bool)
+    instance_check((dense, with_jitter, fit_line, with_grid, legend), bool)
     instance_check((x_label, y_label, title, x_scale, y_scale), str)
     instance_check(fit_line_degree, int)
 
@@ -243,12 +249,11 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
         arrays_equal_size(X, Y, marker)
 
     if not isinstance(c, str):
-        _c = np.asarray(c)
-        arrays_equal_size(X, Y, _c)
         # do some prep work on the color variable.
-        _c, _cmode = _reconfigure_color_array(_c)
+        palette, _cmode = _reconfigure_color_array(np.asarray(c))
+        arrays_equal_size(X, Y, palette)
     else:
-        _c = c
+        palette = c
         _cmode = "static"
 
     if ax is None:
@@ -277,19 +282,19 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
         yp = _Y
 
     # draw
-    scat = _draw_scatter(xp, yp, _c, s, marker,
-                            alpha, ax, cmap=cmap, **scatter_kws)
+    scat = _draw_scatter(xp, yp, palette, s, marker,
+                         alpha, ax, cmap=cmap, **scatter_kws)
 
     # optionally fit a line of best fit
     if fit_line:
-        _draw_line_best_fit(_X, _Y, _c, ax, fit_line_degree)
+        _draw_line_best_fit(_X, _Y, palette, ax, fit_line_degree)
 
     if with_grid:
         ax.grid()
 
     # associate legend if colour map is used
-    if _cmode == "discrete":
-        _associate_legend(c, ax)
+    if _cmode == "discrete" and legend:
+        _associate_legend(c, palette, marker, ax)
     elif _cmode == "continuous":
         # add colorbar
         _make_colorbar(c, ax, cmap)

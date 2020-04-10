@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Creates custom legends."""
 
+import itertools as it
 import pandas as pd
 import matplotlib as mpl
 from matplotlib.lines import Line2D
@@ -41,5 +42,5 @@ def legend_scatter(markers, colors, labels, msize=15):
     """Given a mapping of markers, colors and labels, returns a scatterplot legend."""
     custom_scats = [Line2D([0], [0], color="w", marker=m, label=l,
                            markerfacecolor=c, markersize=msize)
-                    for m, c, l in zip(markers, colors, labels)]
+                    for m, c, l in it.zip_longest(markers, colors, labels)]
     return custom_scats

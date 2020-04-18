@@ -17,7 +17,6 @@ from turbopanda.plot import gridplot
 from turbopanda.utils import instance_check, intersect
 from turbopanda.ml._clean import ml_ready
 
-
 __all__ = ('coefficient', 'overview')
 
 
@@ -88,7 +87,7 @@ def coefficient(cv, plot=None):
 
 def _basic_correlation_matrix(plot, _cmatrix):
     # plot heatmap
-    plot.pcolormesh(_cmatrix, vmin=-1., vmax=1., cmap="seismic")
+    plot.imshow(_cmatrix, vmin=-1., vmax=1., cmap="seismic")
     # if we have too many labels, randomly choose some
     if _cmatrix.shape[0] > 10:
         tick_locs = np.random.choice(_cmatrix.shape[0], 10, replace=False)
@@ -97,10 +96,13 @@ def _basic_correlation_matrix(plot, _cmatrix):
         plot.set_yticks(tick_locs)
         plot.set_yticklabels(_cmatrix.iloc[:, tick_locs].columns)
     else:
-        plot.set_xticks(range(1,_cmatrix.shape[0]+1))
+        plot.set_xticks(range(_cmatrix.shape[0]))
         plot.set_xticklabels(_cmatrix.columns)
-        plot.set_yticks(range(1,_cmatrix.shape[0]+1))
+        plot.set_yticks(range(_cmatrix.shape[0]))
         plot.set_yticklabels(_cmatrix.columns)
+
+    plt.setp(plot.get_xticklabels(), rotation=45, ha="right",
+             rotation_mode="anchor")
 
     plot.tick_params('x', rotation=45)
     for tick in plot.get_xmajorticklabels():

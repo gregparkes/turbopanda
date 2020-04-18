@@ -6,8 +6,11 @@ from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
+from scipy import optimize as so
+
+from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import GridSearchCV, RepeatedKFold
+from sklearn.model_selection import GridSearchCV, RepeatedKFold, cross_val_score
 from sklearn.pipeline import Pipeline
 
 from turbopanda._metapanda import MetaPanda, SelectorType
@@ -16,10 +19,22 @@ from turbopanda.utils import dictchunk, instance_check
 
 from turbopanda.ml._clean import ml_ready
 from turbopanda.ml.plot import parameter_tune
-from turbopanda.ml._pgrid import make_parameter_grid
+from turbopanda.ml._pgrid import make_parameter_grid, make_optimize_grid, \
+    optimize_grid_for_model
+from turbopanda.ml._package import find_sklearn_model
 
 
-def grid(df: MetaPanda,
+def _min_cross_val_scores(theta, X, y, model, pnames, cv):
+    # clone the model
+    new_model = clone(model)
+    # get the mean scores and use this as the minimization objective
+    return -np.mean(
+        cross_val_score(new_model.set_params(**dict(zip(pnames, theta))),
+                        X, y, scoring="neg_root_mean_squared_error", cv=cv)
+    )
+
+
+def grid(df: "MetaPanda",
          x: SelectorType,
          y: str,
          models,
@@ -79,14 +94,14 @@ def grid(df: MetaPanda,
     '%filename_chunk%i.csv' so beware of clashes. Make sure to set `chunks=True` and `cache=str` where the `models`
     parameter is time-expensive.
 
-    By default, `fit_grid` tunes using the root mean squared error (RMSE). There is currently no option to change this.
+    By default, `grid` tunes using the root mean squared error (RMSE). There is currently no option to change this.
 
     By default, this model assumes you are working with a regression problem. Classification compatibility
     will arrive in a later version.
 
     See Also
     --------
-    fit_basic : Performs a rudimentary fit model with no parameter searching.
+    basic : Performs a rudimentary fit model with no parameter searching.
     sklearn.model_selection.GridSearchCV : Exhaustive search over specified parameter values for an estimator
 
     Examples
@@ -160,3 +175,86 @@ def grid(df: MetaPanda,
         parameter_tune(_cv_results)
 
     return _cv_results
+
+
+def optimize(df: "MetaPanda",
+             x: SelectorType,
+             y: str,
+             models,
+             cv: int = 5,
+             verbose: int = 0):
+    """Performs optimization grid analysis on the models selected.
+
+    This uses `scipy.optimize` function to minimize continuous parameters, for example `alpha` in a Lasso model.
+
+    .. note:: optimization only works on *continuous* parameters with each model.
+
+    Parameters
+    ----------
+    df : MetaPanda
+        The main dataset.
+    x : list/tuple of str
+        A list of selected column names for x or MetaPanda `selector`.
+    y : str
+        A selected y column.
+    models : tuple/dict
+        tuple: list of model names, uses default parameters
+        dict: key (model name), value tuple (parameter names) / dict: key (parameter name), value (list of values)
+    cv : int/tuple, optional (5, 10)
+        If int: just reflects number of cross-validations
+        If Tuple: (cross_validation, n_repeats) `for RepeatedKFold`
+    cache : str, optional
+        If not None, cache is a filename handle for caching the `cv_results` as a JSON/csv file.
+    plot : bool, optional
+        If True, produces appropriate plot determining for each parameter.
+    chunks : bool, optional
+        If True, and if cache is not None: caches the ML gridsearch into equal-sized chunks.
+        This saves chunk files which means that if part of the pipeline breaks, you can start from the previous chunk.
+    verbose : int, optional
+        If > 0, prints out statements depending on level.
+
+    Returns
+    -------
+    cv_results : MetaPanda
+        A dataframe result from GridSearchCV detailing iterations and all scores.
+
+    By default, `optimize` tunes using the root mean squared error (RMSE).
+       There is currently no option to change this.
+
+    By default, this model assumes you are working with a regression problem. Classification compatibility
+        will arrive in a later version.
+
+    See Also
+    --------
+    grid : Performs exhaustive grid search analysis on the models selected.
+    sklearn.model_selection.GridSearchCV : Exhaustive search over specified parameter values for an estimator
+
+    References
+     ----------
+    .. [1] Scikit-learn: Machine Learning in Python, Pedregosa et al., JMLR 12, pp. 2825-2830, 2011.
+    """
+    # checks
+    instance_check(df, MetaPanda)
+    instance_check(x, (str, list, tuple, pd.Index))
+    instance_check(y, str)
+    instance_check((cv, verbose), int)
+    instance_check(models, (tuple, list, dict))
+
+    _df, _xnp, _y, _xcols = ml_ready(df, x, y)
+
+    # define the parameter sets
+    param_sets = make_optimize_grid(models)
+
+    for m, params in zip(models, param_sets):
+        model = find_sklearn_model(m)[0]
+        inits, bounds = optimize_grid_for_model(params)
+        # minimize for every i element
+        mins = [
+            so.minimize(_min_cross_val_scores, x0=i,
+                        args=(_xnp, _y, model, params, cv),
+                        bounds=bounds) for i in inits
+        ]
+
+
+
+    pass

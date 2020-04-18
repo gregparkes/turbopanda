@@ -152,6 +152,7 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
             alpha: Optional[float] = None,
             cmap: str = "viridis",
             legend: bool = True,
+            colorbar: bool = True,
             with_jitter: bool = False,
             x_label: str = "x-axis",
             y_label: str = "y-axis",
@@ -192,6 +193,8 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
         The default colormap for continuous-valued c.
     legend : bool, default=True
         Draws a legend if the 'c' variable is discrete
+    colorbar : bool, default=True
+        Draws a colorbar if the 'c' variable is continuous
     with_jitter : bool, default=False
         If True, and dense=True, adds some jitter to the uniform points
     x_label : str, default="x-axis"
@@ -295,7 +298,7 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
     # associate legend if colour map is used
     if _cmode == "discrete" and legend:
         _associate_legend(c, palette, marker, ax)
-    elif _cmode == "continuous":
+    elif _cmode == "continuous" and colorbar:
         # add colorbar
         _make_colorbar(c, ax, cmap)
 

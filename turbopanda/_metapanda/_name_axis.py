@@ -6,6 +6,7 @@ from typing import Tuple
 
 import pandas as pd
 
+from turbopanda._deprecator import deprecated
 from turbopanda.str import string_replace
 from turbopanda.utils import belongs, is_twotuple
 from ._inspect import inspect
@@ -60,6 +61,8 @@ def rename_axis(self,
     return self
 
 
+@deprecated("0.2.5", "0.3.0", instead="apply('add_prefix')",
+            reason="This pandas replacement is not necessary to warrant a function")
 def add_prefix(self, pref: str,
                selector: SelectorType = None) -> "MetaPanda":
     """Add a prefix to all of the columns or selected columns.
@@ -86,6 +89,8 @@ def add_prefix(self, pref: str,
     return self
 
 
+@deprecated("0.2.5", "0.3.0", instead="apply('add_suffix')",
+            reason="This pandas replacement is not necessary to warrant a function")
 def add_suffix(self, suf: str,
                selector: SelectorType = None) -> "MetaPanda":
     """Add a suffix to all of the columns or selected columns.

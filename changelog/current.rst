@@ -17,6 +17,7 @@ Changelog
 
 `turbopanda.metapanda`
 ......................
+- `add_prefix`, `add_suffix` are now deprecated, to be removed in v0.3
 
 `turbopanda.ml`
 ...............

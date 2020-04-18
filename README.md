@@ -6,9 +6,15 @@ The aim of this library is extend the functionality of the `pandas` library pack
  which is extensively used for data munging,
  manipulation and visualization of large datasets.
 
-## Motivation
+## The basic idea
 
 ![Image not found](extras/readme.svg "Describing the interactions between turbopanda and pandas.")
+
+The main purpose is to build a layer on top of pandas which regulates the main data and also associates
+some meta information to the columns which *remembers* interactions the user has with it,
+specifically to do with grouping data columns by the name or some other defining feature.
+
+## Motivation
 
 There are a number of areas that the Pandas library is
   lacklustre from a user standpoint - we'll cover a few of these in more detail and then
@@ -276,8 +282,10 @@ jupyter notebook
 
 We would like to acknowledge the following sources for inspiration for much of this work:
 
-- pandas dev team: [Github](https://github.com/pandas-dev/pandas)
-- `pingouin` [python library][3]
+- `pandas` [dev team](https://github.com/pandas-dev/pandas): Forming a solid backbone package to build upon
+- `pingouin` [python library][3]: For inspiration and code regarding correlation analysis
+- `pyitlib` [library](https://github.com/pafoster/pyitlib): For inspiration on mutual information and entropy
+- `matplotlib` [library][4]
 - `statsmodels` and `patsy` libraries for inspiration on how to formulate design matrices.
 - Wikipedia for many topics
 
@@ -293,6 +301,7 @@ We would like to acknowledge the following sources for inspiration for much of t
 
 [3]: <https://github.com/raphaelvallat/pingouin/blob/master/pingouin/correlation.py> "Pingouin's correlation"
 
+[4]: <https://matplotlib.org/3.1.0/gallery/images_contours_and_fields/image_annotated_heatmap.html> "Matplotlib heatmap"
 ***
 
 Ensure that any use of this material is appropriately referenced 

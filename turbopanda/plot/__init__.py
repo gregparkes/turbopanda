@@ -4,8 +4,10 @@
 
 from ._gridplot import gridplot
 from ._histogram import histogram
-# from ._kdeplot import kde2d
 from ._scatter import scatter
+from ._heatmap import heatmap
+# from ._kdeplot import kde2d
+
 from ._widgets import legend_line, legend_scatter
 from ._palette import color_qualitative
 from ._save_fig import save

@@ -50,9 +50,6 @@ def is_pipe_structure(pipe: Tuple[PipeTypeRawElem, ...]) -> bool:
         if len(p) != 3:
             raise ValueError("pipe of length 3 is of length {}".format(len(pipe)))
         # element 1: string
-        instance_check(p[0], str)
-        instance_check(p[1], (list, tuple))
-        instance_check(p[2], dict)
     return True
 
 
@@ -158,7 +155,6 @@ class Pipe(object):
             fresh Pipe object
         """
         # perform check
-        is_pipe_structure(pipes)
         obj = cls()
         obj._p = pipes
         return obj

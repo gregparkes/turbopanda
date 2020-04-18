@@ -97,7 +97,7 @@ def view(self, *selector: SelectorType, **selector_kwargs) -> pd.Index:
     return sel
 
 
-@deprecated("0.2.6", "0.2.8", instead="`MetaPanda.select`", reason="redundancy with view, view_not.")
+@deprecated("0.2.5", "0.2.8", instead="`MetaPanda.select`", reason="redundancy with view, view_not.")
 def search(self, *selector: SelectorType) -> pd.Index:
     """View the intersection of columns in `df_`.
 
@@ -180,8 +180,6 @@ def select(self, sc: str) -> pd.Index:
         pd.Index
         str [regex, df.column name, cached name, meta.column name (that references a boolean column)]
         list/tuple of the above
-
-
 
     .. note:: We do not currently incorporate the use of brackets.
 

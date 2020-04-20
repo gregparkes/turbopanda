@@ -8,6 +8,7 @@ from ._scatter import scatter
 from ._heatmap import heatmap
 # from ._kdeplot import kde2d
 
+from ._annotate import annotate
 from ._widgets import legend_line, legend_scatter
 from ._palette import color_qualitative
 from ._save_fig import save

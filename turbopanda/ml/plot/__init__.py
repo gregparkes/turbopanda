@@ -6,3 +6,4 @@ from ._plot import best_model
 from ._plot_learning import learning_curve
 from ._plot_overview import coefficient, overview
 from ._plot_tune import parameter_tune
+from ._pca_overview import overview_pca

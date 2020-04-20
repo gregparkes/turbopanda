@@ -7,6 +7,7 @@ import matplotlib
 import itertools as it
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from pandas import CategoricalDtype
 
 from typing import Union, List, Tuple, Optional
 from pandas import Series
@@ -96,7 +97,7 @@ def _reconfigure_color_array(c):
         # convert to 'string' type and use below code.
         c = c.astype(np.str)
 
-    if c.dtype.kind == "U":
+    if c.dtype.kind == "U" or isinstance(c.dtype, CategoricalDtype):
         # i.e we have a string array
         names = np.unique(c)
         # map a qualitative 'name' to each value
@@ -237,12 +238,14 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
     if isinstance(marker, str):
         belongs(marker, _marker_set())
 
+    # get subset where missing values from either are dropped
+    _X = np.asarray(X).flatten()
+    _Y = np.asarray(Y).flatten()
+
     # warn the user if n is large to maybe consider dense option?
-    if X.shape[0] > 15000 and not dense:
+    if _X.shape[0] > 15000 and not dense:
         warn("Data input size: {} is large, consider setting dense=True".format(X.shape[0]), UserWarning)
 
-    # get subset where missing values from either are dropped
-    _X, _Y = remove_na(np.asarray(X), np.asarray(Y), paired=True)
     # reconfigure colors if qualitative
     if isinstance(s, (list, tuple)) and not dense:
         s = np.asarray(s)
@@ -254,6 +257,7 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
     if not isinstance(c, str):
         # do some prep work on the color variable.
         palette, _cmode = _reconfigure_color_array(np.asarray(c))
+        # perform size check
         arrays_equal_size(X, Y, palette)
     else:
         palette = c

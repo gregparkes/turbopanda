@@ -14,8 +14,8 @@ from __future__ import absolute_import, division, print_function
 # imports
 import os
 import warnings
+import functools
 from typing import Callable, List, Optional, Tuple, Union
-
 from pandas import DataFrame, concat
 
 # locals
@@ -211,13 +211,13 @@ def cached_chunk(func: Callable,
         return mpf
 
 
-def cache(filename: str = "example1.json") -> Callable:
+def cache(_func=None, *, filename: str = "example1.json") -> Callable:
     """Provides automatic {.json, .csv} decorator caching for `turb.MetaPanda` or `pd.DataFrame`.
 
     .. note:: this is a decorator function, not to be called directly.
 
     Parameters
-    --------
+    ----------
     filename : str, optional
         The name of the file to cache to, or read from. This is fixed.
          Accepts {'json', 'csv'} extensions only.
@@ -259,10 +259,10 @@ def cache(filename: str = "example1.json") -> Callable:
     belongs(filename.rsplit(".")[-1], ("json", "csv"))
 
     # define decorator
-    def decorator(func):
+    def _decorator_cache(func):
         """Basic decorator."""
-
-        def _caching_function(*args, **kwargs):
+        @functools.wraps(func)
+        def _wrapper_cache(*args, **kwargs):
             # if we find the file
             if os.path.isfile(filename):
                 # read it in
@@ -285,6 +285,9 @@ def cache(filename: str = "example1.json") -> Callable:
                                   ImportWarning)
                     return mpf
 
-        return _caching_function
+        return _wrapper_cache
 
-    return decorator
+    if _func is None:
+        return _decorator_cache
+    else:
+        return _decorator_cache(_func)

@@ -7,7 +7,7 @@ from ._convert import *
 from ._error_raise import *
 from ._factor import nearest_factors
 from ._files import *
-from ._panderize import panderfy
+from ._panderize import panderfy, lparallel
 from ._remove_na import remove_na
 from ._sets import *
 from ._sorting import broadsort, zfilter

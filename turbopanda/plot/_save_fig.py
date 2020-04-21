@@ -63,6 +63,11 @@ def save(fig_obj: plt.Figure,
     success : bool
         Whether it was successful or not
     """
+
+    instance_check(fig_obj, plt.axes.Figure)
+    instance_check((plot_type, name, fp, savemode), str)
+    instance_check(dpi, int)
+
     accepted_types = (
         "scatter", "kde", "heatmap", "cluster", "bar", "hist", "kde", "quiver",
         "box", "line", "venn", "multi", "pie"

@@ -85,7 +85,9 @@ def _model_selection_parameters(cv_results,
         plot.set_ylabel("%s %s" % (y_name, score))
 
 
-def parameter_tune(cv_results, y='test', arrange='square'):
+def parameter_tune(cv_results,
+                   y='test',
+                   arrange='square'):
     """Iterates over every model type in `cv_results` and plots the best parameter. cv_results is MetaPanda
 
     Generates a series of plots for each model type, plotting the parameters.

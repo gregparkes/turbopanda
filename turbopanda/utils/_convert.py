@@ -12,10 +12,9 @@ from ._bool_series import is_column_int, is_n_value_column
 
 ArrayLike = Union[np.ndarray, pd.Series, pd.DataFrame]
 
-
 __all__ = ('listify', 'switcheroo', 'integer_to_boolean',
            'object_to_categorical', 'boolean_to_integer', 'power_scale',
-           'float_to_integer', 'standardize')
+           'float_to_integer', 'standardize', 'ordinal')
 
 
 def listify(a):
@@ -30,6 +29,21 @@ def power_scale(ser: pd.Series, factor: float = 2.) -> pd.Series:
     """Scales every value in ser by factor amount."""
     return np.power(ser, factor)
 
+
+def ordinal(num: int) -> str:
+    """Returns the ordinal number of a given integer, as a string.
+
+    eg. 1 -> 1st, 2 -> 2nd, 3 -> 3rd, etc.
+
+    References
+    ----------
+    Taken from https://www.pythoncentral.io/validate-python-function-parameters-and-return-types-with-decorators/
+    """
+    if 10 <= num % 100 < 20:
+        return '{0}th'.format(num)
+    else:
+        ordn = {1: 'st', 2: 'nd', 3: 'rd'}.get(num % 10, 'th')
+        return '{0}{1}'.format(num, ordn)
 
 
 def switcheroo(ser: pd.Series) -> pd.Series:

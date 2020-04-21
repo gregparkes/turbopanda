@@ -7,6 +7,7 @@ from typing import Callable
 import pandas as pd
 
 from turbopanda.utils import boolean_series_check
+from turbopanda._deprecator import deprecated
 from ._inspect import inspect
 from ._types import SelectorType
 
@@ -78,6 +79,7 @@ def keep(self, *selector: SelectorType) -> "MetaPanda":
     return self
 
 
+@deprecated("0.2.4", "0.2.8", instead="use custom pipe", reason="This method is too verbose and needs rethinking")
 def filter_rows(self,
                 func: Callable,
                 selector: SelectorType = None,

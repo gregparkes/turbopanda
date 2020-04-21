@@ -127,13 +127,10 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
         Allows further modifications to the axes post-histogram
     """
     instance_check(X, (np.ndarray, pd.Series, list, tuple))
-    instance_check(density, bool)
-    instance_check(stat, bool)
-    instance_check(title, str)
-    instance_check(x_label, str)
+    instance_check((density, stat, smoothen_kde), bool)
+    instance_check((title, x_label), str)
     instance_check(kde, (str, type(None), list, tuple))
     instance_check(kde_range, float)
-    instance_check(smoothen_kde, bool)
 
     # convert to numpy.
     _X = np.asarray(X)

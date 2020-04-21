@@ -23,7 +23,8 @@ from ._save_fig import save
 __all__ = ("scatter_grid", "missing", "hist_grid")
 
 
-@deprecated("0.2.5", "0.2.7", instead="No replacement.", reason="There are other libraries that perform this function better")
+@deprecated("0.2.5", "0.2.7", instead="No replacement.", reason="There are other libraries that perform this function "
+                                                                "better")
 def missing(mdf: "MetaPanda"):
     """
     Plots the missing data as a greyscale heatmap.
@@ -172,10 +173,9 @@ def scatter_grid(mdf: Union[DataFrame, "MetaPanda"],
     from turbopanda.corr import bicorr
 
     # checks
-    instance_check(plot_size, int)
+    instance_check((plot_size, best_fit_deg), int)
     instance_check(savepath, (type(None), str, bool))
     instance_check(best_fit, bool)
-    instance_check(best_fit_deg, int)
     nonnegative(best_fit_deg)
     nonnegative(plot_size)
     belongs(arrange, ["square", "row", "column"])

@@ -6,3 +6,4 @@
 from ._cache import cache, cached, cached_chunk
 # sound decorator
 from ._sounds import bleep
+from ._vectorize import Vector, vectorize

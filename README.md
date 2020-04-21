@@ -287,6 +287,7 @@ We would like to acknowledge the following sources for inspiration for much of t
 - `pyitlib` [library](https://github.com/pafoster/pyitlib): For inspiration on mutual information and entropy
 - `matplotlib` [library][4]
 - `statsmodels` and `patsy` libraries for inspiration on how to formulate design matrices.
+- [PythonCentral](https://www.pythoncentral.io/validate-python-function-parameters-and-return-types-with-decorators/) tutorials for code validation
 - Wikipedia for many topics
 
 ## References

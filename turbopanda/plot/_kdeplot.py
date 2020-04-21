@@ -3,14 +3,29 @@
 """Code for plotting pretty 2D KDEs in primitive matplotlib."""
 
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
+from typing import Union, List, Tuple
+from pandas import Series
 
 from turbopanda.stats import density
-from turbopanda.utils import remove_na
+from turbopanda.utils import remove_na, instance_check, arrays_equal_size
 
 
-def kde2d(X, Y, c='red', ax=None, fill=False, with_scatter=False, **contour_kwargs):
+def kde2d(X: Union[np.ndarray, Series, List, Tuple],
+          Y: Union[np.ndarray, Series, List, Tuple],
+          c: str = 'red',
+          ax: matplotlib.axes.Axes = None,
+          fill: bool = False,
+          with_scatter: bool = False,
+          **contour_kwargs):
     """TODO: Generates a 2D KDE using contours."""
+    instance_check((X, Y), (list, tuple, np.ndarray, Series))
+    instance_check(c, str)
+    instance_check((fill, with_scatter), bool)
+    instance_check(ax, matplotlib.axes.Axes)
+    arrays_equal_size(X, Y)
+
     # calculate density
     _X, _Y = remove_na(np.asarray(X), np.asarray(Y), paired=True)
 

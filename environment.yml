@@ -13,6 +13,7 @@ dependencies:
   - numba>=0.48.0
   - xlrd
   - statsmodels
+  - joblib
   - pip:
     - tables
     - toolz

@@ -54,11 +54,10 @@ def _explained_variance_plot(model, ax, cutoff=.9):
 def _annotate_on_magnitude(model, labels, n_samples_annotate, ax):
     if len(labels) != model.components_.shape[0]:
         raise ValueError("number of labels: {} passed does not match component PCA shape: {}".format(len(labels),
-                                                                                                     model.components_.shape[
-                                                                                                         0]))
+                                                                                                     model.components_.shape[                                                                                   0]))
     mag = np.linalg.norm(model.components_[:, :2], axis=1)
     selected = np.argpartition(mag, -n_samples_annotate)[-n_samples_annotate:]
-    annotate(model.components_[:, 0], model.components_[:, 1], list(labels), selected, ax=ax)
+    annotate(model.components_[:, 0], model.components_[:, 1], list(labels), selected, ax=ax, word_shorten=15)
 
 
 def _best_principle_eigenvectors(model, labels, k=5, p=5):
@@ -79,6 +78,17 @@ def _best_principle_eigenvectors(model, labels, k=5, p=5):
         xs.append(["PC{}\n({:0.1f}%)".format(i+1, evr[i]*100)] * k)
 
     return join(*xs), join(*scores), join(*label_set)
+
+
+def _best_eigenvector_plot(x, y, labels, ax, nk=(10, 5)):
+    n_samples, n_pcs = nk
+
+    ax.scatter(x, y)
+    ax.hlines(0, -.5, n_pcs - .5, linestyle="--")
+    annotate(x, y, labels, ax=ax, word_shorten=15)
+    ax.set_ylabel("Eigenvector")
+    ax.set_title("Top {} eigenvector".format(n_samples_annotate))
+    ax.grid()
 
 
 def overview_pca(model,
@@ -123,10 +133,6 @@ def overview_pca(model,
         _annotate_on_magnitude(model, labels, n_samples_annotate, axes[0])
         # 3 plot the top N components by the `most important eigenvector values`
         _x3, _y3, _sel_labels = _best_principle_eigenvectors(model, labels=labels, k=n_samples_annotate, p=n_pcs)
-        axes[-1].scatter(_x3, _y3)
-        annotate(_x3, _y3, _sel_labels, ax=axes[-1], word_shorten=15)
-        axes[-1].set_ylabel("Eigenvector")
-        axes[-1].set_title("Top {} eigenvector".format(n_samples_annotate))
-        axes[-1].grid()
+        _best_eigenvector_plot(_x3, _y3, _sel_labels, axes[-1], nk=(n_samples_annotate, n_pcs))
 
     fig.tight_layout()

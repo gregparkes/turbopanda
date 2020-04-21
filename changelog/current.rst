@@ -6,11 +6,21 @@ Version 0.2.5
 
 Changelog
 ---------
-- Added scatterpoints example notebook
+- Added joblib requirement
+- Added `scatterplots`, `vectorizer` example notebook
+- Tweaks to other examples, such as `gridplot` and `string-analysis`
+- Removed `MetaML` object
 
 `turbopanda.corr`
 .................
 - Removed `pcm`
+
+`turbopanda.dev`
+................
+- |Feature| Added `vectorize` decorator, which along with a `Vector` object
+will allow for parallel parameterization of custom functions.
+- |Enhancement| `cache` decorator now no longer requires bracket notation if a filename is not
+specified.
 
 `turbopanda.merge`
 ..................
@@ -21,7 +31,8 @@ Changelog
 
 `turbopanda.ml`
 ...............
-- |MajorFeature| Added `pca` function to `.fit` and `.plot` to do basic dimensionality reduction and analysis
+- |MajorFeature| Added `pca` function to `.fit` and `.plot` to do basic dimensionality reduction
+and analysis.
 - |Feature| Added `overview_pca` to the plotting to look at principle components
 - |Efficiency| Folder reorganized into *.fit* and *.plot* submodules
 
@@ -38,9 +49,6 @@ Changelog
 - Added a bunch of functions to the palette selection
 - Split `legend` into `legend_line` and `legend_scatter`
 
-`turbopanda.stats`
-..................
-
 `turbopanda.str`
 ................
 - |Feature| Added `common_substrings` which encompasses single and cartesian product-like input
@@ -50,6 +58,15 @@ Changelog
 `turbopanda.utils`
 ..................
 - |Feature| `array_equal_sizes` check for k arrays of equal dimensions
-- |Feature| `nonnegative` check for integers, `disallow_instance_pair` to prevent weird pair combinations for input
-- |Enhancement| `instance_check` now performs checks on groups of objects using the same type check
+- |Feature| `nonnegative` check for integers, `disallow_instance_pair` to prevent weird pair
+- |Feature| `ordinal` for converting integers to ordinal string
+- |Feature| `lparallel` for parallel list comprehension given a set of arguments
+combinations for input.
+- |Enhancement| `instance_check` now performs checks on groups of objects using the
+same type check.
+- A bunch of other functions such as `dictchain` for utility purposes
 - `zfilter`, `standardize` is now deprecated
+
+`turbopanda.validate`
+.....................
+- |Feature| Validation decorators to autocheck types of various functions

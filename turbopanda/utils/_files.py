@@ -25,10 +25,6 @@ def get_file_expanded(files: List[str]) -> List:
     return join(*[glob.glob(f) for f in files if _is_filepath_object(f)])
 
 
-def get_super_directory(dname):
-    """Given the directory name, """
-
-
 def list_dir(obj: Any) -> List:
     """Lists all public functions, classes within a list directory."""
     return [a for a in dir(obj) if not a.startswith("__") and not a.startswith("_")]

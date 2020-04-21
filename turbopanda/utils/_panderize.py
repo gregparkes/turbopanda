@@ -6,6 +6,7 @@ from typing import Callable, Union
 
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed, cpu_count
 
 
 def panderfy(func: Callable):
@@ -29,3 +30,8 @@ def panderfy(func: Callable):
             return result
 
     return _wrapper
+
+
+def lparallel(func: Callable, args):
+    """Performs a parallel list comprehension operation on f(*args)"""
+    return Parallel(cpu_count()-1)(delayed(f)(*arg) for arg in args)

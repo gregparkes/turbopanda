@@ -7,10 +7,9 @@ from typing import Callable, List, Tuple, Union
 
 import numpy as np
 
-from turbopanda._deprecator import deprecated
 from ._error_raise import instance_check
 
-__all__ = ('broadsort', 'zfilter')
+__all__ = ('broadsort')
 
 
 def broadsort(a: Union[List, Tuple, np.ndarray]) -> List:
@@ -35,9 +34,3 @@ def broadsort(a: Union[List, Tuple, np.ndarray]) -> List:
         # if we have objects, try to use the __class__ object to sort them by.
         ss = np.argsort([str(b.__class__) for b in a])
         return np.asarray(a)[ss].tolist()
-
-
-@deprecated("0.2.4", "0.2.6", instead="use `itertools`", reason="This method serves no useful purpose")
-def zfilter(f: Callable, x: Union[List, Tuple]) -> List:
-    """Filters elements using a custom function."""
-    return list(it.filterfalse(f, x))

@@ -22,6 +22,8 @@ from ._merge import merge
 from ._metapanda import MetaPanda
 from ._pipe import Pipe
 from .corr import correlate
+# vectorization methods, hmmmm
+from .dev import Vector, vectorize
 # import these functions so to not lose functionality...
 from .dev import cache, cached
 

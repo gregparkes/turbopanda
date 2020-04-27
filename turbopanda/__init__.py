@@ -1,7 +1,7 @@
 # check imports
 
 """ This block handles the import needs of the package """
-hard_dependencies = ("numpy", "scipy", "pandas", "matplotlib", "sklearn")
+hard_dependencies = ("numpy", "scipy", "pandas", "matplotlib", "sklearn", "joblib")
 missing_dependencies = []
 
 for dependency in hard_dependencies:
@@ -18,18 +18,17 @@ del hard_dependencies, dependency, missing_dependencies
 # folder extensions.
 from ._fileio import read
 from ._merge import merge
+from ._vectorize import vectorize, Param
 # import Objects and critical global functions
 from ._metapanda import MetaPanda
+# vectorization methods
+from .dev import cache, cached
 from ._pipe import Pipe
 from .corr import correlate
-# vectorization methods, hmmmm
-from .dev import Vector, vectorize
-# import these functions so to not lose functionality...
-from .dev import cache, cached
 
 from . import corr, dev, ml, plot, stats, str, utils, pipe
 
-__version__ = "0.2.5"
+__version__ = "0.2.6"
 __name__ = "turbopanda"
 __doc__ = """turbopanda: Turbo-charging the Pandas library in an integrative, meta-orientated style.
 

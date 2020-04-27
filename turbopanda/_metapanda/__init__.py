@@ -10,8 +10,9 @@ from typing import Any, Dict, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from turbopanda._pipe import Pipe
-from turbopanda.utils import join, split_file_directory
+# from turbopanda._pipe import Pipe
+from turbopanda.utils._files import split_file_directory
+from turbopanda.utils._sets import join
 from ._drop_values import drop_columns
 from ._inspect import inspect
 from ._types import SelectorType
@@ -385,8 +386,10 @@ class MetaPanda(object):
             # define meta
             self.update_meta()
             # compute cleaning.
+            """
             if self._with_clean:
                 self.compute(Pipe.clean(with_drop=False), inplace=True)
+            """
             if "colnames" not in self._df.columns:
                 self._df.columns.name = "colnames"
             if "counter" not in self._df.columns:

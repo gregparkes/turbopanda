@@ -6,9 +6,10 @@ from __future__ import absolute_import, division, print_function
 from turbopanda._metapanda import SelectorType
 from turbopanda.pipe import zscore, clean1
 from turbopanda.ml.plot import overview_pca
+from turbopanda.utils import instance_check
 
 
-def pca(df, x=None, plot=False):
+def pca(df, x=None, plot=False, plot_kwargs=None):
     """Fits a PCA model to the data set.
 
     Parameters
@@ -19,6 +20,8 @@ def pca(df, x=None, plot=False):
         A subset of df to select, optionally
     plot : bool
         If True, plots an 'overview' of the PCA result
+    plot_kwargs : dict, optional
+        optional arguments to pass to `pca_overview`.
 
     Returns
     -------
@@ -26,6 +29,9 @@ def pca(df, x=None, plot=False):
         A PCA model
     """
     from sklearn.decomposition import PCA
+
+    instance_check(plot, bool)
+    instance_check(plot_kwargs, (type(None), dict))
 
     if x is None:
         x = df.columns
@@ -43,6 +49,8 @@ def pca(df, x=None, plot=False):
     _pca.fit(_x)
 
     if plot:
-        overview_pca(_pca, labels=cols)
+        if plot_kwargs is None:
+            plot_kwargs = {}
+        overview_pca(_pca, labels=cols, **plot_kwargs)
 
     return _pca

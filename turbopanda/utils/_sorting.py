@@ -9,8 +9,6 @@ import numpy as np
 
 from ._error_raise import instance_check
 
-__all__ = ('broadsort')
-
 
 def broadsort(a: Union[List, Tuple, np.ndarray]) -> List:
     """Sorts elements of most object types.

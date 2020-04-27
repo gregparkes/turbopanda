@@ -1,0 +1,72 @@
+.. include:: _commands.rst
+
+Version 0.2.5
+=============
+**7th Apr 2020**
+
+Changelog
+---------
+- Added joblib requirement
+- Added `scatterplots`, `vectorizer` example notebook
+- Tweaks to other examples, such as `gridplot` and `string-analysis`
+- Removed `MetaML` object
+
+`turbopanda.corr`
+.................
+- Removed `pcm`
+
+`turbopanda.dev`
+................
+- |Feature| Added `vectorize` decorator, which along with a `Vector` object
+will allow for parallel parameterization of custom functions.
+- |Enhancement| `cache` decorator now no longer requires bracket notation if a filename is not
+specified.
+
+`turbopanda.merge`
+..................
+
+`turbopanda.metapanda`
+......................
+- `add_prefix`, `add_suffix` are now deprecated, to be removed in v0.3
+
+`turbopanda.ml`
+...............
+- |MajorFeature| Added `pca` function to `.fit` and `.plot` to do basic dimensionality reduction
+and analysis.
+- |Feature| Added `overview_pca` to the plotting to look at principle components
+- |Efficiency| Folder reorganized into *.fit* and *.plot* submodules
+
+`turbopanda.pipe`
+.................
+- |Feature| Added `yeo_johnson`, `zscore` operations
+
+`turbopanda.plot`
+.................
+- |Feature| Added `scatter` for normal and density-based scatter plots
+- |Feature| Added `annotate` to add text on to most matplotlib plots in a coherent way
+- |Enhancement| `hist_grid`, `scatter_grid` now also accept DataFrame as arguments
+- |Fix| A bug in `scatter` which didn't allow categorical types to work with color selection
+- Added a bunch of functions to the palette selection
+- Split `legend` into `legend_line` and `legend_scatter`
+
+`turbopanda.str`
+................
+- |Feature| Added `common_substrings` which encompasses single and cartesian product-like input
+- |Feature| Added `shorten` which shortens strings to take up less space when visualising
+- `common_substring_match` and its pairwise form are now deprecated
+
+`turbopanda.utils`
+..................
+- |Feature| `array_equal_sizes` check for k arrays of equal dimensions
+- |Feature| `nonnegative` check for integers, `disallow_instance_pair` to prevent weird pair
+- |Feature| `ordinal` for converting integers to ordinal string
+- |Feature| `lparallel` for parallel list comprehension given a set of arguments
+combinations for input.
+- |Enhancement| `instance_check` now performs checks on groups of objects using the
+same type check.
+- A bunch of other functions such as `dictchain` for utility purposes
+- `zfilter`, `standardize` is now deprecated
+
+`turbopanda.validate`
+.....................
+- |Feature| Validation decorators to autocheck types of various functions

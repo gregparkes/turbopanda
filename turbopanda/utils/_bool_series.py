@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from typing import Union
 
-from ._typegroups import c_cat, c_float, c_int
+from ._typegroups import c_cat
 
 __all__ = ('nunique', 'is_possible_category', 'not_column_float', 'is_column_boolean',
            'is_column_float', 'is_column_string', 'is_column_int', 'is_column_unsigned_int',
@@ -103,7 +103,7 @@ def is_column_numeric(ser: Union[pd.Series, np.ndarray]) -> bool:
 """ Dataframe checks using MetaPanda """
 
 
-def is_dataframe_float(df: Union[np.ndarray, pd.DataFrame]):
+def is_dataframe_float(df: Union[np.ndarray, pd.DataFrame]) -> bool:
     """Checks whether every column in df is of type float"""
     if isinstance(df, (np.ndarray, pd.Series, pd.Index)):
         return df.dtype.kind == 'f'

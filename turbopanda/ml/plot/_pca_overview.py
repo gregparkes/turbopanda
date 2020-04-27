@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from turbopanda.plot import gridplot, scatter, annotate
-from turbopanda.utils import join
+from turbopanda.utils import join, instance_check, nonnegative
 
 
 def _plot_pca_scatter(model, ax, dist_col: bool):
@@ -44,7 +44,7 @@ def _explained_variance_plot(model, ax, cutoff=.9):
                edgecolors="red", s=100,
                label="n=%d, auc=%.3f" % (_x[best_index], auc))
     # plot 0 to 1 line
-    ax.plot([0, n+1], [0, 1], 'k--')
+    ax.plot([0, n], [0, 1], 'k--')
     ax.set_xlabel("N\n(Best proportion: %.3f)" % (_x[best_index] / (n+1)))
     ax.set_ylabel("Explained variance (ratio)\n(cutoff=%.2f)" % cutoff)
     ax.grid()
@@ -80,22 +80,22 @@ def _best_principle_eigenvectors(model, labels, k=5, p=5):
     return join(*xs), join(*scores), join(*label_set)
 
 
-def _best_eigenvector_plot(x, y, labels, ax, nk=(10, 5)):
+def _best_eigenvector_plot(x, y, labels, ax, nk=(6, 5)):
     n_samples, n_pcs = nk
 
     ax.scatter(x, y)
     ax.hlines(0, -.5, n_pcs - .5, linestyle="--")
     annotate(x, y, labels, ax=ax, word_shorten=15)
     ax.set_ylabel("Eigenvector")
-    ax.set_title("Top {} eigenvector".format(n_samples_annotate))
     ax.grid()
 
 
 def overview_pca(model,
                  distance_color=True,
                  labels=None,
-                 n_samples_annotate=10,
-                 n_pcs=5):
+                 n_samples_annotate=6,
+                 n_pcs=5,
+                 ax_size=4):
     """Provides an overview plot from a PCA result.
 
     Parameters
@@ -111,17 +111,30 @@ def overview_pca(model,
         Defines the number of labels to show if `labels` is not None in plot 1
     n_pcs : int, default=5
         The number of principle components to consider in plot 3
+    ax_size : int, default=4
+        The default size for each axes.
 
     Other Parameters
     ----------------
     scatter_kws : dict
         keywords to pass to `plt.scatter`
     """
+    instance_check((n_samples_annotate, n_pcs, ax_size), int)
+    instance_check(distance_color, bool)
+    instance_check(labels, (type(None), np.ndarray, pd.Series, list, tuple))
+    nonnegative(n_samples_annotate)
+    nonnegative(n_pcs)
+    nonnegative(ax_size)
 
     if labels is not None:
-        fig, axes = gridplot(3, ax_size=4)
+        fig, axes = gridplot(3, ax_size=ax_size)
     else:
-        fig, axes = gridplot(2, ax_size=4)
+        fig, axes = gridplot(2, ax_size=ax_size)
+
+    if n_samples_annotate > model.n_components_:
+        n_samples_annotate = model.n_components_
+    if n_pcs > model.n_components_:
+        n_pcs = model.n_components_
 
     # 1 plot the scatter of PC
     _plot_pca_scatter(model, axes[0], distance_color)
@@ -134,5 +147,6 @@ def overview_pca(model,
         # 3 plot the top N components by the `most important eigenvector values`
         _x3, _y3, _sel_labels = _best_principle_eigenvectors(model, labels=labels, k=n_samples_annotate, p=n_pcs)
         _best_eigenvector_plot(_x3, _y3, _sel_labels, axes[-1], nk=(n_samples_annotate, n_pcs))
+        axes[-1].set_title("Top {} eigenvectors".format(n_samples_annotate))
 
     fig.tight_layout()

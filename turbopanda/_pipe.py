@@ -13,6 +13,7 @@ from pandas import Index, Series, to_numeric
 from sklearn import preprocessing
 
 # locals
+from ._deprecator import deprecated
 from .utils import instance_check, is_n_value_column, join, object_to_categorical
 
 PipeTypeRawElem = Tuple[str, Tuple, Dict]
@@ -53,6 +54,7 @@ def is_pipe_structure(pipe: Tuple[PipeTypeRawElem, ...]) -> bool:
     return True
 
 
+@deprecated("0.2.6", "0.2.8", instead=".pipe")
 def public():
     """Defines the public Pipe functions to define a pipe."""
     return 'no_id', 'ml_regression', 'clean'
@@ -60,7 +62,6 @@ def public():
 
 def _single_pipe(argument: PipeTypeCleanElem) -> Tuple:
     """Converts a single command line into pipeable code for MetaPanda."""
-    instance_check(argument[0], str)
 
     pipe_command = [argument[0]]
     pipe_d = {}
@@ -88,6 +89,7 @@ def _single_pipe(argument: PipeTypeCleanElem) -> Tuple:
     return tuple(pipe_command)
 
 
+@deprecated("0.2.6", "0.3", instead=".pipe extension")
 class Pipe(object):
     """An object for handling pipelines of data.
 
@@ -106,6 +108,8 @@ class Pipe(object):
     None
     """
 
+    @deprecated("0.2.6", "0.3", instead=".pipe extension",
+                reason="This object is too ugly, use pandas.pipe methods instead")
     def __init__(self, *args: PipeTypeCleanElem):
         """Define a Pipeline for your object.
 

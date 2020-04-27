@@ -88,6 +88,3 @@ def remove_na(x: np.ndarray, y: np.ndarray = None, paired=False, axis='rows'):
         x = x.compress(both, axis=ax)
         y = y.compress(both, axis=ax)
     return x, y
-
-
-

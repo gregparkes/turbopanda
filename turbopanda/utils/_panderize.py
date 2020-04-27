@@ -32,6 +32,6 @@ def panderfy(func: Callable):
     return _wrapper
 
 
-def lparallel(func: Callable, args):
+def lparallel(func: Callable, *args):
     """Performs a parallel list comprehension operation on f(*args)"""
     return Parallel(cpu_count()-1)(delayed(f)(*arg) for arg in args)

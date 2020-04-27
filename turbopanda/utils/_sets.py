@@ -9,8 +9,7 @@ from pandas import Index, Series
 
 SetLike = Union[type(None), str, Set, Index, List, Tuple, Series]
 
-__all__ = ("dictsplit", "dictchain",
-           "dict_to_tuple", "dictzip", "dictmap",
+__all__ = ("dictsplit", "dict_to_tuple", "dictzip", "dictmap",
            "dictchunk", "join", 'pairwise',
            "set_like", "union", "intersect", "difference", 'dictcopy')
 
@@ -36,14 +35,6 @@ def dict_to_tuple(d: Dict) -> Tuple:
 def dictsplit(d: Dict):
     """Splits a dictionary into two tuples."""
     return tuple(d.keys()), tuple(d.values())
-
-
-def dictchain(L: Union[List[Dict], Tuple[Dict, ...]]):
-    """Chain together a list of dictionaries into a single dictionary.
-
-    e.g [{'c': 1}, {'d': 3}, {'e': "hi"}] -> {'c': 1, 'd': 3, 'e': "hi"}
-    """
-    return dict(it.chain(*map(dict.items, L)))
 
 
 def dictzip(a: Iterable, b: Iterable) -> Dict:

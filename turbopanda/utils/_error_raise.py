@@ -26,7 +26,10 @@ def belongs(elem: Any, home: Union[List[Any], Tuple[Any, ...]], raised=True):
 
 
 def nonnegative(a: Union[float, int], raised=True):
-    """Check whether value a is nonnegative number. """
+    """Check whether value a is nonnegative number.
+
+    .. note:: is vectorizable (on a)
+    """
     if not isinstance(a, (float, int, np.float, np.int)):
         if raised:
             raise TypeError("object '{}' must be of type [float, int], not type '{}'".format(a, type(a)))

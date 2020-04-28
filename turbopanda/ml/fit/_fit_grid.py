@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Attempts to fit basic machine learning models."""
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -34,11 +34,11 @@ def _min_cross_val_scores(theta, X, y, model, pnames, cv):
     )
 
 
-def grid(df: "MetaPanda",
-         x: SelectorType,
+def grid(df: Union[pd.DataFrame, "MetaPanda"],
          y: str,
-         models,
-         cv: Tuple[int, int] = (5, 10),
+         x: Optional[SelectorType] = None,
+         models=("Ridge", "Lasso"),
+         cv: Union[int, Tuple[int, int]] = 5,
          cache: Optional[str] = None,
          plot: bool = False,
          chunks: bool = False,
@@ -117,13 +117,18 @@ def grid(df: "MetaPanda",
     .. [1] Scikit-learn: Machine Learning in Python, Pedregosa et al., JMLR 12, pp. 2825-2830, 2011.
     """
     # checks
-    instance_check(df, MetaPanda)
-    instance_check(x, (str, list, tuple, pd.Index))
+    instance_check(df, (pd.DataFrame, MetaPanda))
+    instance_check(x, (type(None), str, list, tuple, pd.Index))
     instance_check(y, str)
     instance_check(cv, (int, tuple))
-    instance_check(models, (tuple, list, dict))
+    instance_check(models, (tuple, list, tuple, dict))
     instance_check(cache, (type(None), str))
     instance_check((plot, chunks), bool)
+
+    _df = MetaPanda(df) if isinstance(df, pd.DataFrame) else df
+
+    if x is None:
+        x = _df.columns.difference(pd.Index([y]))
 
     if isinstance(cv, tuple):
         k, repeats = cv
@@ -163,13 +168,14 @@ def grid(df: "MetaPanda",
         if chunks:
             # if dictionary, we need to split this into 1-sized list/dict blocks.
             values = dictchunk(models, 1) if isinstance(models, dict) else models
-            _cv_results = cached_chunk(_perform_fit, "_models", values, cache, verbose, _df=df,
-                                       _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
+            _cv_results = cached_chunk(_perform_fit, "_models", values, False, cache, verbose,
+                                       _df=_df, _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
         else:
-            _cv_results = cached(_perform_fit, cache, verbose, _df=df, _x=x, _y=y, _k=k, _repeats=repeats,
+            _cv_results = cached(_perform_fit, cache, verbose,
+                                 _df=_df, _x=x, _y=y, _k=k, _repeats=repeats,
                                  _models=models)
     else:
-        _cv_results = _perform_fit(_df=df, _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
+        _cv_results = _perform_fit(_df=_df, _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
 
     if plot:
         parameter_tune(_cv_results)
@@ -188,6 +194,8 @@ def optimize(df: "MetaPanda",
     This uses `scipy.optimize` function to minimize continuous parameters, for example `alpha` in a Lasso model.
 
     .. note:: optimization only works on *continuous* parameters with each model.
+
+    TODO: complete `.ml.fit.optimize` function
 
     Parameters
     ----------
@@ -254,7 +262,5 @@ def optimize(df: "MetaPanda",
                         args=(_xnp, _y, model, params, cv),
                         bounds=bounds) for i in inits
         ]
-
-
 
     pass

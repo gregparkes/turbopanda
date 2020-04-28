@@ -13,10 +13,12 @@ from typing import Dict, Iterable
 from pandas import CategoricalDtype, DataFrame, Index, Series, concat
 
 # locals
-from turbopanda.utils import boolean_series_check, dictzip, difference, intersect, join, t_numpy, union
+from turbopanda.utils import boolean_series_check, dictzip, \
+    difference, intersect, join, t_numpy, union
+from turbopanda.str import patcolumnmatch
 from ._types import SelectorType
 
-__all__ = ("regex_column", "get_selector", "selector_types", 'selector_options', 'not_selector_types')
+__all__ = ("get_selector", "selector_types", 'selector_options', 'not_selector_types')
 
 
 def selector_types() -> Iterable:
@@ -41,18 +43,6 @@ def selector_options():
     return list(it.chain.from_iterable([type(None), Index, "__call__", t_numpy(),
                                         str, float, int, bool, object, CategoricalDtype,
                                         list, tuple]))
-
-
-def regex_column(selector: str, df: DataFrame, raise_error: bool = False):
-    """Use a selector to perform a regex search on the columns within df."""
-    c_fetch = [c for c in df.columns if re.search(selector, c)]
-    if len(c_fetch) > 0:
-        return Index(c_fetch, dtype=object,
-                     name=df.columns.name, tupleize_cols=False)
-    elif raise_error:
-        raise ValueError("selector '{}' yielded no matches.".format(selector))
-    else:
-        return Index([], name=df.columns.name)
 
 
 def _get_selector_item(df: DataFrame,
@@ -92,7 +82,7 @@ def _get_selector_item(df: DataFrame,
         not_same = difference(df.columns, ser.index)
         # if this exists, append these true cols on
         if not_same.shape[0] > 0:
-            ns = concat([Series(True, index=not_same), ser], axis=0)
+            ns = concat([Series(True, index=not_same), ser], axis=0, sort=False)
             return df.columns[ns]
         else:
             return df.columns[ser]
@@ -108,7 +98,7 @@ def _get_selector_item(df: DataFrame,
         # check if key does not exists in df.columns
         elif selector not in df:
             # try regex
-            return regex_column(selector, df, raise_error)
+            return patcolumnmatch(selector, df)
         else:
             # we assume it's in the index, and we return it, else allow pandas to raise the error.
             return Index([selector], name=df.columns.name)

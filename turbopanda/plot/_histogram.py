@@ -59,7 +59,10 @@ def _assign_x_label(title, series_x_l, is_kde, auto_fitted, frozen_dist):
                 return "{}{}({})".format(frozen_dist.dist.name, _crit, _args)
         else:
             if series_x_l != '':
-                return "{}({})".format(series_x_l, frozen_dist.dist.name)
+                if frozen_dist is None:
+                    return series_x_l
+                else:
+                    return "{}({})".format(series_x_l, frozen_dist.dist.name)
             elif frozen_dist is not None:
                 return frozen_dist.dist.name
             else:

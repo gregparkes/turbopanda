@@ -201,10 +201,10 @@ def set_like(x: SetLike = None) -> Index:
     if isinstance(x, str):
         return Index([x])
     if isinstance(x, (list, tuple)):
-        if len(x) == 0:
-            return Index([])
-        else:
+        if len(x) > 0:
             return Index(sorted(set(x), key=x.index))
+        else:
+            return Index([])
     elif isinstance(x, (Series, Index)):
         return Index(x.dropna().unique(), name=x.name) if x.shape[0] > 0 else Index([])
     elif isinstance(x, set):

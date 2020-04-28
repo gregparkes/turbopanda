@@ -7,7 +7,7 @@ import pandas as pd
 from typing import Callable, List, TypeVar, Optional
 from sklearn.preprocessing import scale, power_transform
 
-from turbopanda.utils import float_to_integer, power_scale
+from turbopanda.utils import float_to_integer
 from ._conditions import select_float
 
 __all__ = ('all_float_to_int', 'downcast_all', 'all_low_cardinality_to_categorical',

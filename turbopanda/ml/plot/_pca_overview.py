@@ -2,15 +2,17 @@
 # -*- coding: utf-8 -*-
 """Provides an overview for the analysis of PCA."""
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from typing import Tuple, Optional
 
 from turbopanda.plot import gridplot, scatter, annotate
 from turbopanda.utils import join, instance_check, nonnegative
 
 
-def _plot_pca_scatter(model, ax, dist_col: bool):
+def _plot_pca_scatter(model, ax: mpl.axes.Axes, dist_col: bool):
     # calculate the magnitude away from origin (0, 0)
     mag = np.linalg.norm(model.components_[:, :2], axis=1)
     _x, _y = model.components_[:, 0], model.components_[:, 1]
@@ -29,14 +31,14 @@ def _plot_pca_scatter(model, ax, dist_col: bool):
     ax.grid()
 
 
-def _explained_variance_plot(model, ax, cutoff=.9):
+def _explained_variance_plot(model, ax: mpl.axes.Axes, cutoff: float = .9):
     n = len(model.explained_variance_ratio_)
     _x = np.arange(0, n + 1)
     _y = np.hstack((np.array([0]), model.explained_variance_ratio_))
     _ycum = np.cumsum(_y)
     best_index = np.where(_ycum > cutoff)[0][0]
     # calculate AUC
-    auc = np.trapz(_ycum, _x / (n+1))
+    auc = np.trapz(_ycum, _x / (n + 1))
     # plot
     ax.plot(_x, _ycum, "x-")
     # plot best point
@@ -45,42 +47,42 @@ def _explained_variance_plot(model, ax, cutoff=.9):
                label="n=%d, auc=%.3f" % (_x[best_index], auc))
     # plot 0 to 1 line
     ax.plot([0, n], [0, 1], 'k--')
-    ax.set_xlabel("N\n(Best proportion: %.3f)" % (_x[best_index] / (n+1)))
+    ax.set_xlabel("N\n(Best proportion: %.3f)" % (_x[best_index] / (n + 1)))
     ax.set_ylabel("Explained variance (ratio)\n(cutoff=%.2f)" % cutoff)
     ax.grid()
     ax.legend()
 
 
-def _annotate_on_magnitude(model, labels, n_samples_annotate, ax):
-    if len(labels) != model.components_.shape[0]:
+def _annotate_on_magnitude(model, labels: pd.Index, n_samples_annotate: int, ax: mpl.axes.Axes):
+    if len(labels) != model.n_features_:
         raise ValueError("number of labels: {} passed does not match component PCA shape: {}".format(len(labels),
-                                                                                                     model.components_.shape[                                                                                   0]))
+                                                                                                     model.components_.shape[
+                                                                                                         0]))
     mag = np.linalg.norm(model.components_[:, :2], axis=1)
     selected = np.argpartition(mag, -n_samples_annotate)[-n_samples_annotate:]
     annotate(model.components_[:, 0], model.components_[:, 1], list(labels), selected, ax=ax, word_shorten=15)
 
 
-def _best_principle_eigenvectors(model, labels, k=5, p=5):
+def _best_principle_eigenvectors(model, labels: pd.Index, k: int = 5, p: int = 5):
     """Extracts the topk eigenvectors from p PCs"""
     PC = model.components_
     evr = model.explained_variance_ratio_
     xs = []
     label_set = []
     scores = []
-
     for i in range(p):
-        ind_top = np.argpartition(PC[:, i], k//2)[:k//2]
-        ind_bot = np.argpartition(PC[:, i], -(k//2))[-(k//2):]
+        ind_top = np.argpartition(PC[:, i], k // 2)[:k // 2]
+        ind_bot = np.argpartition(PC[:, i], -(k // 2))[-(k // 2):]
         label_set.append(
             np.hstack((labels[ind_top], labels[ind_bot])))
         scores.append(
             np.hstack((PC[ind_top, i], PC[ind_bot, i])))
-        xs.append(["PC{}\n({:0.1f}%)".format(i+1, evr[i]*100)] * k)
+        xs.append(["PC{}\n({:0.1f}%)".format(i + 1, evr[i] * 100)] * k)
 
     return join(*xs), join(*scores), join(*label_set)
 
 
-def _best_eigenvector_plot(x, y, labels, ax, nk=(6, 5)):
+def _best_eigenvector_plot(x, y, labels: pd.Index, ax: mpl.axes.Axes, nk: Tuple[int, int] = (6, 5)):
     n_samples, n_pcs = nk
 
     ax.scatter(x, y)
@@ -91,11 +93,11 @@ def _best_eigenvector_plot(x, y, labels, ax, nk=(6, 5)):
 
 
 def overview_pca(model,
-                 distance_color=True,
-                 labels=None,
-                 n_samples_annotate=6,
-                 n_pcs=5,
-                 ax_size=4):
+                 distance_color: bool = True,
+                 labels: Optional[pd.Index] = None,
+                 n_samples_annotate: int = 6,
+                 n_pcs: int = 5,
+                 ax_size: int = 4):
     """Provides an overview plot from a PCA result.
 
     Parameters
@@ -121,7 +123,7 @@ def overview_pca(model,
     """
     instance_check((n_samples_annotate, n_pcs, ax_size), int)
     instance_check(distance_color, bool)
-    instance_check(labels, (type(None), np.ndarray, pd.Series, list, tuple))
+    instance_check(labels, (type(None), np.ndarray, pd.Series, pd.Index, list, tuple))
     nonnegative(n_samples_annotate)
     nonnegative(n_pcs)
     nonnegative(ax_size)

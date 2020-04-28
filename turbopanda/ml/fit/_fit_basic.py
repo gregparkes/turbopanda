@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Attempts to fit basic machine learning models."""
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -39,10 +39,10 @@ def _extract_coefficients_from_model(cv, x, pkg_name):
         return []
 
 
-def basic(df: "MetaPanda",
-          x: SelectorType,
+def basic(df: Union[pd.DataFrame, "MetaPanda"],
           y: str,
-          cv: Tuple[int, int] = (5, 10),
+          x: Optional[SelectorType] = None,
+          cv: Union[int, Tuple[int, int]] = 5,
           model: str = "LinearRegression",
           cache: Optional[str] = None,
           plot: bool = False,
@@ -56,22 +56,22 @@ def basic(df: "MetaPanda",
 
     Parameters
     ----------
-    df : MetaPanda
+    df : DataFrame / MetaPanda
         The main dataset.
-    x : list/tuple of str
-        A list of selected column names for x or MetaPanda `selector`.
     y : str
-        A selected y column.
-    cv : int/tuple, optional (5, 10)
+        Target/dependent variable (as column)
+    x : list / tuple of str, optional
+        A list of selected column names for independent variables. If None uses all except `y` column
+    cv : int / tuple, default=5
         If int: just reflects number of cross-validations
         If Tuple: (cross_validation, n_repeats) `for RepeatedKFold`
-    model : str, sklearn model
+    model : str / sklearn model, default="LinearRegression"
         The name of a scikit-learn model, or the model object itself.
     cache : str, optional
         If not None, stores the resulting model parts in JSON and reloads if present.
-    plot : bool, optional
+    plot : bool, default=False
         If True, produces `overview_plot` inplace.
-    verbose : int, optional
+    verbose : int, default=0
         If > 0, prints out statements depending on level.
 
     Other Parameters
@@ -104,8 +104,8 @@ def basic(df: "MetaPanda",
     .. [1] Scikit-learn: Machine Learning in Python, Pedregosa et al., JMLR 12, pp. 2825-2830, 2011.
     """
     # checks
-    instance_check(df, MetaPanda)
-    instance_check(x, (str, list, tuple, pd.Index))
+    instance_check(df, (pd.DataFrame, MetaPanda))
+    instance_check(x, (type(None), str, list, tuple, pd.Index))
     instance_check(y, str)
     instance_check(cv, (int, tuple))
     instance_check(cache, (type(None), str))
@@ -114,6 +114,10 @@ def basic(df: "MetaPanda",
     instance_check(model_kws, dict)
     assert is_sklearn_model(model), "model '{}' is not a valid sklearn model."
 
+    _df = MetaPanda(df) if isinstance(df, pd.DataFrame) else df
+
+    if x is None:
+        x = _df.columns.difference(pd.Index([y]))
     if isinstance(cv, tuple):
         k, repeats = cv
     else:
@@ -123,10 +127,10 @@ def basic(df: "MetaPanda",
     # assign keywords to lm
     lm.set_params(**model_kws)
     # make data set machine learning ready.
-    _df, _x, _y, _xcols = ml_ready(df, x, y)
+    __df, _x, _y, _xcols = ml_ready(_df, x, y)
     if verbose > 0:
         print(
-            "full dataset: {}/{} -> ML: {}/{}({},{})".format(df.n_, df.p_, _df.shape[0], _df.shape[1], _x.shape[1], 1))
+            "full dataset: {}/{} -> ML: {}/{}({},{})".format(_df.n_, _df.p_, __df.shape[0], __df.shape[1], _x.shape[1], 1))
 
     # function 1: performing cross-validated fit.
     def _perform_cv_fit(_x: np.ndarray,
@@ -170,13 +174,13 @@ def basic(df: "MetaPanda",
             _repeats=repeats, _lm=lm, package_name=pkg_name
         )
         _yp = cached(
-            _perform_prediction_fit, cache_yp, verbose, _df=_df, _x=_x, _y=_y, _yn=y, _k=k, _lm=lm
+            _perform_prediction_fit, cache_yp, verbose, _df=__df, _x=_x, _y=_y, _yn=y, _k=k, _lm=lm
         )
     else:
         _cv = _perform_cv_fit(_x, _xcols, _y, k, repeats, lm, pkg_name)
-        _yp = _perform_prediction_fit(_df, _x, _y, y, k, lm)
+        _yp = _perform_prediction_fit(__df, _x, _y, y, k, lm)
 
     if plot:
-        overview(df, x, y, _cv, _yp)
+        overview(_df, x, y, _cv, _yp)
     # return both.
     return _cv, _yp

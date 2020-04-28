@@ -11,8 +11,10 @@ import operator
 from ._sets import join
 
 
-__all__ = ("belongs", "instance_check", "disallow_instance_pair", "check_list_type", "nonnegative",
-           "boolean_series_check", "is_twotuple", "arrays_equal_size", "is_iterable")
+__all__ = ("belongs", "instance_check", "disallow_instance_pair",
+           "check_list_type", "nonnegative",
+           "boolean_series_check", "is_twotuple",
+           "arrays_equal_size", "arrays_dimension", "is_iterable")
 
 
 def belongs(elem: Any, home: Union[List[Any], Tuple[Any, ...]], raised=True):
@@ -88,6 +90,30 @@ def arrays_equal_size(a, b, *arrays):
     """Check that arrays a, b, ...n, are equal dimensions."""
     arrs = tuple(map(np.asarray, join((a, b), arrays)))
     return reduce(operator.add, map(lambda x: x.shape[0], arrs)) // len(arrs) == arrs[0].shape[0]
+
+
+def arrays_dimension(X: Union[np.ndarray, pd.Series, pd.DataFrame],
+                     d: str,
+                     raised: bool = True):
+    """Check that np.ndarray X is of dimension '1d', '2d', '3d'..."""
+    instance_check(X, (np.ndarray, pd.Series, pd.DataFrame))
+    belongs(d, ("1d", "2d", "3d"))
+    d_int = int(d[0])
+    if isinstance(X, pd.Series):
+        if d_int != 1:
+            if raised:
+                raise ValueError("array is %dD, not %dD".format(d_int, X.shape[1]))
+            else:
+                return False
+        else:
+            return True
+    elif X.shape[1] != d_int:
+        if raised:
+            raise ValueError("array is %dD, not %dD".format(d_int, X.shape[1]))
+        else:
+            return False
+    else:
+        return True
 
 
 def disallow_instance_pair(a: object, i: TypeVar, b: object, j: TypeVar):

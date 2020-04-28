@@ -3,17 +3,18 @@
 """Operations for handling string operationss."""
 
 import re
+import itertools as it
 import numpy as np
-from typing import Tuple, Union
+from typing import Tuple, Union, Iterable, List
 from pandas import DataFrame, Index, Series
 
 from turbopanda.utils import set_like, belongs, instance_check
 
+__all__ = ('strpattern', 'patproduct', 'patcolumnmatch', 'string_replace',
+           'reformat', 'shorten')
 
-__all__ = ('strpattern', 'string_replace', 'reformat', 'shorten')
 
-
-def strpattern(pat, K):
+def strpattern(pat: str, K: Iterable) -> Index:
     """Determines if pattern `pat` exists in list of str `K`."""
     # compile pattern - improves performance
     _p = re.compile(pat)
@@ -21,22 +22,66 @@ def strpattern(pat, K):
     return set_like([s for s in K if re.search(_p, s)])
 
 
-def _shorten_string(s, approp_len=15, method="middle"):
+def patcolumnmatch(pat: str, df: DataFrame) -> Index:
+    """Use regex to match to column names in a pandas.DataFrame."""
+    _p = re.compile(pat)
+    c_fetch = [s for s in df.columns if re.search(_p, s)]
+    if len(c_fetch) > 0:
+        return Index(c_fetch, dtype=object, name=df.columns.name, tupleize_cols=False)
+    else:
+        return Index([], name=df.columns.name)
+
+
+def patproduct(pat: str, *args: Iterable) -> List[str]:
+    """Creates a list of strings following a certain pattern.
+
+    Uses the old C-style of string formatting, newer style of str.format not
+        currently supported.
+
+    This is useful in the case you quickly want to produce a patterned index
+    or default column names for a pandas.DataFrame index.
+
+    Parameters
+    ----------
+    pat : str
+        A formattable string to accept arguments
+    args : list of options
+        Values to insert into the pattern string
+
+    Returns
+    -------
+    prod : list of str
+        A list of the product of the patterns
+
+    Examples
+    --------
+    A basic example would be to create default column names
+    >>> import turbopanda as turb
+    >>> turb.str.patproduct("%s%d", ("X", "Y"), range(100))
+    >>> ["X0", ..., "X99", "Y0", ..., "Y99"]
+    As you can see the product of the arguments is used, another example would be:
+    >>> turb.str.patproduct("%s_%s", ("repl", "quality"), ("sum", "prod"))
+    >>> ["repl_sum", "repl_prod", "quality_sum", "quality_prod"]
+    """
+    return [pat % item for item in it.product(*args)]
+
+
+def _shorten_string(s: str, approp_len: int = 15, method: str = "middle") -> str:
     if len(s) <= approp_len:
         return s
     else:
         if method == "start":
-            return ".." + s[-approp_len-2:]
+            return ".." + s[-approp_len - 2:]
         elif method == "end":
-            return s[:approp_len-2] + ".."
+            return s[:approp_len - 2] + ".."
         elif method == "middle":
-            midpoint = (approp_len-2) // 2
+            midpoint = (approp_len - 2) // 2
             return s[:midpoint] + ".." + s[-midpoint:]
         else:
             raise ValueError("method '{}' not in {}".format(method, ('middle', 'start', 'end')))
 
 
-def shorten(s, newl=15, method="middle"):
+def shorten(s, newl: int = 15, method: str = "middle"):
     """Shortens a string or array of strings to length `newl`.
 
     Parameters
@@ -63,7 +108,8 @@ def shorten(s, newl=15, method="middle"):
         return [_shorten_string(_s) for _s in s]
 
 
-def string_replace(strings: Union[Series, Index], operations: Tuple[str, str]) -> Series:
+def string_replace(strings: Union[Series, Index],
+                   operations: Tuple[str, str]) -> Series:
     """ Performs all replace operations on the string inplace """
     for op in operations:
         strings = strings.str.replace(*op)

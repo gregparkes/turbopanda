@@ -24,6 +24,10 @@ def deprecated(version: str, remove: str = None, instead: str = None, reason: st
         The function name of an alternative function
     reason : str, optional
         A verbose string detailing the reasons behind deprecation
+
+    Usage
+    -----
+    @deprecated("0.2.4", "0.2.7", reason="function beyond scope of the module", instead=".pipe.zscore")
     """
 
     def decorator(func):

@@ -9,11 +9,12 @@ import pandas as pd
 
 from turbopanda._deprecator import deprecated
 from ._bool_series import is_column_int, is_n_value_column
+from ._error_raise import instance_check
 
 ArrayLike = Union[np.ndarray, pd.Series, pd.DataFrame]
 
-__all__ = ('listify', 'switcheroo', 'integer_to_boolean',
-           'object_to_categorical', 'boolean_to_integer', 'power_scale',
+__all__ = ('listify', 'switcheroo', 'integer_to_boolean', "upcast",
+           'object_to_categorical', 'boolean_to_integer',
            'float_to_integer', 'standardize', 'ordinal')
 
 
@@ -23,11 +24,6 @@ def listify(a):
         return a
     else:
         return [a]
-
-
-def power_scale(ser: pd.Series, factor: float = 2.) -> pd.Series:
-    """Scales every value in ser by factor amount."""
-    return np.power(ser, factor)
 
 
 def ordinal(num: int) -> str:
@@ -103,3 +99,18 @@ def standardize(x: ArrayLike) -> ArrayLike:
         return (x - np.nanmean(x, axis=0)) / np.nanstd(x, axis=0)
     else:
         raise TypeError("x must be of type [pd.Series, pd.DataFrame, np.ndarray]")
+
+
+def upcast(x: Union[list, tuple, np.ndarray]):
+    """Upcasts an object, list to np.ndarray, np.ndarray to pandas."""
+    instance_check(x, (list, tuple, np.ndarray))
+    if isinstance(x, (list, tuple)):
+        # cast as numpy.ndarray
+        return np.asarray(x)
+    elif isinstance(x, np.ndarray):
+        if x.ndim == 1:
+            return pd.Series(x)
+        elif x.ndim == 2:
+            return pd.DataFrame(x).squeeze()
+        else:
+            raise ValueError("Cannot induce numpy.array -> pandas of dim > 2")

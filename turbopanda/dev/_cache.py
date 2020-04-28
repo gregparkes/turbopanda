@@ -17,11 +17,13 @@ import warnings
 import functools
 from typing import Callable, List, Optional, Tuple, Union
 from pandas import DataFrame, concat
+from joblib import Parallel, delayed, cpu_count
 
 # locals
 from turbopanda._fileio import read
 from turbopanda._metapanda import MetaPanda
-from turbopanda.utils import belongs, dictcopy, insert_suffix, instance_check, intersect
+from turbopanda.utils import belongs, dictcopy, insert_suffix, \
+    instance_check, intersect
 
 __all__ = ("cached", "cache", 'cached_chunk')
 
@@ -127,6 +129,7 @@ def cached(func: Callable,
 def cached_chunk(func: Callable,
                  param_name: str,
                  param_values: Union[List, Tuple],
+                 parallel: bool = True,
                  filename: str = 'example1.json',
                  verbose: int = 0,
                  *args, **kwargs) -> "MetaPanda":
@@ -142,6 +145,8 @@ def cached_chunk(func: Callable,
         The keyword name of the parameter in question to iterate over
     param_values : list/tuple of something
         The values associated with the parameter to iterate over
+    parallel : bool, default=True
+        Determines whether to use `joblib` to compute independent chunks in parallel or not
     filename : str, optional
         The name of the file to cache to, or read from. This is fixed.
         Accepts {'json', 'csv'} formats.
@@ -193,13 +198,20 @@ def cached_chunk(func: Callable,
         return mdf
     else:
         # create a bunch of chunks by repeatedly calling cache.
-        _mdf_chunks = [
-            cached(func,
-                   insert_suffix(filename, "_chunk%d" % i),
-                   verbose=verbose,
-                   *args, **dictcopy(kwargs, {param_name: chunk})).df_
-            for i, chunk in enumerate(param_values)
-        ]
+        if parallel:
+            _mdf_chunks = Parallel(cpu_count())(
+                delayed(cached)(func, insert_suffix(filename, "_chunk%d" % i),
+                                verbose=verbose, *args, **dictcopy(kwargs, {param_name: chunk})).df_
+                for i, chunk in enumerate(param_values)
+            )
+        else:
+            _mdf_chunks = [
+                cached(func,
+                       insert_suffix(filename, "_chunk%d" % i),
+                       verbose=verbose,
+                       *args, **dictcopy(kwargs, {param_name: chunk})).df_
+                for i, chunk in enumerate(param_values)
+            ]
         # join together the chunks
         mpf = _stack_rows(_mdf_chunks)
         # save file - return type must be a MetaPanda or error occurs!
@@ -261,6 +273,7 @@ def cache(_func=None, *, filename: str = "example1.json") -> Callable:
     # define decorator
     def _decorator_cache(func):
         """Basic decorator."""
+
         @functools.wraps(func)
         def _wrapper_cache(*args, **kwargs):
             # if we find the file

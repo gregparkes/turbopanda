@@ -5,6 +5,7 @@
 from typing import Any, Tuple, TypeVar
 
 import numpy as np
+import pandas as pd
 
 __all__ = ("c_float", "c_int", "t_numpy", "c_cat", 'fself')
 
@@ -37,3 +38,16 @@ def t_numpy() -> Tuple[TypeVar, ...]:
 def c_cat() -> Tuple[TypeVar, ...]:
     """Returns accepted category types."""
     return np.uint8, np.uint16, object
+
+
+""" Miscallaenous type groups to use for instance checks """
+
+
+def one_dim() -> Tuple[TypeVar, ...]:
+    """Returns 1D-like elements"""
+    return list, tuple, pd.Series, pd.Index, np.ndarray
+
+
+def two_dim() -> Tuple[TypeVar, ...]:
+    """Returns 2D-like elements"""
+    return np.ndarray, pd.DataFrame

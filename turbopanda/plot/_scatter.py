@@ -13,7 +13,8 @@ from typing import Union, List, Tuple, Optional
 from pandas import Series
 from warnings import warn
 
-from turbopanda.utils import remove_na, instance_check, arrays_equal_size, belongs
+from turbopanda.utils import remove_na, instance_check,\
+    arrays_equal_size, belongs, as_flattened_numpy
 from turbopanda.stats._kde import freedman_diaconis_bins
 from turbopanda.plot._palette import palette_mixed, darken, lighten
 from turbopanda.plot._widgets import legend_scatter
@@ -239,8 +240,8 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
         belongs(marker, _marker_set())
 
     # get subset where missing values from either are dropped
-    _X = np.asarray(X).flatten()
-    _Y = np.asarray(Y).flatten()
+    _X = as_flattened_numpy(X)
+    _Y = as_flattened_numpy(Y)
 
     # warn the user if n is large to maybe consider dense option?
     if _X.shape[0] > 15000 and not dense:
@@ -248,7 +249,7 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
 
     # reconfigure colors if qualitative
     if isinstance(s, (list, tuple)) and not dense:
-        s = np.asarray(s)
+        s = as_flattened_numpy(s)
         arrays_equal_size(X, Y, s)
     if isinstance(marker, (list, tuple)) and not dense:
         marker = np.asarray(marker)

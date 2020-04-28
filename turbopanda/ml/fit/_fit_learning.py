@@ -11,15 +11,15 @@ import pandas as pd
 from sklearn.model_selection import RepeatedKFold, permutation_test_score, learning_curve
 
 from turbopanda._metapanda import MetaPanda, SelectorType
-from turbopanda.utils import instance_check
+from turbopanda.utils import instance_check, difference
 from turbopanda.ml._clean import ml_ready
 from turbopanda.ml._package import find_sklearn_model
 from turbopanda.ml.plot._plot_learning import learning_curve as lcurve
 
 
 def learning(df: "MetaPanda",
-             x: SelectorType,
              y: str,
+             x: Optional[SelectorType] = None,
              train_n: Optional[np.ndarray] = None,
              permute_n: int = 0,
              cv: Tuple[int, int] = (5, 15),
@@ -38,10 +38,10 @@ def learning(df: "MetaPanda",
     ----------
     df : MetaPanda (n_samples, n_features)
         The main dataset.
-    x : list/tuple of str/selector
-        A list of selected column names for x or MetaPanda `selector`.
     y : str
         A selected y column.
+    x : list/tuple of str/selector, optional
+        A list of selected column names for x or MetaPanda `selector`.
     train_n : int/array-like, with shape (n_ticks,) dtype float or int, optional
         Relative or absolute numbers of training examples that will be used to generate
         learning curve related data.
@@ -94,12 +94,20 @@ def learning(df: "MetaPanda",
     .. [1] Scikit-learn: Machine Learning in Python, Pedregosa et al., JMLR 12, pp. 2825-2830, 2011.
     """
     # perform checks
+    instance_check(df, pd.DataFrame, MetaPanda)
     instance_check(y, str)
     instance_check(train_n, (type(None), int, list, tuple, np.ndarray))
     instance_check(permute_n, int)
     instance_check(cv, (int, tuple))
     # instance_check(cache, (type(None), str))
     instance_check(plot, bool)
+
+    # set dataset if a pandas object
+    _df = MetaPanda(df) if isinstance(df, pd.DataFrame) else df
+
+    # retrieve x columns if none
+    if x is None:
+        x = _df.columns.difference(pd.Index([y]))
 
     if isinstance(cv, tuple):
         k, repeats = cv
@@ -114,10 +122,10 @@ def learning(df: "MetaPanda",
     elif isinstance(train_n, int):
         train_n = np.linspace(.1, .9, train_n)
     # ml ready
-    _df, _x, _y, _xcols = ml_ready(df, x, y)
+    __df, _x, _y, _xcols = ml_ready(_df, x, y)
     if verbose > 0:
         print(
-            "full dataset: {}/{} -> ML: {}/{}({},{})".format(df.n_, df.p_, _df.shape[0], _df.shape[1], _x.shape[1], 1))
+            "full dataset: {}/{} -> ML: {}/{}({},{})".format(_df.n_, _df.p_, __df.shape[0], __df.shape[1], _x.shape[1], 1))
 
     rep = RepeatedKFold(n_splits=k, n_repeats=repeats)
     vars_ = learning_curve(lm, _x, _y, train_sizes=train_n,

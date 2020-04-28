@@ -8,6 +8,7 @@ from typing import Optional
 
 import pandas as pd
 
+from turbopanda._deprecator import unimplemented
 from turbopanda.utils import split_file_directory, union
 from ._metadata import default_columns
 
@@ -48,6 +49,7 @@ def _write_json(self, filename: str):
         f.write(compile_string.encode())
 
 
+@unimplemented
 def _write_hdf(self, filename: str):
     """Saves a file in special HDF5 format.
 

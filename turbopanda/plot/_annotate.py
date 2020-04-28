@@ -9,7 +9,8 @@ import matplotlib
 from pandas import Series
 import matplotlib.pyplot as plt
 
-from turbopanda.utils import instance_check, arrays_equal_size
+from turbopanda.utils import instance_check, arrays_equal_size, \
+    as_flattened_numpy
 from turbopanda.str import shorten
 
 
@@ -54,9 +55,9 @@ def annotate(X: Union[np.ndarray, Series, List, Tuple],
     instance_check(ax, (type(None), matplotlib.axes.Axes))
     arrays_equal_size(X, Y, T)
 
-    _X = np.asarray(X).flatten()
-    _Y = np.asarray(Y).flatten()
-    _T = np.asarray(T).flatten()
+    _X = as_flattened_numpy(X)
+    _Y = as_flattened_numpy(Y)
+    _T = as_flattened_numpy(T)
     if word_shorten:
         _T = shorten(_T, newl=word_shorten)
 

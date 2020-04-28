@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Attempts to fit basic machine learning models."""
+from __future__ import absolute_import, division, print_function
 
 from typing import Optional, Tuple, Union
 
@@ -12,16 +13,17 @@ from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import GridSearchCV, RepeatedKFold, cross_val_score
 from sklearn.pipeline import Pipeline
+from sklearn.utils.estimator_checks import check_estimator
 
+from turbopanda._deprecator import unimplemented
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.dev import cached, cached_chunk
 from turbopanda.utils import dictchunk, instance_check
-
 from turbopanda.ml._clean import ml_ready
 from turbopanda.ml.plot import parameter_tune
 from turbopanda.ml._pgrid import make_parameter_grid, make_optimize_grid, \
     optimize_grid_for_model
-from turbopanda.ml._package import find_sklearn_model
+from turbopanda.ml._package import find_sklearn_model, is_sklearn_model
 
 
 def _min_cross_val_scores(theta, X, y, model, pnames, cv):
@@ -52,16 +54,16 @@ def grid(df: Union[pd.DataFrame, "MetaPanda"],
 
     Parameters
     ----------
-    df : MetaPanda
+    df : pd.DataFrame/MetaPanda
         The main dataset.
-    x : list/tuple of str
-        A list of selected column names for x or MetaPanda `selector`.
     y : str
         A selected y column.
-    models : tuple/dict
+    x : list/tuple of str, optional
+        A list of selected column names for x or MetaPanda `selector`.
+    models : list/dict, default=["Ridge", "Lasso"]
         tuple: list of model names, uses default parameters
         dict: key (model name), value tuple (parameter names) / dict: key (parameter name), value (list of values)
-    cv : int/tuple, optional (5, 10)
+    cv : int/tuple, default=5
         If int: just reflects number of cross-validations
         If Tuple: (cross_validation, n_repeats) `for RepeatedKFold`
     cache : str, optional
@@ -108,9 +110,9 @@ def grid(df: Union[pd.DataFrame, "MetaPanda"],
     --------
     To fit a basic grid, say using Ridge Regression we would:
     >>> import turbopanda as turb
-    >>> results = turb.ml.grid(df, "x_column", "y_column", ['Ridge'])
+    >>> results = turb.ml.fit.grid(df, "y_column", "x_column", 'Ridge')
     >>> # these results could then be plotted
-    >>> turb.ml.parameter_tune(results)
+    >>> turb.ml.plot.parameter_tune(results)
 
     References
     ----------
@@ -121,15 +123,24 @@ def grid(df: Union[pd.DataFrame, "MetaPanda"],
     instance_check(x, (type(None), str, list, tuple, pd.Index))
     instance_check(y, str)
     instance_check(cv, (int, tuple))
-    instance_check(models, (tuple, list, tuple, dict))
     instance_check(cache, (type(None), str))
     instance_check((plot, chunks), bool)
 
+    if is_sklearn_model(models):
+        models = [models]
+    else:
+        if isinstance(models, tuple):
+            models = list(models)
+        instance_check(models, (list, dict))
+
+    # set dataset if a pandas object
     _df = MetaPanda(df) if isinstance(df, pd.DataFrame) else df
 
+    # retrieve x columns if none
     if x is None:
         x = _df.columns.difference(pd.Index([y]))
 
+    # set up cv, repeats
     if isinstance(cv, tuple):
         k, repeats = cv
     else:
@@ -183,6 +194,7 @@ def grid(df: Union[pd.DataFrame, "MetaPanda"],
     return _cv_results
 
 
+@unimplemented
 def optimize(df: "MetaPanda",
              x: SelectorType,
              y: str,

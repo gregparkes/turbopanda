@@ -13,9 +13,18 @@ from ._error_raise import instance_check
 
 ArrayLike = Union[np.ndarray, pd.Series, pd.DataFrame]
 
-__all__ = ('listify', 'switcheroo', 'integer_to_boolean', "upcast",
+__all__ = ('as_flattened_numpy', 'listify', 'switcheroo',
+           'integer_to_boolean', "upcast",
            'object_to_categorical', 'boolean_to_integer',
            'float_to_integer', 'standardize', 'ordinal')
+
+
+def as_flattened_numpy(x):
+    """Returns a flattened numpy array representation."""
+    _x = np.asarray(x)
+    if _x.ndim > 1:
+        _x = _x.flatten()
+    return _x
 
 
 def listify(a):

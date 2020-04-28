@@ -22,9 +22,6 @@ will allow for parallel parameterization of custom functions.
 - |Enhancement| `cache` decorator now no longer requires bracket notation if a filename is not
 specified.
 
-`turbopanda.merge`
-..................
-
 `turbopanda.metapanda`
 ......................
 - `add_prefix`, `add_suffix` are now deprecated, to be removed in v0.3

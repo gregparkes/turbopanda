@@ -103,9 +103,9 @@ def shorten(s, newl: int = 15, method: str = "middle"):
     belongs(method, ("middle", "start", "end"))
 
     if isinstance(s, str):
-        return _shorten_string(s)
+        return _shorten_string(s, newl, method)
     else:
-        return [_shorten_string(_s) for _s in s]
+        return [_shorten_string(_s, newl, method) for _s in s]
 
 
 def string_replace(strings: Union[Series, Index],

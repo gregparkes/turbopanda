@@ -223,7 +223,8 @@ def cached_chunk(func: Callable,
         return mpf
 
 
-def cache(_func=None, *, filename: str = "example1.json") -> Callable:
+def cache(_func=None, *,
+          filename: str = "example1.json") -> Callable:
     """Provides automatic {.json, .csv} decorator caching for `turb.MetaPanda` or `pd.DataFrame`.
 
     .. note:: this is a decorator function, not to be called directly.

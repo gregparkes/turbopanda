@@ -8,6 +8,8 @@ import numpy as np
 from scipy import optimize as so, stats
 from scipy.interpolate import make_interp_spline
 
+from turbopanda.utils import as_flattened_numpy
+
 
 def _smooth_kde(_bins, _mt, _n=300):
     xn = np.linspace(_bins.min(), _bins.max(), _n)
@@ -44,7 +46,7 @@ def freedman_diaconis_bins(a: np.ndarray) -> int:
     Taken from https://github.com/mwaskom/seaborn/blob/master/seaborn/distributions.py
     """
     # From https://stats.stackexchange.com/questions/798/
-    a = np.asarray(a)
+    a = as_flattened_numpy(a)
     if len(a) < 2:
         return 1
     h = 2 * (stats.scoreatpercentile(a, 75) - stats.scoreatpercentile(a, 25)) / (a.shape[0] ** (1 / 3))
@@ -175,9 +177,7 @@ def univariate_kde(X: np.ndarray,
 
     supported_disc_dists = list(_get_discrete_single()) + list(_get_discrete_multiple())
     # convert to numpy
-    _X = np.asarray(X)
-    if _X.ndim > 1:
-        _X = _X.flatten()
+    _X = as_flattened_numpy(X)
     if bins is None:
         bins = get_bins(_X)
 

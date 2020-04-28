@@ -7,7 +7,10 @@ import warnings
 
 import numpy as np
 
+from turbopanda._deprecator import unimplemented
 
+
+@unimplemented
 def _seeded_checksum(df):
     """Generates a seeded checksum for a MetaPanda, given it's `df_`.
 

@@ -74,13 +74,13 @@ def instance_check(a: Union[object, Tuple], i: TypeVar, raised: bool = True):
     Parameters
     ----------
     a : object or tuple of object
-        If list/tuple, performs check on all in a
+        If tuple, performs check on all in a
     i : type or list of type
         Passed into isinstance which accepts type or list/tuple of type
     raised : bool
         If True, raises error, else just returns false
     """
-    if isinstance(a, tuple):
+    if isinstance(a, tuple) and i is not tuple:
         return all([_instance_check_element(x, i) for x in a])
     else:
         return _instance_check_element(a, i, raised)

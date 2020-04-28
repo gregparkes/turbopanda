@@ -5,13 +5,37 @@
 from __future__ import absolute_import, division, print_function
 
 import re
-# imports
+import sys
 import warnings
+import functools
 
-__all__ = ('deprecated', 'deprecated_param')
+__all__ = ('unimplemented', 'deprecated', 'deprecated_param')
 
 
-def deprecated(version: str, remove: str = None, instead: str = None, reason: str = None):
+def unimplemented(_func=None, *, to_complete: str = "<unknown>"):
+    """A decorator for declaring a function written to be incomplete or unimplemented"""
+
+    def _decorator_unimplemented(func):
+        @functools.wraps(func)
+        def _wrapper_unimplemented(*args, **kwargs):
+            warnings.warn(("{} is unimplemented, "
+                           "parts or whole of this function may not work; "
+                           "to be completed in version: {}")
+                          .format(func.__name__, to_complete), FutureWarning)
+            return func(*args, **kwargs)
+
+        return _wrapper_unimplemented
+
+    if _func is None:
+        return _decorator_unimplemented
+    else:
+        return _decorator_unimplemented(_func)
+
+
+def deprecated(version: str,
+               remove: str = None,
+               instead: str = None,
+               reason: str = None):
     """A decorator for deprecating functions.
 
     Parameters
@@ -30,10 +54,8 @@ def deprecated(version: str, remove: str = None, instead: str = None, reason: st
     @deprecated("0.2.4", "0.2.7", reason="function beyond scope of the module", instead=".pipe.zscore")
     """
 
-    def decorator(func):
-        """This decorator takes the function.
-        """
-
+    def _decorator_deprecate(func):
+        @functools.wraps(func)
         def _caching_function(*args, **kwargs):
             segments = ["{} is deprecated since version {}".format(func.__name__, version)]
             if remove is not None:
@@ -48,10 +70,13 @@ def deprecated(version: str, remove: str = None, instead: str = None, reason: st
 
         return _caching_function
 
-    return decorator
+    return _decorator_deprecate
 
 
-def deprecated_param(version: str, deprecated_args: str, remove: str = None, reason: str = None):
+def deprecated_param(version: str,
+                     deprecated_args: str,
+                     remove: str = None,
+                     reason: str = None):
     """A method for handling deprecated arguments within a function.
 
     deprecated_args can be separated by whitespace, ';', ',', or '|'
@@ -64,6 +89,7 @@ def deprecated_param(version: str, deprecated_args: str, remove: str = None, rea
     """
 
     def _decorator(func):
+        @functools.wraps(func)
         def _caching_function(*args, **kwargs):
             # splits arguments into words
             dep_arg = re.findall(r"[\w'_]+", deprecated_args)

@@ -8,10 +8,12 @@ import matplotlib.pyplot as plt
 from typing import Union, List, Tuple
 from pandas import Series
 
+from turbopanda._deprecator import unimplemented
 from turbopanda.stats import density
 from turbopanda.utils import remove_na, instance_check, arrays_equal_size
 
 
+@unimplemented
 def kde2d(X: Union[np.ndarray, Series, List, Tuple],
           Y: Union[np.ndarray, Series, List, Tuple],
           c: str = 'red',

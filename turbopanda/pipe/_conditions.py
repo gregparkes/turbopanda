@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Provides access to conditions which can be directly fed into pandas.DataFrame.pipe."""
-
+from __future__ import absolute_import, division, print_function
 from typing import List
 import pandas as pd
 

@@ -4,13 +4,14 @@
 
 from typing import List, Optional, Tuple, Union
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy import stats
 
 from turbopanda.stats import get_bins, univariate_kde, auto_fit
-from turbopanda.utils import instance_check
+from turbopanda.utils import instance_check, as_flattened_numpy
 
 """ Helper methods for redundant code such as plotting, getting bin type, smoothing etc. """
 
@@ -77,7 +78,7 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
               bins: Optional[Union[int, np.ndarray]] = None,
               density: bool = True,
               stat: bool = False,
-              ax: Optional = None,
+              ax: Optional[mpl.axes.Axes] = None,
               x_label: str = "",
               title: str = "",
               kde_range: float = 1e-3,
@@ -89,8 +90,8 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
 
     Parameters
     ----------
-    X : np.ndarray/pd.Series (1d)
-        The data column to draw.
+    X : list/tuple/np.ndarray/pd.Series (1d)
+        The data column to draw. Must be numeric.
     kde : str/tuple of str, optional, default="freeform"
         If None, does not draw a KDE plot
         If 'freeform': fits the best KDE to the points
@@ -136,9 +137,7 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
     instance_check(kde_range, float)
 
     # convert to numpy.
-    _X = np.asarray(X)
-    if _X.ndim > 1:
-        _X = _X.flatten()
+    _X = as_flattened_numpy(x)
     # make bins if set to None
     if bins is None:
         # if X is float, use freedman_diaconis_bins determinant, else simply np.arange for integer input.

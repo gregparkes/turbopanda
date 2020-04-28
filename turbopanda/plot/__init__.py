@@ -6,6 +6,7 @@ from ._gridplot import gridplot
 from ._histogram import histogram
 from ._scatter import scatter
 from ._heatmap import heatmap
+from ._boxplot import box1d, bibox1d
 # from ._kdeplot import kde2d
 
 from ._annotate import annotate

@@ -2,16 +2,21 @@
 # -*- coding: utf-8 -*-
 """Provides access to functions which can be directly fed into pandas.DataFrame.pipe.
 """
+from __future__ import absolute_import, division, print_function
 import numpy as np
 import pandas as pd
 from typing import Callable, List, TypeVar, Optional
 from sklearn.preprocessing import scale, power_transform
 
+from turbopanda.str import patcolumnmatch
 from turbopanda.utils import float_to_integer
 from ._conditions import select_float
 
-__all__ = ('all_float_to_int', 'downcast_all', 'all_low_cardinality_to_categorical',
-           'zscore', 'yeo_johnson', 'clean1', 'clean2')
+
+__all__ = ('all_float_to_int', 'downcast_all',
+           'all_low_cardinality_to_categorical',
+           'zscore', 'yeo_johnson', 'clean1', 'clean2',
+           'filter_rows_by_column', 'absolute')
 
 
 def _multi_assign(df: pd.DataFrame,
@@ -29,6 +34,12 @@ def _multi_assign(df: pd.DataFrame,
                 col: transform_fn(df_to_use[col]) for col in cond
             }
         ))
+
+
+def absolute(df: pd.DataFrame, pat: str = None) -> pd.DataFrame:
+    """Performs subselected absolute operation on certain columns."""
+    condition = lambda x: list(patcolumnmatch(pat, x)) if pat is not None else df.columns.tolist()
+    return _multi_assign(df, np.abs, condition)
 
 
 def all_float_to_int(df: pd.DataFrame) -> pd.DataFrame:
@@ -82,6 +93,24 @@ def yeo_johnson(df: pd.DataFrame) -> pd.DataFrame:
     """Performs Yeo-Johnson transformation to all float-value columns. """
     # transformation function is sklearn.power_transform
     return _multi_assign(df.copy(), power_transform, select_float)
+
+
+""" Filtering rows by a selected column value """
+
+
+def filter_rows_by_column(df: pd.DataFrame,
+                          expression: Callable) -> pd.DataFrame:
+    """Performs a filter operation using the expression function.
+
+    Expression function must return a boolean-series like object to filter
+    rows by.
+
+    Examples
+    --------
+    >>> import turbopanda as turb
+    >>> df.pipe(turb.pipe.filter_rows_by_column, lambda z: z['column'] == 3)
+    """
+    return df[expression(df)]
 
 
 """ Some global cleaning functions... """

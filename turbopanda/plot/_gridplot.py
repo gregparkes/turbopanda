@@ -5,7 +5,7 @@
 from __future__ import absolute_import, division, print_function
 
 import itertools as it
-
+import string
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -52,17 +52,23 @@ def _generate_diag_like_grid(n, direction, ax_size=2):
 
 def gridplot(n_plots: int,
              arrange: str = "square",
-             ax_size: int = 2):
+             ax_size: int = 2,
+             annotate_labels: bool = False,
+             annotate_offset: float = 0.01):
     """Determines the most optimal shape for a set of plots.
 
     Parameters
     ----------
     n_plots : int
         The total number of plots.
-    arrange : str
+    arrange : str, default="square"
         Choose from {'square', 'row' 'column'}. Indicates preference for direction of plots.
-    ax_size : int
+    ax_size : int, default=2
         The square size of each plot.
+    annotate_labels : bool, default=False
+        If True, adds A, B,.. K label to top-left corner of each axes.
+    annotate_offset : float, default=0.01
+        Determines the amount of offset for each label
 
     Returns
     -------
@@ -76,10 +82,26 @@ def gridplot(n_plots: int,
     nonnegative(ax_size)
     belongs(arrange, ['square', 'row', 'column'])
 
+    annot_props = {'weight': 'bold', 'horizontalalignment': 'left',
+                   'verticalalignment': 'center'}
+
     if n_plots == 1:
         fig, ax = plt.subplots(figsize=(ax_size, ax_size))  #
         # wrap ax as a list to iterate over.
+        if annotate_labels:
+            fig.text(0.01, .98, "A", **annot_props)
         return fig, [ax]
     else:
-        return _generate_square_like_grid(n_plots, ax_size=ax_size) \
+        fig, ax = _generate_square_like_grid(n_plots, ax_size=ax_size) \
             if arrange == 'square' else _generate_diag_like_grid(n_plots, arrange, ax_size=ax_size)
+        # add annotation labels, hmmm
+        if annotate_labels:
+            # we use tight layout to make sure text isnt overlapping
+            fig.tight_layout()
+            for a, n in zip(ax, string.ascii_uppercase):
+                pos_ = a.get_position().bounds
+                # add label
+                fig.text(pos_[0] - annotate_offset,
+                         pos_[1] + pos_[3] + annotate_offset,
+                         n, **annot_props)
+        return fig, ax

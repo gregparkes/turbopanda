@@ -13,7 +13,8 @@ from scipy import stats
 from turbopanda._metapanda import SelectorType
 from turbopanda._dependency import is_statsmodels_installed
 
-from turbopanda.plot import gridplot
+from turbopanda.pipe import absolute
+from turbopanda.plot import gridplot, bibox1d
 from turbopanda.utils import instance_check, intersect
 from turbopanda.ml._clean import ml_ready
 
@@ -32,20 +33,12 @@ def _fitted_vs_residual(plot, y, yp):
 
 
 def _boxplot_scores(plot, cv, score="RMSE"):
-    # has columns: fit_time, test_score, train_score
-    # create a copy
-    res = cv.copy()
-    # transform.
-    if res['test_score'].mean() < 0.:
-        res.transform(np.abs, "_score")
-
-    plot.boxplot(res['train_score|test_score'].values)
-    plot.set_xlabel("Train/Test Score")
-    plot.set_ylabel(score)
-    plot.set_title("{}: {:0.3f}".format(score, res['test_score'].median()))
-    plot.tick_params('x', rotation=45)
-    plot.set_xticks(range(1, 3))
-    plot.set_xticklabels(['test', 'train'])
+    # use bibox1d
+    _data = cv.df_.pipe(absolute, 'train_score|test_score')
+    bibox1d(_data['test_score'], _data['train_score'],
+            measured=score,
+            ax=plot, mannwhitney=False,
+            label_rotation=30)
 
 
 def _actual_vs_predicted(plot, y, yp):

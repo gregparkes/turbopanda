@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 # from turbopanda._pipe import Pipe
+from turbopanda._deprecator import unimplemented
 from turbopanda.utils._files import split_file_directory
 from turbopanda.utils._sets import join
 from ._drop_values import drop_columns
@@ -297,6 +298,7 @@ class MetaPanda(object):
         return mpf
 
     @classmethod
+    @unimplemented
     def from_hdf(cls, filename: str, **kwargs):
         """Read in a MetaPanda from a custom HDF5 file.
 

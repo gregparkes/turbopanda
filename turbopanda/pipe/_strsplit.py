@@ -6,6 +6,7 @@ These functions specifically handle string splitting.
 
 Inspired from https://hackersandslackers.com/splitting-columns-with-pandas/
 """
+from __future__ import absolute_import, division, print_function
 from typing import List, Optional
 import pandas as pd
 

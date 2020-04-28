@@ -9,7 +9,7 @@ import numpy as np
 from typing import Optional
 
 from turbopanda.stats import density
-from turbopanda.utils import instance_check, remove_na
+from turbopanda.utils import instance_check, remove_na, as_flattened_numpy
 
 __all__ = ('entropy', 'conditional_entropy', 'continuous_mutual_info')
 
@@ -86,8 +86,8 @@ def conditional_entropy(X: np.ndarray,
     H : float
         H(X|Y) the entropy of X given Y
     """
-    _X = np.asarray(X)
-    _Y = np.asarray(Y)
+    _X = as_flattened_numpy(X)
+    _Y = as_flattened_numpy(Y)
     # cast entropy and return
     H_Y = _estimate_entropy(_Y)
     H_XY = _estimate_entropy(_X, _Y)
@@ -121,8 +121,8 @@ def continuous_mutual_info(X: np.ndarray,
     MI : float
         I(X; Y) or I(X; Y|Z)
     """
-    _X = np.asarray(X)
-    _Y = np.asarray(Y)
+    _X = as_flattened_numpy(X)
+    _Y = as_flattened_numpy(Y)
 
     if Z is None:
         # calculate
@@ -131,7 +131,7 @@ def continuous_mutual_info(X: np.ndarray,
         H_XY = _estimate_entropy(_X, _Y)
         return H_X + H_Y - H_XY
     else:
-        _Z = np.asarray(Z)
+        _Z = as_flattened_numpy(Z)
         # calculate entropies.
         H_XZ = _estimate_entropy(_X, _Z)
         H_YZ = _estimate_entropy(_Y, _Z)

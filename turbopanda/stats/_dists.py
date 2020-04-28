@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
+from turbopanda.utils import as_flattened_numpy
 from ._kde import fit_model
 
 
@@ -77,10 +78,7 @@ def auto_fit(data, option="slim"):
     df : DataFrame
         Results dataframe of each fitted model.
     """
-    _data = np.asarray(data)
-
-    if _data.ndim > 1:
-        _data = _data.flatten()
+    _data = as_flattened_numpy(data)
 
     dists = _get_distribution_set(option)
     # make as dataframe

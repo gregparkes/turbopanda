@@ -6,8 +6,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from turbopanda._pipe import Pipe
-from turbopanda.plot import color_qualitative, gridplot
-from turbopanda.utils import belongs, difference, set_like
+from turbopanda.pipe import absolute, filter_rows_by_column
+from turbopanda.plot import color_qualitative, gridplot, box1d
+from turbopanda.utils import belongs, difference, set_like, instance_check, nonnegative
+from turbopanda.str import patcolumnmatch
 
 from turbopanda.ml._default import model_types, param_types
 
@@ -29,21 +31,22 @@ def _model_selection_parameters(cv_results,
                                 score="RMSE"):
     # definition of accepted models.
     _mt = model_types()
-    _pt = param_types()
     log_params = ("alpha", "C")
     # get primary parameter based on the model.
     plot.set_title(model_name)
-    frp = Pipe(['filter_rows', lambda df: df['model'] == model_name],
-               ['transform', np.abs, "(?:split[0-9]+|mean)_(?:train|test)_score"])
-    # if we only have one row, just compute the boxplot
-    subset = cv_results.compute(frp)
+
+    # subset is pandas.DataFrame
+    subset = (cv_results.df_
+              .pipe(filter_rows_by_column, lambda z: z['model'] == model_name)
+              .pipe(absolute, "(?:split[0-9]+|mean)_(?:train|test)_score")
+              )
 
     if plot is None:
         fig, plot = plt.subplots(figsize=(6, 4))
 
-    if subset.n_ == 1:
-        plot.boxplot(subset['split[0-9]+_%s_score' % y_name], notch=True)
-        plot.set_ylabel(score)
+    if subset.shape[0] == 1:
+        pcols = patcolumnmatch('split[0-9]+_%s_score' % y_name, subset)
+        box1d(np.asarray(subset[pcols]), ax=plot, label=score)
         return
     else:
         # define primary parameter axis as x
@@ -52,8 +55,8 @@ def _model_selection_parameters(cv_results,
         if _basic_p(prim_param) in log_params:
             plot.set_xscale("log")
         # sort values based on x
-        fr_sort = Pipe(['apply', 'sort_values', 'by={}'.format(prim_param)])
-        subset_sorted = subset.compute(fr_sort)
+        # fr_sort = Pipe(['apply', 'sort_values', 'by={}'.format(prim_param)])
+        subset_sorted = subset.sort_values(by=prim_param)
 
         # the number of dimensions affects how we plot this.
         if len(params) == 1:
@@ -73,9 +76,12 @@ def _model_selection_parameters(cv_results,
             # fetch non-primary column.
             for line, c in zip(non_prim_uniq, colors):
                 # mean, sd
-                _p = subset_sorted.df_.loc[subset_sorted[non_prim] == line, prim_param]
-                test_m = subset_sorted.df_.loc[subset_sorted[non_prim] == line, 'mean_%s_score' % y_name]
-                test_sd = subset_sorted.df_.loc[subset_sorted[non_prim] == line, 'std_%s_score' % y_name]
+                _p = subset_sorted.loc[subset_sorted[non_prim] == line,
+                                       prim_param]
+                test_m = subset_sorted.loc[subset_sorted[non_prim] == line,
+                                           'mean_%s_score' % y_name]
+                test_sd = subset_sorted.loc[subset_sorted[non_prim] == line,
+                                            'std_%s_score' % y_name]
 
                 plot.plot(_p, test_m, 'x-', label="{}={}".format(non_prim.split("__")[-1], line), color=c)
                 plot.fill_between(_p, test_m + test_sd, test_m - test_sd, alpha=.3, color=c)
@@ -86,33 +92,40 @@ def _model_selection_parameters(cv_results,
 
 
 def parameter_tune(cv_results,
-                   y='test',
-                   arrange='square'):
-    """Iterates over every model type in `cv_results` and plots the best parameter. cv_results is MetaPanda
+                   y: str = 'test',
+                   arrange: str = 'square',
+                   ax_size: int = 4):
+    """Iterates over every model type in `cv_results` and plots the best parameter.
 
     Generates a series of plots for each model type, plotting the parameters.
 
     Parameters
     ----------
     cv_results : MetaPanda
-        The results from a call to `fit_grid`.
-    y : str, optional
-        Choose from {'test', 'train'}
-        Uses the mean/std test or train scores, respectively.
-    arrange : str
+        The results from a call to `.fit.grid`.
+    y : str, default='test'
+        Choose from {'test', 'train'}, determines whether to plot training or testing data
+        Uses the mean/std test scores, respectively.
+    arrange : str, default='square'
         Choose from {'square', 'row' 'column'}. Indicates preference for direction of plots.
+    ax_size : int, default=4
+        The default size of each plot
 
     Returns
     -------
     None
     """
     belongs(y, ('test', 'train'))
+    belongs(arrange, ('square', 'column', 'row'))
+    instance_check(ax_size, int)
+    nonnegative(ax_size)
+
     # determine the models found within.
     if "model" in cv_results.columns:
         # get unique models
         models = set_like(cv_results['model'])
         # create figures
-        fig, axes = gridplot(len(models), ax_size=4, arrange=arrange)
+        fig, axes = gridplot(len(models), ax_size=ax_size, arrange=arrange)
         for i, m in enumerate(models):
             # determine parameter names from results.
             _P = [p for p in cv_results.view("param_model__") if

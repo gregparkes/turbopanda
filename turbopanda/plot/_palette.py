@@ -17,6 +17,10 @@ def _tuple_to_hex(t):
     return "#%02x%02x%02x" % (int(t[0]), int(t[1]), int(t[2]))
 
 
+def _luminance(arr):
+    return np.dot(arr, np.array([.299, .587, .114, 0.]))
+
+
 def _colormap_to_hex(cm_array: np.ndarray):
     """
     Given a colormap array arranged as:
@@ -61,10 +65,66 @@ def darken(c, frac_change=.3):
     return colors.rgb2hex(clipped)
 
 
+def autoshade(c, frac_change=.3):
+    """Given a color name, returns a slightly lighter OR darker version of that color"""
+    x = np.asarray(colors.to_rgba(c))
+    # determine luminousity
+    lum = _luminance(x)
+    other = np.array([frac_change, frac_change, frac_change, 0])
+    if lum > .5:
+        clipped = np.clip(x - other, 0., 1.)
+    else:
+        clipped = np.clip(x + other, 0., 1.)
+    return colors.rgb2hex(clipped)
+
+
+def noncontrast(c):
+    """Given colour c, find best noncontrasting colour (white or black).
+
+    References
+    ----------
+    https://stackoverflow.com/questions/1855884/determine-font-color-based-on-background-color
+    """
+    if isinstance(c, str):
+        _c = np.asarray(colors.to_rgba(c))
+    else:
+        _c = np.asarray(c)
+
+    # calculate perpective luminance
+    lum_weights = np.array([.299, .587, .114, 0.])
+    luminance = np.dot(_c, lum_weights)
+    # if luminance is high, use black font, else use white font
+    if luminance < .5:
+        return "#000000"
+    else:
+        return "#ffffff"
+
+
+def contrast(c):
+    """Given colour c, find best contrasting colour (white or black).
+
+    References
+    ----------
+    https://stackoverflow.com/questions/1855884/determine-font-color-based-on-background-color
+    """
+    if isinstance(c, str):
+        _c = np.asarray(colors.to_rgba(c))
+    else:
+        _c = np.asarray(c)
+
+    # calculate perpective luminance
+    luminance = _luminance(_c)
+    # if luminance is high, use black font, else use white font
+    if luminance > .5:
+        return "#000000"
+    else:
+        return "#ffffff"
+
+
 """ Qualitative methods """
 
 
-def palette_black(n):
+def palette_black(n: int):
     """Returns a qualitiative set of black-white colors"""
     options_ = ["k", "dimgray", "gray", "darkgray",
                 "silver", "lightgray", "gainsboro",
@@ -72,14 +132,14 @@ def palette_black(n):
     return list(it.islice(it.cycle(options_), 0, n))
 
 
-def palette_red(n):
+def palette_red(n: int):
     """Returns a qualitiative set of red colors"""
     options_ = ["r", "maroon", "firebrick", "indianred",
                 "lightcoral", "rosybrown"]
     return list(it.islice(it.cycle(options_), 0, n))
 
 
-def palette_green(n):
+def palette_green(n: int):
     """Returns a qualitiative set of green colors"""
     options_ = ["g", "olivedrab", "yellowgreen", "darkolivegreen",
                 "lawngreen", "sage", "lightsage", "darksage", "palegreen",
@@ -87,7 +147,7 @@ def palette_green(n):
     return list(it.islice(it.cycle(options_), 0, n))
 
 
-def palette_blue(n):
+def palette_blue(n: int):
     """Returns a qualitiative set of blue colors"""
     options_ = ["b", "steelblue", "dodgerblue", "cyan",
                 "c", "deepskyblue", "powderblue", "navy", "slateblue",
@@ -103,7 +163,7 @@ def palette_pair():
     return list(it.islice(it.cycle(options_), 0, 1))
 
 
-def palette_mixed(n):
+def palette_mixed(n: int):
     """Returns a qualitiative set of mixed-spectrum default colors"""
     options_ = ['b', 'r', 'g', 'silver', 'orange',
                 'purple', 'pink', 'gold']
@@ -111,7 +171,7 @@ def palette_mixed(n):
 
 
 def color_qualitative(n: Union[int, List, Tuple],
-                      sharp: bool = True) -> List:
+                      sharp: bool = True) -> List[str]:
     """Generates a qualitative palette generator as hex.
 
     Parameters

@@ -1,4 +1,12 @@
-# turbopanda: Turbo-charging the Pandas library in an integrative, meta-orientated style
+# turbopanda: The All-encompassing Data Science package
+========================================================================================
+Turbo-charging the Pandas library in an integrative, meta-orientated style.
+
+![pypi](https://img.shields.io/pypi/v/turbopanda)
+![last commit](https://img.shields.io/github/last-commit/gregparkes/turbopanda)
+![repo size](https://img.shields.io/github/repo-size/gregparkes/turbopanda)
+![commit activity](https://img.shields.io/github/commit-activity/m/gregparkes/turbopanda)
+![License](https://img.shields.io/badge/LICENSE-GPLv3-blue)
 
 **Current version: 0.2.6**
 

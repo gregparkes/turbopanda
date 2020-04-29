@@ -20,6 +20,7 @@ tags
 *.lprof
 *.swp
 *.swo
+*.sw*
 .DS_Store
 *.tar.gz
 *.tgz

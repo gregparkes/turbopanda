@@ -1,0 +1,33 @@
+language: python
+
+dist: xenial
+
+env:
+  - PYTHON=3.7 DEPS=pinned BACKEND=agg DOCTESTS=false
+
+before_install:
+  - sudo apt-get update -yq
+  - sudo sh tests/getmsfonts.sh
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda config --add channels conda-forge
+  - conda update -q conda
+  - conda config --set channel_priority false
+  - conda info -a
+
+install:
+  - conda create -f environment.yml
+  - source activate turbopanda
+
+script:
+  - make lint
+  - if [$DOCTESTS == 'true' ];
+    then make coverage;
+    then make unittests;
+
+after_success:
+  - pip install codecov
+  - codecov

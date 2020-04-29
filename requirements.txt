@@ -1,7 +1,7 @@
 numpy
-pandas
 scipy
+pandas
+joblib
 matplotlib
 scikit-learn
 numba
-joblib

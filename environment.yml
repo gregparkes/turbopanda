@@ -1,8 +1,10 @@
 name: turbopanda
 channels: 
   - defaults
+  - conda-forge
 dependencies:
   - python>=3.7
+  - pip>=19.0.3
   - jupyter>=1.0.0
   - numpy>=1.11.0
   - scipy>=1.3
@@ -10,10 +12,5 @@ dependencies:
   - pandas>=0.25
   - matplotlib>=3.1.1
   - scikit-learn>=0.22
-  - pip>=19.0.3
   - numba>=0.48.0
-  - xlrd
   - statsmodels
-  - pip:
-    - tables
-    - toolz

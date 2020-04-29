@@ -1,0 +1,7 @@
+[run]
+omit =
+    turbopanda/tests/*
+    turbopanda/examples/*
+    turbopanda/extras/*
+    turbopanda/changelog/*
+    turbopanda/data/*

@@ -14,7 +14,7 @@ from turbopanda._metapanda import SelectorType
 from turbopanda._dependency import is_statsmodels_installed
 
 from turbopanda.pipe import absolute
-from turbopanda.plot import gridplot, bibox1d
+from turbopanda.plot import gridplot, bibox1d, widebox
 from turbopanda.utils import instance_check, intersect
 from turbopanda.ml._clean import ml_ready
 
@@ -36,9 +36,8 @@ def _boxplot_scores(plot, cv, score="RMSE"):
     # use bibox1d
     _data = cv.df_.pipe(absolute, 'train_score|test_score')
     bibox1d(_data['test_score'], _data['train_score'],
-            measured=score,
-            ax=plot, mannwhitney=False,
-            label_rotation=30)
+            measured=score, vertical=False,
+            ax=plot, mannwhitney=False)
 
 
 def _actual_vs_predicted(plot, y, yp):
@@ -55,26 +54,14 @@ def coefficient(cv, plot=None):
         coef = cv['w__']
         # sort the coefficients by size
         coef = coef.reindex(cv['w__'].mean(axis=0).sort_values().index, axis=1)
+        # rename the columns
+
         # plot
         if plot is None:
             fig, plot = plt.subplots(figsize=(8, 5))
 
-        plot.boxplot(coef.values)
-        plot.set_yscale("log")
-        plot.set_ylabel(r"$\beta$")
-        # if we have too many labels, randomly select some
-        if len(coef.columns) > 10:
-            # subset
-            xtick_locs = np.random.choice(len(coef.columns), 10, replace=False)
-            plot.set_xticks(xtick_locs)
-            plot.set_xticklabels(coef.iloc[:, xtick_locs].columns.str[3:])
-        else:
-            plot.set_xticks(range(1, len(coef.columns) + 1))
-            plot.set_xticklabels(coef.columns.str[3:])
-
-        plot.tick_params("x", rotation=45)
-        for tick in plot.get_xmajorticklabels():
-            tick.set_horizontalalignment('right')
+        widebox(coef, vertical=False, outliers=False,
+                measured=r"$\beta$", ax=plot)
         plot.set_title("Coefficients")
 
 

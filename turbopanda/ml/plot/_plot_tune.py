@@ -46,7 +46,7 @@ def _model_selection_parameters(cv_results,
 
     if subset.shape[0] == 1:
         pcols = patcolumnmatch('split[0-9]+_%s_score' % y_name, subset)
-        box1d(np.asarray(subset[pcols]), ax=plot, label=score)
+        box1d(np.asarray(subset[pcols]), ax=plot, label=score, notch=True)
         return
     else:
         # define primary parameter axis as x

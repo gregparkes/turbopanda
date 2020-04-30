@@ -215,4 +215,4 @@ def color_qualitative(n: Union[int, List, Tuple],
         return _colormap_to_hex(getattr(cm, np.random.choice(lt20))(np.linspace(0, 1, n)))
     else:
         # we cycle one of the lt20s
-        return list(it.islice(it.cycle(mf.colormap_to_hex(getattr(cm, np.random.choice(lt20))(np.linspace(0, 1, 20)))), 0, n))
+        return list(it.islice(it.cycle(_colormap_to_hex(getattr(cm, np.random.choice(lt20))(np.linspace(0, 1, 20)))), 0, n))

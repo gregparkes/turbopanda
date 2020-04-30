@@ -137,7 +137,7 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
     instance_check(kde_range, float)
 
     # convert to numpy.
-    _X = as_flattened_numpy(x)
+    _X = as_flattened_numpy(X)
     # make bins if set to None
     if bins is None:
         # if X is float, use freedman_diaconis_bins determinant, else simply np.arange for integer input.

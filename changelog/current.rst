@@ -39,7 +39,7 @@ operations
 
 `turbopanda.plot`
 .................
-- |MajorFeature| Added `box1d` and `bibox1d` to enable easy boxplot drawing.
+- |MajorFeature| Added `box1d`, `bibox1d` and `widebox` to enable easy boxplot drawing.
 - |Feature| Added a number of shading methods to do with *luminance*, such as `autoshade`,
 `contrast` and `noncontrast` within the palette
 - |Enhancement| `gridplot` now annotates plots with A..K for papers

@@ -11,18 +11,17 @@ from __future__ import absolute_import, division, print_function
 import itertools as it
 # imports
 from typing import List, Optional, Union
-
 import numpy as np
 import pandas as pd
 from scipy import stats
+from joblib import Parallel, delayed, cpu_count
 
 # locals
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.stats._lmfast import lm
 from turbopanda.utils import belongs, difference, instance_check, \
     is_column_boolean, is_column_float, remove_na, union, is_dataframe_float, \
-    disallow_instance_pair
-
+    disallow_instance_pair, bounds_check
 
 from scipy.stats import pearsonr, spearmanr, kendalltau, pointbiserialr
 from ._corr_metrics import percbend, shepherd, skipped
@@ -247,7 +246,7 @@ def bicorr(x: pd.Series,
     """
     # perform all checks in the public method.. rather than repeating them internally.
     # check type
-    instance_check(x, pd.Series)
+    instance_check((x, y), pd.Series)
     belongs(tail, ("one-sided", "two-sided"))
     belongs(method, ('pearson', 'spearman', 'kendall', 'biserial', 'percbend', 'shepherd', 'skipped'))
     # Check size
@@ -339,10 +338,50 @@ def partial_bicorr(data: pd.DataFrame,
     return _partial_bicorr_inner(data, x, y, covar, tail, method)
 
 
+""" Parallel bicorrelate methods """
+
+
+def _parallel_bicorr(data, comb, is_parallel, *args, **kwargs):
+    # performs optional parallelism on bicorrelations.
+    # where comb is ((col_name_x1, col_name_y1), (col_name_x2, col_name_y2), ...)
+    if is_parallel:
+        return Parallel(cpu_count() - 1)(delayed(_bicorr_inner)(data[x], data[y], *args, **kwargs) for x, y in comb)
+    else:
+        return [_bicorr_inner(data[x], data[y], *args, **kwargs) for x, y in comb]
+
+
+def _parallel_partial_bicorr(data, covar, comb, is_parallel, is_cart_z, *args, **kwargs):
+    # performs optional parallelism on partial bicorrelations
+    # where comb can be ((col_name_x1, col_name_y1), (col_name_x2, col_name_y2), ...)
+    # or (((col_name_x1, col_name_y1), z1), ((col_name_x2, col_name_y2), z2), ...)
+    if is_cart_z:
+        comb_cart = it.product(comb, covar)
+        if is_parallel:
+            return Parallel(cpu_count()-1)(delayed(_partial_bicorr_inner)(data, x, y, z, *args, **kwargs) for (x, y), z in comb_cart)
+        else:
+            return [_partial_bicorr_inner(data, x, y, z, *args, **kwargs) for (x, y), z in comb_cart]
+    else:
+        if is_parallel:
+            return Parallel(cpu_count()-1)(delayed(_partial_bicorr_inner)(data, x, y, covar, *args, **kwargs) for x, y in comb)
+        else:
+            return [_partial_bicorr_inner(data, x, y, covar, *args, **kwargs) for x, y in comb]
+
+
 """ Helper methods to convert from complex `correlate` function to bivariate examples (with partials). """
 
 
-def _corr_two_matrix_diff(data, x, y, covar=None, cartesian_Z=False, method='spearman', verbose=0):
+def _corr_combination(data, comb, covar, parallel, cart_z, method, verbose):
+    # iterate and perform two_variable as before
+    if covar is None:
+        result_k = _parallel_bicorr(data, comb, parallel, method=method, verbose=verbose)
+    else:
+        result_k = _parallel_partial_bicorr(data, covar, comb, parallel, cart_z, method=method, verbose=verbose)
+    return pd.concat(result_k, axis=0, sort=False).reset_index().rename(columns={"index": "method"})
+
+
+def _corr_two_matrix_diff(data, x, y, covar=None,
+                          cartesian_Z=False, method='spearman',
+                          parallel=False, verbose=0):
     """
     Computes the correlation between two matrices X and Y of different columns lengths.
 
@@ -352,35 +391,26 @@ def _corr_two_matrix_diff(data, x, y, covar=None, cartesian_Z=False, method='spe
     comb = it.product(x, y)
     # iterate and perform two_variable as before
     if covar is None:
-        result_k = [_bicorr_inner(data[xc], data[yc], method=method, verbose=verbose) for (xc, yc) in comb]
+        result_k = _parallel_bicorr(data, comb, parallel, method=method, verbose=verbose)
     else:
-        if cartesian_Z:
-            comb_Z = it.product(comb, covar)
-            result_k = [_partial_bicorr_inner(data, xc, yc, z, method=method, verbose=verbose) for (xc, yc), z in comb_Z]
-        else:
-            result_k = [_partial_bicorr_inner(data, xc, yc, covar, method=method, verbose=verbose) for xc, yc in comb]
+        result_k = _parallel_partial_bicorr(data, covar, comb, parallel, cartesian_Z, method=method, verbose=verbose)
 
     result = pd.concat(result_k, axis=0, sort=False).reset_index().rename(columns={"index": "method"})
     return result
 
 
-def _corr_matrix_singular(data, covar=None, cartesian_Z=False, method="spearman", verbose=0):
+def _corr_matrix_singular(data, covar=None, cartesian_Z=False,
+                          method="spearman", parallel=False, verbose=0):
     """Computes the correlation matrix on pairwise columns."""
     # combinations with replacement diagonal
-    combs = it.combinations_with_replacement(range(data.shape[1]), 2)
-    # iterate over i,j pairs
+    comb = it.combinations_with_replacement(data.columns, 2)
+    # iterate over combination column name pairs.
     if covar is None:
-        result_k = [_bicorr_inner(data.iloc[:, i], data.iloc[:, j], method=method, verbose=verbose) for i, j in combs]
+        result_k = _parallel_bicorr(data, comb, parallel, method=method, verbose=verbose)
     else:
         # computes the symmetric difference
-        _x = difference(data.columns, covar)
-        # determine if Z is cartesian or not
-        if cartesian_Z:
-            # modify combs to cartesianize over Z
-            combs_Z = it.product(combs, covar)
-            result_k = [_partial_bicorr_inner(data, _x[i], _x[j], z, method=method, verbose=verbose) for (i, j), z in combs_Z]
-        else:
-            result_k = [_partial_bicorr_inner(data, _x[i], _x[j], covar, method=method, verbose=verbose) for i, j in combs]
+        # _x = difference(data.columns, covar)
+        result_k = _parallel_partial_bicorr(data, covar, comb, parallel, cartesian_Z, method=method, verbose=verbose)
 
     results = pd.concat(result_k, axis=0, sort=False).reset_index().rename(columns={"index": "method"})
     return results
@@ -394,21 +424,19 @@ def _corr_matrix_vector(data: pd.DataFrame,
                         method: str = "spearman",
                         verbose: int = 0) -> pd.DataFrame:
     # join together the list/strings of column names
-    cols = union(x, y, covar)
+    # cols = union(x, y, covar)
     # extract data subset, no dropping yet though.
-    _data = data[cols]
+    # _data = data[cols]
+    # create 'combination' of groups
+    comb = it.product(x, [y])
 
     # calculate bicorr or partial bicorr based on presense of covar list
     if covar is None:
-        _x = _data[x]
-        _y = _data[y]
-        result_k = [_bicorr_inner(_x.iloc[:, i], _y, method=method, verbose=verbose) for i in range(_x.shape[1])]
+        result_k = _parallel_bicorr(data, comb, parallel, method=method, verbose=verbose)
+        # _x, _y = _data[x], _data[y]
+        # result_k = [_bicorr_inner(_x.iloc[:, i], _y, method=method, verbose=verbose) for i in range(_x.shape[1])]
     else:
-        if cartesian_Z:
-            xz_prod = it.product(x, covar)
-            result_k = [_partial_bicorr_inner(_data, _xn, y, _cov, method=method, verbose=verbose) for _xn, _cov in xz_prod]
-        else:
-            result_k = [_partial_bicorr_inner(_data, _xn, y, covar, method=method, verbose=verbose) for _xn in x]
+        result_k = _parallel_partial_bicorr(data, covar, comb, parallel, cartesian_Z, method=method, verbose=verbose)
 
     # concatenate, add method and return
     result = pd.concat(result_k, axis=0, sort=False).reset_index().rename(columns={"index": "method"})
@@ -423,6 +451,7 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
               y: Optional[SelectorType] = None,
               covar: Optional[SelectorType] = None,
               cartesian_covar: bool = False,
+              parallel: bool = False,
               method: str = "spearman",
               verbose: int = 0) -> pd.DataFrame:
     """Correlates X and Y together to generate a list of correlations.
@@ -445,6 +474,8 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
     cartesian_covar : bool, default=False
         If True, and if covar is not None, separates every element in covar to individually control for
         using the cartesian product
+    parallel : bool, default=False
+        If True, computes multiple correlation pairs in parallel using `joblib`. Uses `n_jobs=-2` for default.
     method : str, default="spearman"
         Method to correlate with. Choose from:
             'pearson' : Pearson product-moment correlation
@@ -495,11 +526,10 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
 
     # data cannot be NONE
     instance_check(data, (pd.DataFrame, MetaPanda))
-    instance_check(x, (type(None), str, list, tuple, pd.Index))
-    instance_check(y, (type(None), str, list, tuple, pd.Index))
-    instance_check(covar, (type(None), str, list, tuple, pd.Index))
+    instance_check((x, y, covar), (type(None), str, list, tuple, pd.Index))
     instance_check(cartesian_covar, bool)
     belongs(method, ('pearson', 'spearman', 'kendall', 'biserial', 'percbend', 'shepherd', 'skipped'))
+    bounds_check(verbose, 0, 4)
 
     # downcast to dataframe option
     df = data.df_ if isinstance(data, MetaPanda) else data
@@ -509,11 +539,12 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
 
     # convert using `view` if we have string instances.
     if isinstance(x, str) and isinstance(data, MetaPanda):
-        x = data.view(x)
+        # new in v0.2.6 - update to `select`
+        x = data.select(x)
     if isinstance(y, str) and isinstance(data, MetaPanda):
-        y = data.view(y)
+        y = data.select(y)
     if isinstance(covar, str) and isinstance(data, MetaPanda):
-        covar = data.view(covar)
+        covar = data.select(covar)
 
     # perform a check to make sure every column in `covar` is continuous.
     if covar is not None:
@@ -523,27 +554,28 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
     # execute various use cases based on the presense of x, y, and covar, respectively.
     if x is None and y is None:
         # here just perform matrix-based correlation
-        return _corr_matrix_singular(df, covar=covar, method=method,
-                                     cartesian_Z=cartesian_covar, verbose=verbose)
+        comb = it.combinations_with_replacement(df.columns, 2)
+        # return _corr_matrix_singular(df, covar=covar, method=method, cartesian_Z=cartesian_covar, verbose=verbose)
     elif isinstance(x, (list, tuple, pd.Index)) and y is None:
         # use a subset of x, in union with covar
-        cols = union(x, covar)
-        return _corr_matrix_singular(df[cols], covar=covar, method=method,
-                                     cartesian_Z=cartesian_covar, verbose=verbose)
+        comb = it.combinations_with_replacement(x, 2)
+        # return _corr_matrix_singular(df[union(x, covar)], covar=covar, method=method, cartesian_Z=cartesian_covar, verbose=verbose)
     elif isinstance(x, (list, tuple, pd.Index)) and isinstance(y, str):
         # list of x, y str -> matrix-vector cartesian product
-        return _corr_matrix_vector(df, x, y, covar=covar, method=method,
-                                   cartesian_Z=cartesian_covar, verbose=verbose)
+        comb = it.product(x, [y])
+        # return _corr_matrix_vector(df, x, y, covar=covar, method=method, cartesian_Z=cartesian_covar, verbose=verbose)
     elif isinstance(y, (list, tuple, pd.Index)) and isinstance(x, str):
         # list of y, x str -> matrix-vector cartesian product
-        return _corr_matrix_vector(df, y, x, covar=covar, method=method,
-                                   cartesian_Z=cartesian_covar, verbose=verbose)
+        comb = it.product(y, [x])
+        # return _corr_matrix_vector(df, y, x, covar=covar, method=method, cartesian_Z=cartesian_covar, verbose=verbose)
     elif isinstance(x, (list, tuple, pd.Index)) and isinstance(y, (list, tuple, pd.Index)):
         # list of x, y -> cartesian product of x: y terms
-        return _corr_two_matrix_diff(df, x, y, covar=covar, method=method,
-                                     cartesian_Z=cartesian_covar, verbose=verbose)
+        comb = it.product(x, y)
+        # return _corr_two_matrix_diff(df, x, y, covar=covar, method=method, cartesian_Z=cartesian_covar, verbose=verbose)
     else:
         raise ValueError("X: {}; Y: {}; Z: {} combination unknown.".format(x, y, covar))
+    # return the combination of these effects.
+    return _corr_combination(df, comb, covar, parallel, cartesian_covar, method, verbose)
 
 
 def row_to_matrix(rows: pd.DataFrame, x="x", y="y", piv_value='r'):

@@ -11,7 +11,7 @@ from sklearn.model_selection import RepeatedKFold, cross_val_predict, cross_vali
 # internal functions, objects.
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.dev import cached
-from turbopanda.utils import insert_suffix, instance_check, listify, union
+from turbopanda.utils import insert_suffix, instance_check, listify, union, bounds_check
 
 from turbopanda.ml._clean import ml_ready
 from turbopanda.ml._package import find_sklearn_model, is_sklearn_model
@@ -110,8 +110,7 @@ def basic(df: Union[pd.DataFrame, "MetaPanda"],
     instance_check(cv, (int, tuple))
     instance_check(cache, (type(None), str))
     instance_check(plot, bool)
-    instance_check(verbose, int)
-    instance_check(model_kws, dict)
+    bounds_check(verbose, 0, 4)
     assert is_sklearn_model(model), "model '{}' is not a valid sklearn model."
 
     _df = MetaPanda(df) if isinstance(df, pd.DataFrame) else df

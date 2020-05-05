@@ -14,6 +14,8 @@ Changelog
 
 `turbopanda.corr`
 .................
+- |Enhancement| `correlate` now has a `parallel` parameter to calculate bicorrelates in parallel
+using joblib.
 
 `turbopanda.dev`
 ................
@@ -24,11 +26,15 @@ Changelog
 
 `turbopanda.metapanda`
 ......................
+- meta calculations make use of `.str.common_substrings` rather than the pairwise implementation
+as before.
 
 `turbopanda.ml`
 ...............
 - |Enhancement| `.fit.basic` and `.fit.grid` have changed parameter ordering,
 and accept pandas.DataFrame objects
+- |Enhancement| `pca` now is vectorizable, with the addition of `stratified_pca`
+to streamline this
 - |Enhancement| `.plot` methods now use boxplots from the `.plot` library
 - |Fix| Many bugs in `.plot.pca_overview' which wasn't plotting eigenvectors properly
 
@@ -49,11 +55,11 @@ operations
 ................
 - |Feature| Added `patcolumnmatch` to match column names in a dataframe using regex to clean code
 - |Fix| `shorten` now properly uses the parameters passed to it
+- |Fix| `common_substrings` now properly filters substrings as needed
+- `score_pairwise_common_substring` is now deprecated
 
 `turbopanda.utils`
 ..................
 - |Feature| Added `upcast` method to convert lists to numpy, numpy to pandas, etc.
 - |Feature| Added `arrays_dimension` method for checking dimensions on numpy, pandas objects
-
-`turbopanda.validate`
-.....................
+- |Feature| Added `bounds_check` function to check numeric bounding of functions

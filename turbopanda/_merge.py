@@ -16,7 +16,8 @@ from ._fileio import read
 # locals
 from ._metapanda import MetaPanda
 from ._pipe import PipeMetaPandaType
-from .utils import belongs, check_list_type, get_file_expanded, instance_check, intersect, union
+from .utils import belongs, check_list_type, \
+    get_file_expanded, instance_check, intersect, union, bounds_check
 
 # custom types
 DataSetType = Union[Series, DataFrame, MetaPanda]
@@ -192,6 +193,7 @@ def merge(mdfs: Union[str, List[DataSetType]],
     instance_check(mdfs, (str, list, tuple))
     instance_check(name, (type(None), str))
     belongs(how, ['left', 'inner', 'outer'])
+    bounds_check(verbose, 0, 4)
 
     if isinstance(mdfs, str):
         """Use glob to select multiple files to merge together."""

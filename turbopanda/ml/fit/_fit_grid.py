@@ -18,7 +18,7 @@ from sklearn.utils.estimator_checks import check_estimator
 from turbopanda._deprecator import unimplemented
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.dev import cached, cached_chunk
-from turbopanda.utils import dictchunk, instance_check
+from turbopanda.utils import dictchunk, instance_check, bounds_check, nonnegative
 from turbopanda.ml._clean import ml_ready
 from turbopanda.ml.plot import parameter_tune
 from turbopanda.ml._pgrid import make_parameter_grid, make_optimize_grid, \
@@ -125,6 +125,7 @@ def grid(df: Union[pd.DataFrame, "MetaPanda"],
     instance_check(cv, (int, tuple))
     instance_check(cache, (type(None), str))
     instance_check((plot, chunks), bool)
+    bounds_check(verbose, 0, 4)
 
     if is_sklearn_model(models):
         models = [models]
@@ -257,8 +258,9 @@ def optimize(df: "MetaPanda",
     instance_check(df, MetaPanda)
     instance_check(x, (str, list, tuple, pd.Index))
     instance_check(y, str)
-    instance_check((cv, verbose), int)
+    nonnegative((cv, verbose), int)
     instance_check(models, (tuple, list, dict))
+    bounds_check(verbose, 0, 4)
 
     _df, _xnp, _y, _xcols = ml_ready(df, x, y)
 

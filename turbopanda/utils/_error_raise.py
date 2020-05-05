@@ -10,9 +10,8 @@ import operator
 
 from ._sets import join
 
-
 __all__ = ("belongs", "instance_check", "disallow_instance_pair",
-           "check_list_type", "nonnegative",
+           "check_list_type", "nonnegative", "bounds_check",
            "boolean_series_check", "is_twotuple",
            "arrays_equal_size", "arrays_dimension", "is_iterable")
 
@@ -25,26 +24,6 @@ def belongs(elem: Any, home: Union[List[Any], Tuple[Any, ...]], raised=True):
         else:
             return False
     return True
-
-
-def nonnegative(a: Union[float, int], raised=True):
-    """Check whether value a is nonnegative number.
-
-    .. note:: is vectorizable (on a)
-    """
-    if not isinstance(a, (float, int, np.float, np.int)):
-        if raised:
-            raise TypeError("object '{}' must be of type [float, int], not type '{}'".format(a, type(a)))
-        else:
-            return False
-    else:
-        if a < 0:
-            if raised:
-                raise AttributeError("object '{}' must be non-negative.".format(a))
-            else:
-                return False
-        else:
-            return True
 
 
 def _instance_check_element(a: object, i: TypeVar, raised: bool = True):
@@ -84,6 +63,50 @@ def instance_check(a: Union[object, Tuple], i: TypeVar, raised: bool = True):
         return all([_instance_check_element(x, i) for x in a])
     else:
         return _instance_check_element(a, i, raised)
+
+
+def nonnegative(a: Union[float, int, Tuple],
+                i: Union[TypeVar, Tuple[TypeVar, TypeVar]] = (float, int),
+                raised=True):
+    """Check whether value a is nonnegative number."""
+    instance_check(a, i, raised=raised)
+    if isinstance(a, tuple):
+        # do nonnegative on all values
+        result = any([x < 0 for x in a])
+        if result and raised:
+            raise Attribute("Not all values in {} are nonnegative".format(a))
+        elif result and not raised:
+            return False
+        else:
+            return True
+    else:
+        if a < 0 and raised:
+            raise Attribute("Not all values in {} are nonnegative".format(a))
+        elif a < 0 and not raised:
+            return False
+        else:
+            return True
+
+
+def bounds_check(x: Union[float, int],
+                 lower: Union[float, int],
+                 upper: Union[float, int],
+                 with_equality: bool = False,
+                 raised: bool = True):
+    """Checks that x is in a upper/lower bound."""
+    instance_check((x, upper, lower), (float, int), raised=raised)
+    if with_equality:
+        eq = lower <= x <= upper
+    else:
+        eq = lower < x < upper
+
+    if eq:
+        return True
+    else:
+        if raised:
+            raise AttributeError("object bound {} < {} < {} doesn't hold".format(lower, x, upper))
+        else:
+            return False
 
 
 def arrays_equal_size(a, b, *arrays):

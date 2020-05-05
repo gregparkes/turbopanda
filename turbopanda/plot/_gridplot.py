@@ -77,9 +77,7 @@ def gridplot(n_plots: int,
     axes : list of matplotlib.ax.Axes
         A list of axes to use.
     """
-    instance_check((n_plots, ax_size), int)
-    nonnegative(n_plots)
-    nonnegative(ax_size)
+    nonnegative((n_plots, ax_size,), int)
     belongs(arrange, ['square', 'row', 'column'])
 
     annot_props = {'weight': 'bold', 'horizontalalignment': 'left',

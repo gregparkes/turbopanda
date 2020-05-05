@@ -117,8 +117,7 @@ def parameter_tune(cv_results,
     """
     belongs(y, ('test', 'train'))
     belongs(arrange, ('square', 'column', 'row'))
-    instance_check(ax_size, int)
-    nonnegative(ax_size)
+    nonnegative(ax_size, int)
 
     # determine the models found within.
     if "model" in cv_results.columns:

@@ -20,6 +20,9 @@ will be executed in a list-like fashion. If multiple arguments are Param objects
 is the *product* of all of the combinations.
 """
 from collections.abc import Iterable
+import os
+from tempfile import mkdtemp
+import shutil
 import itertools as it
 import operator
 import functools
@@ -27,7 +30,8 @@ import numpy as np
 from joblib import Parallel, delayed, cpu_count
 from pandas import Series, Index, DataFrame
 
-from turbopanda.utils._error_raise import belongs, instance_check
+from .utils._error_raise import belongs, instance_check
+from .dev._cache import cached
 
 
 def _expand_dict(k, vs):
@@ -66,21 +70,32 @@ class Param(list):
         return super().__repr__()
 
 
-def vectorize(_func=None, *, parallel=False, return_as="list"):
+def vectorize(_func=None,
+              *,
+              parallel=False,
+              cache=False,
+              return_as="list"):
     """A decorator for making vectorizable function calls.
 
     Optionally we can parallelize the operation to speed up execution over a long parameter set.
 
+    .. note:: Currently in v0.2.6, with cache=True, parallel=False, as there is no current way we know of
+    incorporating persistence with parallelism.
+
     Parameters
     ----------
-    parallel : bool
+    parallel : bool, default=False
         If True, uses `joblib` to parallelize the list comprehension
+    cache : bool, default=False
+        If True, creates a cache for each step using `joblib`. If code breaks part way through,
+        reloads all steps from the last cache.
     return_as : str, default="list"
         Choose from {'list', 'tuple', 'numpy', 'pandas'}
         Specifies how you want the returned data to look like. Be careful when you use this as you may
         get results you don't expect!
     """
     instance_check(parallel, bool)
+    instance_check(cache, (type(None), str))
     belongs(return_as, ("list", 'tuple', 'numpy', 'pandas'))
 
     def _decorator_vectorize(f):
@@ -100,6 +115,20 @@ def vectorize(_func=None, *, parallel=False, return_as="list"):
                 filtered_kwargs = [_dictchain(list(filter(lambda x: isinstance(x, dict), y))) for y in combined]
                 # map these arguments and return each type
                 # NEW in v0.2.5: parallelize with joblib.
+                # NEW in v0.2.6: caching (with parallel!)
+                """
+                if cache:
+                    savedir = mkdtemp()
+                    fsubname = os.path.join(savedir, "cache.vectorize")
+                    # perform operation here
+
+                    try:
+                        shutil.rmtree(savedir)
+                    except OSError:
+                        pass # this can fail with windows
+                
+                else:
+                """
                 if parallel:
                     result = Parallel(n_jobs=cpu_count() - 1)(
                         delayed(f)(*arg, **kwarg) for arg, kwarg in zip(filtered_args, filtered_kwargs))

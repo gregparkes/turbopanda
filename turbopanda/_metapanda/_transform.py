@@ -8,7 +8,7 @@ from typing import Callable, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 
-from turbopanda.str import common_substring_match
+from turbopanda.str import common_substrings
 from turbopanda.utils import belongs, instance_check, is_twotuple, listify, pairwise, \
     object_to_categorical
 from ._drop_values import drop_columns
@@ -195,8 +195,7 @@ def aggregate(self,
             _name = selector
         else:
             # calculate the best name by common substring matching
-            pairs = pairwise(common_substring_match, _selection)
-            _name = pd.Series(pairs).value_counts().idxmax()
+            _name = common_substrings(_selection).idxmax()
     else:
         _name = name
 

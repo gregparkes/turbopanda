@@ -38,6 +38,8 @@ def density(X: np.ndarray,
 
     if r is None:
         r = freedman_diaconis_bins(X)
+    else:
+        nonnegative(r, int)
 
     if Y is None and Z is None:
         _X = remove_na(X)

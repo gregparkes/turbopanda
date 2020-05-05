@@ -9,7 +9,7 @@ from typing import Callable, List, TypeVar, Optional
 from sklearn.preprocessing import scale, power_transform
 
 from turbopanda.str import patcolumnmatch
-from turbopanda.utils import float_to_integer
+from turbopanda.utils import float_to_integer, bounds_check
 from ._conditions import select_float
 
 
@@ -64,6 +64,8 @@ def downcast_all(df: pd.DataFrame,
 def all_low_cardinality_to_categorical(df: pd.DataFrame,
                                        threshold: float = 0.5) -> pd.DataFrame:
     """Casts all low cardinality columns to type 'category' """
+    bounds_check(threshold, 0., 1.)
+
     df_to_use = df.copy()
     transform_fn = lambda x: x.astype("category")
     n_entre = df_to_use.shape[0]

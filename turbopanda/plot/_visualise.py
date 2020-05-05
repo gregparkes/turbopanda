@@ -100,10 +100,9 @@ def hist_grid(mdf: Union[DataFrame, "MetaPanda"],
     None
     """
     # checks
-    instance_check(plot_size, int)
     instance_check(shared_dist, (type(None), str, list, tuple, dict))
     instance_check(savepath, (type(None), str, bool))
-    nonnegative(plot_size)
+    nonnegative(plot_size, int)
     belongs(arrange, ["square", "row", "column"])
     # make a metapanda if we have a dataframe.
     _mdf = MetaPanda(mdf) if isinstance(mdf, DataFrame) else mdf
@@ -176,8 +175,7 @@ def scatter_grid(mdf: Union[DataFrame, "MetaPanda"],
     instance_check((plot_size, best_fit_deg), int)
     instance_check(savepath, (type(None), str, bool))
     instance_check(best_fit, bool)
-    nonnegative(best_fit_deg)
-    nonnegative(plot_size)
+    nonnegative((best_fit_deg, plot_size,))
     belongs(arrange, ["square", "row", "column"])
 
     # make a metapanda if we have a dataframe.

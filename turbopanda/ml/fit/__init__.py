@@ -5,4 +5,4 @@
 from ._fit_basic import basic
 from ._fit_grid import grid
 from ._fit_learning import learning
-from ._fit_pca import pca
+from ._fit_pca import pca, stratified_pca

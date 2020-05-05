@@ -12,7 +12,7 @@ from scipy.stats import mannwhitneyu
 
 from turbopanda._deprecator import unimplemented
 from turbopanda.utils import instance_check, as_flattened_numpy, intersect, \
-    difference, arrays_equal_size, listify
+    difference, arrays_equal_size, listify, bounds_check
 from turbopanda.str import shorten
 from ._palette import color_qualitative, contrast, noncontrast, autoshade
 
@@ -249,6 +249,8 @@ def box1d(X: Union[np.ndarray, pd.Series, List, Tuple],
     instance_check((capsize, width), float)
     instance_check(label_rotation, (int, float))
     instance_check(label_max_length, int)
+    bounds_check(width, 0., 1.)
+
     # convert option to numpy
     _X = as_flattened_numpy(X)
     _style = _get_flier_style(theme)
@@ -370,6 +372,7 @@ def bibox1d(X: Union[np.ndarray, pd.Series, List, Tuple],
     instance_check((capsize, width, strip_jitter, label_rotation), (float, int))
     instance_check(theme, str)
     instance_check(label_max_length, int)
+    bounds_check(strip_jitter, 0., 1.)
 
     _X = as_flattened_numpy(X)
     _Y = as_flattened_numpy(Y)
@@ -474,6 +477,8 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
     instance_check((capsize, width, strip_jitter, label_rotation), (float, int))
     instance_check(theme, str)
     instance_check(label_max_length, int)
+    bounds_check(width, 0., 1.)
+    bounds_check(strip_jitter, 0., 1.)
 
     if isinstance(data, pd.DataFrame):
         # select float, int subset

@@ -6,7 +6,7 @@ from typing import Union
 
 import pandas as pd
 
-from turbopanda.utils import instance_check
+from turbopanda.utils import instance_check, nonnegative
 
 __all__ = ('head', 'dtypes', 'copy', 'info')
 
@@ -30,7 +30,7 @@ def head(self, k: int = 5) -> pd.DataFrame:
     --------
     pandas.DataFrame.head : Return the first n rows.
     """
-    instance_check(k, int)
+    nonnegative(k, int)
     return self.df_.head(k)
 
 

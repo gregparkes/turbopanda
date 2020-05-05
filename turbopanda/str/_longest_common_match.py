@@ -7,13 +7,14 @@ from typing import List, Tuple, Union, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
-from pandas import Series
+from pandas import Series, Index
 
 from turbopanda._deprecator import deprecated
 from turbopanda.utils import pairwise, instance_check, nonnegative, disallow_instance_pair
 
 
-__all__ = ('common_substring_match', 'pairwise_common_substring_matches', 'score_pairwise_common_substring')
+__all__ = ('common_substring_match', 'common_substrings',
+           'pairwise_common_substring_matches', 'score_pairwise_common_substring')
 
 
 def _single_common_substring_match(a: str, b: str) -> str:
@@ -67,10 +68,9 @@ def common_substrings(a: Union[str, List[str]],
         str returned if (a, b) are strs, else Series of valuecounts
     """
 
-    instance_check(a, (str, list, tuple))
-    instance_check(b, (type(None), str, list, tuple))
-    instance_check(min_length, int)
-    nonnegative(min_length)
+    instance_check(a, (str, list, tuple, Index))
+    instance_check(b, (type(None), str, list, tuple, Index))
+    nonnegative(min_length, int)
     # prevent a case where a can be a str, b is None
     disallow_instance_pair(a, str, b, type(None))
 
@@ -84,16 +84,17 @@ def common_substrings(a: Union[str, List[str]],
             b = [b]
         # determine pair set.
         if b is None:
+            # combination iterator
             pair_groups = it.combinations(a, 2)
         else:
-            # cartesian product
+            # cartesian product iterator
             pair_groups = it.product(a, b)
         # generate pairs
         z = [_single_common_substring_match(i, j) for i, j in pair_groups]
 
         def filter_func(x):
             """Custom function which filters according to tuple and keeps elements >= min length"""
-            return (x in filters) or (len(x) < min_length) or (pairs.count(x) <= 1)
+            return (x in filters) or (len(x) < min_length) or (z.count(x) <= 1)
         # filter out naff elements
         z_up = list(it.filterfalse(filter_func, z))
         # save as series valuecounts.
@@ -137,6 +138,7 @@ def pairwise_common_substring_matches(array: List[str],
     return Series(pairs_upd).value_counts()
 
 
+@deprecated("0.2.6", "0.2.8", reason="No longer necessary")
 def score_pairwise_common_substring(pairs, with_plot=True, eps=.001):
     """Provides a default scoring method of choosing good pairs.
 

@@ -35,13 +35,15 @@ to give users powerful methods to statistically analyse the data they present to
 
 ### v0.2.5: Intelligent plotting
 
-We include improved versions of scatterplots, boxplots and KDE plots (2D) in the latest patch
+We include improved versions of scatterplots and KDE plots (2D) in the latest patch
 with automatic intelligent plotting. For example, a common problem with scatter plots with large `n`
 is to plot too many points over each other, slowing memory. `turb.plot.scatter` remedies this
 by density checking, and altering the size of points if clusters begin to emerge, saving run time and
 space.
 
-Further to this, DataFrame-to-DataFrame pipes are now beginning to be integrated.
+## v0.2.6: Intelligent plotting (2)
+This version sees the introduction of smarter *boxplots* with optional stripplot overlays. The introduction of
+`joblib` as a requirement also opens the avenue for significant speedups where list comprehensions are used.
 
 ### AOB
 

@@ -11,7 +11,7 @@ import pandas as pd
 from sklearn.model_selection import RepeatedKFold, permutation_test_score, learning_curve
 
 from turbopanda._metapanda import MetaPanda, SelectorType
-from turbopanda.utils import instance_check, difference
+from turbopanda.utils import instance_check, difference, bounds_check
 from turbopanda.ml._clean import ml_ready
 from turbopanda.ml._package import find_sklearn_model
 from turbopanda.ml.plot._plot_learning import learning_curve as lcurve
@@ -55,6 +55,7 @@ def learning(df: "MetaPanda",
     model : str/estimator sklearn model that implements `fit` and `predict` methods
         The name of a scikit-learn model, or the model object itself.
     cache : str, optional
+        TODO: Not Implemented yet.
         If not None, stores the resulting model parts in JSON and reloads if present.
     plot : bool, optional
         If True, produces `.plot.learning_curve` inplace.
@@ -101,6 +102,7 @@ def learning(df: "MetaPanda",
     instance_check(cv, (int, tuple))
     # instance_check(cache, (type(None), str))
     instance_check(plot, bool)
+    bounds_check(verbose, 0, 4)
 
     # set dataset if a pandas object
     _df = MetaPanda(df) if isinstance(df, pd.DataFrame) else df
@@ -124,8 +126,9 @@ def learning(df: "MetaPanda",
     # ml ready
     __df, _x, _y, _xcols = ml_ready(_df, x, y)
     if verbose > 0:
-        print(
-            "full dataset: {}/{} -> ML: {}/{}({},{})".format(_df.n_, _df.p_, __df.shape[0], __df.shape[1], _x.shape[1], 1))
+        print("full dataset: {}/{} -> ML: {}/{}({},{})".format(_df.n_, _df.p_,
+                                                             __df.shape[0], __df.shape[1],
+                                                             _x.shape[1], 1))
 
     rep = RepeatedKFold(n_splits=k, n_repeats=repeats)
     vars_ = learning_curve(lm, _x, _y, train_sizes=train_n,

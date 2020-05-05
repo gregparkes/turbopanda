@@ -11,7 +11,8 @@ import pandas as pd
 from scipy import stats
 
 from turbopanda.stats import get_bins, univariate_kde, auto_fit
-from turbopanda.utils import instance_check, as_flattened_numpy
+from turbopanda.utils import instance_check, as_flattened_numpy, nonnegative,\
+    bounds_check
 
 """ Helper methods for redundant code such as plotting, getting bin type, smoothing etc. """
 
@@ -135,6 +136,7 @@ def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
     instance_check((title, x_label), str)
     instance_check(kde, (str, type(None), list, tuple))
     instance_check(kde_range, float)
+    bounds_check(verbose, 0, 4)
 
     # convert to numpy.
     _X = as_flattened_numpy(X)

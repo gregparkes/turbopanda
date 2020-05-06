@@ -10,7 +10,6 @@ from sklearn.preprocessing import normalize, power_transform, quantile_transform
 
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.utils import belongs, instance_check, union, intersect
-from turbopanda._deprecator import deprecated
 
 
 def ml_ready(df: "MetaPanda",
@@ -103,55 +102,3 @@ def ml_ready(df: "MetaPanda",
         return __df, _x, xcols
     else:
         return __df, _x, np.asarray(__df[y]), xcols
-
-
-@deprecated("0.2.5", "0.2.7", instead="There is no alternative at present.",
-            reason="Function is clunky, can do better")
-def make_polynomial(df: "MetaPanda",
-                    x: SelectorType = None,
-                    degree: int = 2,
-                    **poly_kws):
-    """Generates a polynomial full dataset from a smaller subset.
-
-    Parameters
-    ----------
-    df : MetaPanda
-        The full target dataset
-    x : selector, optional
-        An optional subset of x to perform the polynomialization on
-    degree : int
-        The degree of the polynomial features
-
-    Other Parameters
-    ----------------
-    poly_kws : dict
-        keywords to pass to `sklearn.preprocessing.PolynomialFeatures()`
-
-    Returns
-    -------
-    ndf : MetaPanda
-        The new target dataset
-
-    See Also
-    --------
-    sklearn.preprocessing.PolynomialFeatures : Generate polynomial and interaction features
-    """
-    from sklearn.preprocessing import PolynomialFeatures
-    # make a copy
-    _xc = df.columns if x is None else x
-    # make 'machine learning ready'
-    selection = intersect(df.view(_xc), df.view(float))
-    _df, _x, _xcol = ml_ready(df, selection)
-    # define object and fit
-    pf = PolynomialFeatures(degree=degree, **poly_kws)
-    pf.fit(_x)
-    # get new xcols
-    _nxcol = [s.replace(" ", "__") for s in pf.get_feature_names(_xcol)]
-    # transform x
-    __x = pf.transform(_x)
-    # rejoin to full dataset and return...
-    return MetaPanda(
-        pd.DataFrame(
-            __x, columns=_nxcol, index=_df.index
-        )
-    )

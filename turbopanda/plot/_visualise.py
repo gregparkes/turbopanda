@@ -13,7 +13,6 @@ import numpy as np
 from pandas import DataFrame
 
 from turbopanda._metapanda import MetaPanda, SelectorType
-from turbopanda._deprecator import deprecated
 from turbopanda.utils import belongs, remove_na, instance_check, difference, nonnegative
 
 from ._gridplot import gridplot
@@ -21,44 +20,6 @@ from ._histogram import histogram
 from ._save_fig import save
 
 __all__ = ("scatter_grid", "missing", "hist_grid")
-
-
-@deprecated("0.2.5", "0.2.7", instead="No replacement.", reason="There are other libraries that perform this function "
-                                                                "better")
-def missing(mdf: "MetaPanda"):
-    """
-    Plots the missing data as a greyscale heatmap.
-
-    Parameters
-    --------
-    mdf : turb.MetaPanda
-        The dataset
-
-    Returns
-    -------
-    None
-    """
-
-    def _data_polynomial_length(length):
-        # calculate length based on size of DF
-        # dimensions follow this polynomial
-        x = np.linspace(0, 250, 100)
-        y = np.sqrt(np.linspace(0, 1, 100)) * 22 + 3
-        p = np.poly1d(np.polyfit(x, y, deg=2))
-        return int(p(length).round())
-
-    dims = (16, _data_polynomial_length(mdf.df_.shape[1]))
-
-    # wrangle data
-    out = mdf.df_.notnull().astype(np.int).T
-
-    # figure out which plot we are using.!
-    fig, ax = plt.subplots(figsize=dims)
-    # use seaborn's heatmap
-    ax.imshow(out, cmap="Greys", aspect="auto")
-    # make sure to plot ALL labels. manual override
-    ax.set_yticks(range(0, mdf.df_.shape[1], 2))
-    ax.set_yticklabels(mdf.df_.columns)
 
 
 def hist_grid(mdf: Union[DataFrame, "MetaPanda"],

@@ -13,25 +13,10 @@ from turbopanda._deprecator import deprecated
 from turbopanda.utils import pairwise, instance_check, nonnegative, disallow_instance_pair
 
 
-__all__ = ('common_substring_match', 'common_substrings',
-           'pairwise_common_substring_matches', 'score_pairwise_common_substring')
+__all__ = ('common_substrings', 'score_pairwise_common_substring')
 
 
 def _single_common_substring_match(a: str, b: str) -> str:
-    """Given two strings, find the longest common substring.
-
-     Also known as the Longest Common Substring problem."""
-    from difflib import SequenceMatcher
-    match = SequenceMatcher(None, a, b).find_longest_match(0, len(a), 0, len(b))
-    # return the longest substring
-    if match.size != 0:
-        return a[match.a:match.a + match.size]
-    else:
-        return ""
-
-
-@deprecated("0.2.5", "0.2.7", instead=".str.common_substrings")
-def common_substring_match(a: str, b: str) -> str:
     """Given two strings, find the longest common substring.
 
      Also known as the Longest Common Substring problem."""
@@ -99,43 +84,6 @@ def common_substrings(a: Union[str, List[str]],
         z_up = list(it.filterfalse(filter_func, z))
         # save as series valuecounts.
         return Series(z_up).value_counts()
-
-
-@deprecated("0.2.5", "0.2.7", instead=".str.common_substrings")
-def pairwise_common_substring_matches(array: List[str],
-                                      filters: Tuple[str, ...] = ('', '_', '__'),
-                                      min_length: int = 2) -> Series:
-    """
-    Given k strings, find the most frequent longest common substring.
-
-    Filtered by:
-        - not belonging to a member of `filters`
-        - containing more than `min_length` in length
-        - having more than 1 occurrence
-
-    Parameters
-    ----------
-    array : list, tuple, pd.Index
-        A list of strings
-    filters : tuple
-        The character/string elements to filter out
-    min_length : int
-        The minimum accepted length of string for a given pair
-
-    Returns
-    -------
-    ser : Series
-        The value counts of every pairwise common substring match
-    """
-    def filter_function(x):
-        """Custom function which filters according to tuple and keeps elements >= min length"""
-        return (x in filters) or (len(x) < min_length) or (pairs.count(x) <= 1)
-
-    pairs = pairwise(common_substring_match, array)
-    # filter out crap elements, such as '', and '_'
-    pairs_upd = list(it.filterfalse(filter_function, pairs))
-    # save as series and get `value_counts`
-    return Series(pairs_upd).value_counts()
 
 
 @deprecated("0.2.6", "0.2.8", reason="No longer necessary")

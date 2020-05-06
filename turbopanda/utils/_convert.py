@@ -7,7 +7,6 @@ from typing import Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 
-from turbopanda._deprecator import deprecated
 from ._bool_series import is_column_int, is_n_value_column
 from ._error_raise import instance_check
 
@@ -16,7 +15,7 @@ ArrayLike = Union[np.ndarray, pd.Series, pd.DataFrame]
 __all__ = ('as_flattened_numpy', 'listify', 'switcheroo',
            'integer_to_boolean', "upcast",
            'object_to_categorical', 'boolean_to_integer',
-           'float_to_integer', 'standardize', 'ordinal')
+           'float_to_integer', 'ordinal')
 
 
 def as_flattened_numpy(x):
@@ -91,23 +90,6 @@ def object_to_categorical(ser: pd.Series,
 def boolean_to_integer(ser: pd.Series) -> pd.Series:
     """ Convert a boolean series into an integer if possible """
     return ser.astype(np.uint8) if (ser.dtype == np.bool) else ser
-
-
-@deprecated("0.2.5", "0.2.7", instead=".pipe.zscore")
-def standardize(x: ArrayLike) -> ArrayLike:
-    """
-    Performs z-score standardization on vector x.
-
-    Accepts x as [np.ndarray, pd.Series, pd.DataFrame]
-    """
-    if isinstance(x, pd.Series):
-        return (x - x.mean()) / x.std()
-    elif isinstance(x, pd.DataFrame):
-        return (x - x.mean(axis=0)) / x.std(axis=0)
-    elif isinstance(x, np.ndarray):
-        return (x - np.nanmean(x, axis=0)) / np.nanstd(x, axis=0)
-    else:
-        raise TypeError("x must be of type [pd.Series, pd.DataFrame, np.ndarray]")
 
 
 def upcast(x: Union[list, tuple, np.ndarray]):

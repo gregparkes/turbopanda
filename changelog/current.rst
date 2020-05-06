@@ -26,6 +26,7 @@ using joblib.
 
 `turbopanda.metapanda`
 ......................
+- |Enhancement| `view` now accepts eval-like arguments if it's only arg is a string
 - meta calculations make use of `.str.common_substrings` rather than the pairwise implementation
 as before.
 

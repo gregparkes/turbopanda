@@ -91,7 +91,7 @@ def nonnegative(a: Union[float, int, Tuple],
 def bounds_check(x: Union[float, int],
                  lower: Union[float, int],
                  upper: Union[float, int],
-                 with_equality: bool = False,
+                 with_equality: bool = True,
                  raised: bool = True):
     """Checks that x is in a upper/lower bound."""
     instance_check((x, upper, lower), (float, int), raised=raised)

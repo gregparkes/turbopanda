@@ -143,7 +143,7 @@ def pca(df: Union[np.ndarray, pd.DataFrame, MetaPanda],
 
 
 def stratified_pca(df: Union[np.ndarray, pd.DataFrame, MetaPanda],
-                   groups: List[SelectorType],
+                   groups: Union[Dict[str, str], List[SelectorType]],
                    preprocess: bool = True,
                    whiten: bool = False,
                    sparsity: float = 0.,
@@ -157,8 +157,10 @@ def stratified_pca(df: Union[np.ndarray, pd.DataFrame, MetaPanda],
     ----------
     df : np.ndarray / pd.DataFrame / MetaPanda
         The full dataset
-    groups : list of selector
+    groups : list of selector / dict of [k:str, k:selector]
         The different groups to stratify on.
+        If List, uses different selectors to form the different groups
+        If Dict, uses `select` eval-like strings, where k: is the name, and v: is the selector
     preprocess : bool, default=True
         Preprocesses the data matrix X if set. Only preprocesses if pandas.DataFrame or above
         Uses the `.pipe.clean1` function which includes zscore,
@@ -184,22 +186,32 @@ def stratified_pca(df: Union[np.ndarray, pd.DataFrame, MetaPanda],
         The reconstructed transformed X matrix.
     """
     instance_check(df, (np.ndarray, pd.DataFrame, MetaPanda))
+    instance_check(groups, (list, tuple, dict, pd.Index))
+
+    if isinstance(groups, (list, tuple, pd.Index)):
+        _param = Param(*groups)
+    else:
+        _param = Param(*list(groups.values()))
 
     # call pca using PARAM
-    results = pca(df, Param(*groups), preprocess=preprocess,
+    results = pca(df, _param, preprocess=preprocess,
                   whiten=whiten, sparsity=sparsity,
                   refit=True, with_transform=True,
                   variance_threshold=variance_threshold)
 
-    # set column names for each transformed data
-    for r, group in zip(results, groups):
-        # if the group is a string, do something
-        if isinstance(group, str):
-            r[1].columns = patproduct("%s_PC%d", [group], range(1,r[1].shape[1]+1))
-        elif isinstance(group, (list, tuple, pd.Index, pd.Series)):
-            # use str to find common longest substring.
-            lcs = common_substrings(group, min_length=3).idxmax()
-            r[1].columns = patproduct(lcs + "_PC%d", range(1,r[1].shape[1]+1))
+    if isinstance(groups, dict):
+        for r, group in zip(results, groups.keys()):
+            r[1].columns = patproduct("%s_PC%d", [group], range(1, r[1].shape[1]+1))
+    else:
+        # set column names for each transformed data
+        for r, group in zip(results, groups):
+            # if the group is a string, do something
+            if isinstance(group, str):
+                r[1].columns = patproduct("%s_PC%d", [group], range(1,r[1].shape[1]+1))
+            elif isinstance(group, (list, tuple, pd.Index, pd.Series)):
+                # use str to find common longest substring.
+                lcs = common_substrings(group, min_length=3).idxmax()
+                r[1].columns = patproduct(lcs + "_PC%d", range(1,r[1].shape[1]+1))
 
     # join together pandas chunks
     joined_xt = pd.concat(

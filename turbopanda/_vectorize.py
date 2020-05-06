@@ -73,7 +73,7 @@ class Param(list):
 def vectorize(_func=None,
               *,
               parallel=False,
-              cache=False,
+              # cache=False,
               return_as="list"):
     """A decorator for making vectorizable function calls.
 
@@ -87,6 +87,7 @@ def vectorize(_func=None,
     parallel : bool, default=False
         If True, uses `joblib` to parallelize the list comprehension
     cache : bool, default=False
+        TODO: Implement chunked caching for each vectorizable
         If True, creates a cache for each step using `joblib`. If code breaks part way through,
         reloads all steps from the last cache.
     return_as : str, default="list"
@@ -95,7 +96,6 @@ def vectorize(_func=None,
         get results you don't expect!
     """
     instance_check(parallel, bool)
-    instance_check(cache, (type(None), str))
     belongs(return_as, ("list", 'tuple', 'numpy', 'pandas'))
 
     def _decorator_vectorize(f):

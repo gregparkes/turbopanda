@@ -10,7 +10,7 @@ from sklearn.preprocessing import scale, power_transform
 
 from turbopanda.str import patcolumnmatch
 from turbopanda.utils import float_to_integer, bounds_check
-from ._conditions import select_float
+from ._conditions import select_float, select_numeric
 
 
 __all__ = ('all_float_to_int', 'downcast_all',

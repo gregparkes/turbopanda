@@ -18,7 +18,7 @@ from turbopanda.utils import boolean_series_check, dictzip, \
 from turbopanda.str import patcolumnmatch
 from ._types import SelectorType
 
-__all__ = ("get_selector", "selector_types", 'selector_options', 'not_selector_types')
+__all__ = ("get_selector", "selector_types")
 
 
 def selector_types() -> Iterable:
@@ -30,19 +30,12 @@ def selector_types() -> Iterable:
     )
 
 
-def not_selector_types() -> Iterable:
-    """Returns the NOT acceptable selector data types that are searched for, i.e everything NOT as k"""
-    return join(
-        tuple(map(lambda n: "~"+n.__name__, t_numpy())),
-        ("~object", "~category")
-    )
+def _varstrtypes():
+    return list(map(lambda t: t.__name__, t_numpy())) + ['object', 'category']
 
 
-def selector_options():
-    """Gets all possible selector_item options."""
-    return list(it.chain.from_iterable([type(None), Index, "__call__", t_numpy(),
-                                        str, float, int, bool, object, CategoricalDtype,
-                                        list, tuple]))
+def _vartypes():
+    return [float, int, bool, object, CategoricalDtype] + list(t_numpy())
 
 
 def _get_selector_item(df: DataFrame,
@@ -64,9 +57,9 @@ def _get_selector_item(df: DataFrame,
         return intersect(df.columns, selector)
     elif selector in selector_types():
         # if it's a string option, convert to type
-        dec_map = {
-            **{"object": object, "category": CategoricalDtype},
-            **dictzip(map(lambda n: n.__name__, t_numpy()), t_numpy())
+        dec_map = {"object": object,
+                   "category": CategoricalDtype,
+                   **dictzip(map(lambda n: n.__name__, t_numpy()), t_numpy())
         }
         if selector in dec_map.keys():
             selector = dec_map[selector]
@@ -87,7 +80,7 @@ def _get_selector_item(df: DataFrame,
         else:
             return df.columns[ser]
     elif isinstance(selector, str):
-        # if we begin with ~, reverse the str search as NOT
+        # check if our string contains ~, | or &, and use selector if true
         # check if the key is in the meta_ column names, only if a boolean column
         if (selector in meta) and (meta[selector].dtype == bool):
             # UPDATE: this should fix some merging issues.

@@ -91,10 +91,15 @@ def view(self, *selector: SelectorType, **selector_kwargs) -> pd.Index:
         self.cache_k(**selector_kwargs)
         # add 'values' to the selector list
         _ms = join(_ms, selector_kwargs.values())
-    # we do this 'double-drop' to maintain the order of the DataFrame, because of set operations.
-    sel = inspect(self.df_, self.meta_, self.selectors_, _ms, join_t='union', mode='view')
-    # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
-    return sel
+    # special case if it's only one element and of type str, and contains & or | - use select
+    if len(_ms) == 1 and isinstance(_ms[0], str) and re.search("[&|]", _ms[0]):
+        # try select statement
+        return self.select(_ms[0])
+    else:
+        # we do this 'double-drop' to maintain the order of the DataFrame, because of set operations.
+        sel = inspect(self.df_, self.meta_, self.selectors_, _ms, join_t='union', mode='view')
+        # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
+        return sel
 
 
 @deprecated("0.2.5", "0.2.8", instead="`MetaPanda.select`", reason="redundancy with view, view_not.")

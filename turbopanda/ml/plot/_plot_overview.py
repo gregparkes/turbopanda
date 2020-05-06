@@ -13,6 +13,7 @@ from scipy import stats
 from turbopanda._metapanda import SelectorType
 from turbopanda._dependency import is_statsmodels_installed
 
+from turbopanda.str import shorten
 from turbopanda.pipe import absolute
 from turbopanda.plot import gridplot, bibox1d, widebox
 from turbopanda.utils import instance_check, intersect
@@ -98,10 +99,10 @@ def _plot_vif(plot, _vif):
         if len(_vif) > 10:
             tick_locs = np.random.choice(len(_vif), 10, replace=False)
             plot.set_xticks(tick_locs)
-            plot.set_xticklabels(_vif.iloc[tick_locs].index.values)
+            plot.set_xticklabels(shorten(_vif.iloc[tick_locs].index.values, 15))
         else:
             plot.set_xticks(range(1, len(_vif) + 1))
-            plot.set_xticklabels(_vif.index.values)
+            plot.set_xticklabels(shorten(_vif.index.values, 15))
 
         plot.tick_params('x', rotation=45)
 

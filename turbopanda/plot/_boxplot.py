@@ -366,7 +366,7 @@ def bibox1d(X: Union[np.ndarray, pd.Series, List, Tuple],
     Inspiration from https://github.com/jbmouret/matplotlib_for_papers#colored-boxes
     """
     instance_check((X, Y), (list, tuple, np.ndarray, pd.Series))
-    instance_check((colors, labels, spines), (type(None), list))
+    instance_check((colors, labels, spines), (type(None), list, pd.Index))
     instance_check(ax, (type(None), mpl.axes.Axes))
     instance_check((mannwhitney, vertical, notch, outliers, grid, with_strip), bool)
     instance_check((capsize, width, strip_jitter, label_rotation), (float, int))
@@ -471,7 +471,7 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
              **plot_kwargs):
     """Plots a 2D boxplot with data oriented in wide-form"""
     instance_check(data, (list, np.ndarray, pd.DataFrame))
-    instance_check((colors, spines), (type(None), list))
+    instance_check((colors, spines), (type(None), list, pd.Index))
     instance_check(ax, (type(None), mpl.axes.Axes))
     instance_check((vertical, notch, outliers, grid, with_strip), bool)
     instance_check((capsize, width, strip_jitter, label_rotation), (float, int))

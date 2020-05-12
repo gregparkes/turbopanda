@@ -6,7 +6,6 @@ from typing import Callable
 
 import pandas as pd
 
-from turbopanda.utils import boolean_series_check
 from turbopanda._deprecator import deprecated
 from ._inspect import inspect
 from ._types import SelectorType
@@ -115,6 +114,5 @@ def filter_rows(self,
     else:
         raise ValueError("parameter '{}' not callable".format(func))
     # check that bs is boolean series
-    boolean_series_check(bs)
     self._df = self.df_.loc[bs, :]
     return self

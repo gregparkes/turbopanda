@@ -34,4 +34,12 @@ def panderfy(func: Callable):
 
 def lparallel(func: Callable, *args):
     """Performs a parallel list comprehension operation on f(*args)"""
-    return Parallel(cpu_count()-1)(delayed(f)(*arg) for arg in args)
+    if len(args) == 0:
+        return func()
+    elif len(args) == 1:
+        n_cpus = cpu_count()-1 if len(args[0]) > cpu_count() else len(args[0])
+        # if we have a numpy array, list etc, expand it out
+        return Parallel(n_cpus)(delayed(func)(a) for a in args[0])
+    else:
+        n_cpus = cpu_count() - 1 if len(args) > cpu_count() else len(args)
+        return Parallel(n_cpus)(delayed(func)(arg) for arg in args)

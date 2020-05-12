@@ -7,12 +7,13 @@ import numpy as np
 import pandas as pd
 from functools import reduce
 import operator
+# use scipy.utils.check_array for array_like
+from sklearn.utils import check_array
 
 from ._sets import join
 
 __all__ = ("belongs", "instance_check", "disallow_instance_pair",
-           "check_list_type", "nonnegative", "bounds_check",
-           "boolean_series_check", "is_twotuple",
+           "check_list_type", "nonnegative", "bounds_check", "is_twotuple",
            "arrays_equal_size", "arrays_dimension", "is_iterable")
 
 
@@ -72,7 +73,7 @@ def nonnegative(a: Union[float, int, Tuple],
     instance_check(a, i, raised=raised)
     if isinstance(a, tuple):
         # do nonnegative on all values
-        result = any([x < 0 for x in a])
+        result = any(map(lambda x: x < 0, a))
         if result and raised:
             raise Attribute("Not all values in {} are nonnegative".format(a))
         elif result and not raised:
@@ -155,14 +156,6 @@ def check_list_type(elems: Tuple, t: TypeVar, raised=True):
             else:
                 return False
     return True
-
-
-def boolean_series_check(ser: pd.Series):
-    """Check whether ser is full of booleans or not."""
-    if not isinstance(ser, pd.Series):
-        raise TypeError("bool_s must be of type [pd.Series], not {}".format(type(ser)))
-    if ser.dtype not in (bool, np.bool):
-        raise TypeError("bool_s must contain booleans, not type '{}'".format(ser.dtype))
 
 
 def is_twotuple(t: Tuple[Any, Any]):

@@ -10,7 +10,7 @@ from ._files import *
 from ._panderize import panderfy, lparallel
 from ._remove_na import remove_na
 from ._sets import *
-from ._sorting import broadsort
+from ._sorting import broadsort, unique_ordered
 from ._duplicates import remove_dup_cols
 # import statements here
 from ._typegroups import *

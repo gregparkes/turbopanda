@@ -6,3 +6,10 @@ Version 0.2.7
 
 Changelog
 ---------
+`turbopanda.dev`
+................
+- |Enhancement| `cache` for non-pandas objects uses `joblib` to serialize/pickle the object
+
+`turbopanda.plot`
+.................
+- |Fix| An issue in `scatter` where colors were not corresponding to legend

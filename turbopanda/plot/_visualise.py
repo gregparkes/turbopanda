@@ -19,7 +19,7 @@ from ._gridplot import gridplot
 from ._histogram import histogram
 from ._save_fig import save
 
-__all__ = ("scatter_grid", "missing", "hist_grid")
+__all__ = ("scatter_grid", "hist_grid")
 
 
 def hist_grid(mdf: Union[DataFrame, "MetaPanda"],

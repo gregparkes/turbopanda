@@ -83,7 +83,7 @@ def _levenshtein_product(X: List[str], Y: List[str]) -> pd.DataFrame:
 
 
 def _mirror_matrix_lev(D):
-    X = D.pivot("x","y","L").fillna(0.)
+    X = D.pivot("x", "y", "L").fillna(0.)
     # add to transpose, remove + 1 from diagonal
     X += X.T - np.eye(X.shape[0])
     return X
@@ -123,6 +123,6 @@ def levenshtein(X: List[str],
     else:
         res = _levenshtein_product(X, Y)
         if as_matrix:
-            res = res.pivot("x","y","L")
+            res = res.pivot("x", "y", "L")
 
     return res

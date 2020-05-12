@@ -4,7 +4,6 @@
 
 import itertools as it
 from typing import Callable, List, Tuple, Union
-
 import numpy as np
 
 from ._error_raise import instance_check
@@ -32,3 +31,10 @@ def broadsort(a: Union[List, Tuple, np.ndarray]) -> List:
         # if we have objects, try to use the __class__ object to sort them by.
         ss = np.argsort([str(b.__class__) for b in a])
         return np.asarray(a)[ss].tolist()
+
+
+def unique_ordered(a: np.ndarray) -> np.ndarray:
+    """Determines the unique elements in `a` in sorted order."""
+    _a = np.asarray(a)
+    _, idx = np.unique(_a, return_index=True)
+    return _a[np.sort(idx)]

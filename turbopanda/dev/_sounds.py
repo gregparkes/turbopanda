@@ -12,7 +12,7 @@ import numpy as np
 
 from turbopanda.utils import belongs
 
-__all__ = ['bleep']
+__all__ = ['bleep', "Bleep"]
 
 
 def _get_note_progression(n, A_4=440):
@@ -68,7 +68,7 @@ def _minor_arpeggios():
         'B': ['D', 'F#'], 'C#': ['E', 'G#'], 'Eb': ['Gb', 'Bb'],
         'F#': ['A', 'C#'], 'G#': ['B', 'D#'], 'Bb': ['Db', 'F'],
         # also map equivalents e.g F#=Gb
-        'Db': ['E', 'G#'], 'D#': ['Gb', 'Bb'], 'Gb':  ['A', 'C#'],
+        'Db': ['E', 'G#'], 'D#': ['Gb', 'Bb'], 'Gb': ['A', 'C#'],
         'Ab': ['B', 'D#'], 'A#': ['Db', 'F'],
     }
 
@@ -84,7 +84,7 @@ def _get_arpeggio(note='C', key='major', level=4):
 
     three_five = arp[note]
     l_i = "_%s" % str(level)
-    l_j = "_%s" % str(level+1)
+    l_j = "_%s" % str(level + 1)
     return [note + l_i, three_five[0] + l_i, three_five[1] + l_i, note + l_j]
 
 
@@ -158,9 +158,11 @@ def bleep(note='C') -> Callable:
     ...     pass
     """
     belongs(note, _get_notes_all())
+
     # define decorator
     def decorator(func):
         """Basic decorator."""
+
         def _bleep_function(*args, **kwargs):
             # enter try-catch and if success, positive noise, or failure, negative noise.
             try:
@@ -177,3 +179,16 @@ def bleep(note='C') -> Callable:
         return _bleep_function
 
     return decorator
+
+
+""" A Bleep class to decorate a block of code with. """
+
+
+class Bleep:
+    """Handles noise sound with a `with` statement."""
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, type_, value, traceback):
+        _play_arpeggio("C", key="major")

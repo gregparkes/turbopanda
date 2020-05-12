@@ -13,7 +13,7 @@ from typing import Dict, Iterable
 from pandas import CategoricalDtype, DataFrame, Index, Series, concat
 
 # locals
-from turbopanda.utils import boolean_series_check, dictzip, \
+from turbopanda.utils import dictzip, \
     difference, intersect, join, t_numpy, union
 from turbopanda.str import patcolumnmatch
 from ._types import SelectorType
@@ -69,8 +69,6 @@ def _get_selector_item(df: DataFrame,
         # call the selector, assuming it takes a pandas.DataFrame argument. Must
         # return a boolean Series.
         ser = df.aggregate(selector, axis=0)
-        # perform check
-        boolean_series_check(ser)
         # check lengths
         not_same = difference(df.columns, ser.index)
         # if this exists, append these true cols on

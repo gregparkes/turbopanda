@@ -162,7 +162,8 @@ def overview(df: "MetaPanda",
     yp = yp[y].squeeze()
     # pair them and remove NA
     _df, _x, _y, _xcols = ml_ready(df, x, y)
-    options_yes_ = (True, True, True, True, 1 < len(_xcols) < 50, (len(_xcols) > 1) and is_statsmodels_installed(),
+    options_yes_ = (True, True, True, True, 1 < len(_xcols) < 50,
+                    (len(_xcols) > 1) and is_statsmodels_installed(),
                     True, True)
     # compress down options
     option_compressed = list(it.compress(options_, options_yes_))

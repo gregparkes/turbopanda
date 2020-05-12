@@ -10,13 +10,15 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pandas import CategoricalDtype
 
 from typing import Union, List, Tuple, Optional
-from pandas import Series
+from pandas import Series, Index
 from warnings import warn
 
 from turbopanda.utils import remove_na, instance_check,\
-    arrays_equal_size, belongs, as_flattened_numpy
+    arrays_equal_size, belongs, as_flattened_numpy, unique_ordered
 from turbopanda.stats._kde import freedman_diaconis_bins
-from turbopanda.plot._palette import palette_mixed, darken, lighten
+
+from turbopanda.plot._annotate import annotate
+from turbopanda.plot._palette import palette_mixed, darken, lighten, color_qualitative
 from turbopanda.plot._widgets import legend_scatter
 
 
@@ -68,19 +70,22 @@ def _draw_line_best_fit(x, y, c, ax, deg):
     ax.plot(xl, np.polyval(z, xl), color=line_color, linestyle="--")
 
 
-def _associate_legend(raw_c, palette_c, marker, ax):
-    names = np.unique(raw_c)
-    cols = np.unique(palette_c)
+def _associate_legend(raw_c, palette_c, marker, ax, legend_outside=False):
+    names = unique_ordered(raw_c)
+    cols = unique_ordered(palette_c)
 
     if isinstance(marker, str):
         markers = [marker] * len(names)
     else:
-        mnames = np.unique(marker)
+        mnames = unique_ordered(marker)
         markers = tuple(it.islice(it.cycle(_marker_set()), 0, len(mnames)))
 
     leg = legend_scatter(markers, cols, names)
     # add to ax
-    ax.legend(leg, names, loc='best')
+    if legend_outside:
+        ax.legend(leg, names, bbox_to_anchor=(1, 1))
+    else:
+        ax.legend(leg, names, loc='best')
 
 
 def _make_colorbar(data, ax, cmap):
@@ -97,12 +102,11 @@ def _reconfigure_color_array(c):
     if c.dtype.kind == 'b':
         # convert to 'string' type and use below code.
         c = c.astype(np.str)
-
     if c.dtype.kind == "U" or isinstance(c.dtype, CategoricalDtype):
         # i.e we have a string array
-        names = np.unique(c)
+        names = unique_ordered(c)
         # map a qualitative 'name' to each value
-        colors = palette_mixed(len(names))
+        colors = color_qualitative(len(names))
         # create new color array
         c2 = np.zeros_like(c)
         for n, col in zip(names, colors):
@@ -119,7 +123,7 @@ def _draw_scatter(x, y, c, s, m, alpha, ax, **kwargs):
         return ax.scatter(x, y, c=c, s=s, marker=m, alpha=alpha, **kwargs)
     else:
         scatters = []
-        names = np.unique(m)
+        names = unique_ordered(m)
         marks = tuple(it.islice(it.cycle(_marker_set()), 0, len(names)))
         for v, mark in zip(names, marks):
             # handle cases where c, s are standalone and/or arrays
@@ -160,6 +164,7 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
             y_label: str = "y-axis",
             x_scale: str = "linear",
             y_scale: str = "linear",
+            legend_outside: bool = False,
             title: str = "",
             with_grid: bool = False,
             fit_line_degree: int = 1,
@@ -207,6 +212,8 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
         Choose from {'linear', 'log', 'symlog', 'logit'}, see `matplotlib.ax.set_xscale`
     y_scale : str, default="linear"
         Choose from {'linear', 'log', 'symlog', 'logit'}, see `matplotlib.ax.set_yscale`
+    legend_outside : bool, default=False
+        If True, plots the legend outside the plot at (1, 1)
     title : str, default=""
         Optional title at the top of the axes
     with_grid : bool, default=False
@@ -227,11 +234,11 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
     """
 
     instance_check((X, Y), (list, tuple, np.ndarray, Series))
-    instance_check((c, marker), (str, list, tuple, np.ndarray, Series))
-    instance_check(s, (type(None), int, float, list, tuple, np.ndarray, Series))
+    instance_check((c, marker), (str, list, tuple, np.ndarray, Series, Index))
+    instance_check(s, (type(None), int, float, list, tuple, np.ndarray, Series, Index))
     instance_check(alpha, (type(None), float))
     instance_check(ax, (type(None), matplotlib.axes.Axes))
-    instance_check((dense, with_jitter, fit_line, with_grid, legend), bool)
+    instance_check((dense, with_jitter, fit_line, with_grid, legend, legend_outside), bool)
     instance_check((x_label, y_label, title, x_scale, y_scale), str)
     instance_check(fit_line_degree, int)
 
@@ -302,7 +309,7 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
 
     # associate legend if colour map is used
     if _cmode == "discrete" and legend:
-        _associate_legend(c, palette, marker, ax)
+        _associate_legend(c, palette, marker, ax, legend_outside)
     elif _cmode == "continuous" and colorbar:
         # add colorbar
         _make_colorbar(c, ax, cmap)

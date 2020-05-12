@@ -6,7 +6,7 @@ from typing import Union, List, Tuple, Optional
 import itertools as it
 import numpy as np
 import matplotlib
-from pandas import Series
+from pandas import Series, Index
 import matplotlib.pyplot as plt
 
 from turbopanda.utils import instance_check, arrays_equal_size, \
@@ -50,14 +50,16 @@ def annotate(X: Union[np.ndarray, Series, List, Tuple],
     ax : matplotlib.ax.Axes
         The same matplotlib plot, or the one generated
     """
-    instance_check((X, Y, T), (list, tuple, np.ndarray, Series))
-    instance_check(subset, (type(None), list, tuple, np.ndarray, Series))
+    instance_check((X, Y), (list, tuple, np.ndarray, Series))
+    instance_check(T, (list, tuple, np.ndarray, Series, Index))
+    instance_check(subset, (type(None), list, tuple, np.ndarray, Series, Index))
     instance_check(ax, (type(None), matplotlib.axes.Axes))
     arrays_equal_size(X, Y, T)
-
+    # convert to numpy.
     _X = as_flattened_numpy(X)
     _Y = as_flattened_numpy(Y)
     _T = as_flattened_numpy(T)
+
     if word_shorten:
         _T = shorten(_T, newl=word_shorten)
 

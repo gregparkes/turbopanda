@@ -15,6 +15,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import warnings
 import functools
+import joblib
 from typing import Callable, List, Optional, Tuple, Union
 from pandas import DataFrame, concat
 from joblib import Parallel, delayed, cpu_count
@@ -98,6 +99,7 @@ def cached(func: Callable,
     instance_check(func, "__call__")
 
     # check that file ends with json or csv
+    file_ext = filename.rsplit(".")[-1]
     belongs(filename.rsplit(".", 1)[-1], ("json", "csv"))
 
     if os.path.isfile(filename):
@@ -199,9 +201,9 @@ def cached_chunk(func: Callable,
     else:
         # create a bunch of chunks by repeatedly calling cache.
         if parallel:
-            _mdf_chunks = Parallel(cpu_count())(
-                delayed(cached)(func, insert_suffix(filename, "_chunk%d" % i),
-                                verbose=verbose, *args, **dictcopy(kwargs, {param_name: chunk})).df_
+            _mdf_chunks = joblib.Parallel(joblib.cpu_count())(
+                joblib.delayed(cached)(func, insert_suffix(filename, "_chunk%d" % i),
+                                       verbose=verbose, *args, **dictcopy(kwargs, {param_name: chunk})).df_
                 for i, chunk in enumerate(param_values)
             )
         else:
@@ -224,8 +226,11 @@ def cached_chunk(func: Callable,
 
 
 def cache(_func=None, *,
-          filename: str = "example1.json") -> Callable:
-    """Provides automatic {.json, .csv} decorator caching for `turb.MetaPanda` or `pd.DataFrame`.
+          filename: str = "example1.pkl",
+          compress=0) -> Callable:
+    """Provides automatic decorator caching for objects.
+
+    Especially compatible with `turb.MetaPanda` or `pd.DataFrame`.
 
     .. note:: this is a decorator function, not to be called directly.
 
@@ -233,8 +238,17 @@ def cache(_func=None, *,
     ----------
     filename : str, optional
         The name of the file to cache to, or read from. This is fixed.
-         Accepts {'json', 'csv'} extensions only.
-
+         Accepts {'json', 'csv', 'pkl'} extensions only.
+    compress : int [0-9] or 2-tuple, optional
+        Optional compression level for the data. 0 or False is no compression.
+        Higher value means more compression, but also slower read and
+        write times. Using a value of 3 is often a good compromise.
+        See the notes for more details.
+        If compress is True, the compression level used is 3.
+        If compress is a 2-tuple, the first element must correspond to a string
+        between supported compressors (e.g 'zlib', 'gzip', 'bz2', 'lzma'
+        'xz'), the second element must be an integer from 0 to 9, corresponding
+        to the compression level.
     Warnings
     --------
     ImportWarning
@@ -245,44 +259,49 @@ def cache(_func=None, *,
     TypeError
         `filename` isn't of type `str`
     ValueError
-        `filename` extension isn't found in {'json', 'csv'}
+        `filename` extension isn't found in {'json', 'csv', 'pkl'}
 
     Returns
     -------
-    mp : turb.MetaPanda
-        The MetaPanda object
-
-    .. note:: custom function must return a `pd.DataFrame` or `turb.MetaPanda` object.
+    mp : turb.MetaPanda / object
+        The MetaPanda object if {'csv' or 'json'}, otherwise uses
+        serialized pickling which can return an arbritrary object.
 
     Examples
     --------
     For example, we call as a decorator to our custom function:
-    >>> import turbopanda as turb
+    >>> from turbopanda import cache
     >>> @cache('meta_file.json')
     >>> def f(x):
     ...     return turb.MetaPanda(x)
-
-    See Also
-    --------
-    cached : Provides automatic {.json, .csv} caching for `turb.MetaPanda` or `pd.DataFrame`.
+    These also work with numpy arrays or python objects by using `joblib`:
+    >>> from turbopanda import cache
+    >>> @cache("meta.pkl")
+    >>> def g(x):
+    ...     return [1, 2, [3, 4], {"hi":"moto"}]
     """
     # check it is string
     instance_check(filename, str)
+    file_ext = filename.rsplit(".")[-1]
     # check that file ends with json or csv
-    belongs(filename.rsplit(".")[-1], ("json", "csv"))
+    belongs(file_ext, ("json", "csv", "pkl"))
 
     # define decorator
     def _decorator_cache(func):
         """Basic decorator."""
-
         @functools.wraps(func)
         def _wrapper_cache(*args, **kwargs):
             # if we find the file
             if os.path.isfile(filename):
-                # read it in
-                mdf = read(filename)
-                _set_index_def(mdf.df_)
-                return mdf
+                # if its .csv or .json, use `read`
+                if file_ext in ('json', 'csv'):
+                    # read it in
+                    mdf = read(filename)
+                    _set_index_def(mdf.df_)
+                    return mdf
+                else:
+                    mdf = joblib.load(filename)
+                    return mdf
             else:
                 # returns MetaPanda or pandas.DataFrame
                 mpf = func(*args, **kwargs)
@@ -295,8 +314,8 @@ def cache(_func=None, *,
                     mpf.reset_index().to_csv(filename, index=None)
                     return MetaPanda(mpf)
                 else:
-                    warnings.warn("returned object from cache not of type [pd.DataFrame, turb.MetaPanda], not cached",
-                                  ImportWarning)
+                    # attempt to use joblib to dump
+                    joblib.dump(mpf, filename, compress=compress)
                     return mpf
 
         return _wrapper_cache

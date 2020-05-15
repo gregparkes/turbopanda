@@ -3,8 +3,16 @@
 """Code for different defaults to use in conjunction with Matplotlib."""
 
 import matplotlib as mpl
+from typing import List, Tuple, Optional, Union
+from numpy import ndarray
+from pandas import Series
 
 from turbopanda._deprecator import unimplemented
+
+# define a bunch of plot types
+_Numeric = Union[int, float]
+_ListLike = Union[List, Tuple, ndarray]
+_ArrayLike = Union[List, Tuple, ndarray, Series]
 
 
 def set_style(style_name="paper"):

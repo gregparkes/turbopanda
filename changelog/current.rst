@@ -6,10 +6,15 @@ Version 0.2.7
 
 Changelog
 ---------
+- |Enhancement| `vectorize` now supports caching for each step with
+keyword argument `cache`, default set to False
+
+
 `turbopanda.dev`
 ................
 - |Enhancement| `cache` for non-pandas objects uses `joblib` to serialize/pickle the object
 
 `turbopanda.plot`
 .................
+- |Feature| Added `bar1d` function to efficiently draw barplots, with automatic sorting and colouring
 - |Fix| An issue in `scatter` where colors were not corresponding to legend

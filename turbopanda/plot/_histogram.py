@@ -14,6 +14,8 @@ from turbopanda.stats import get_bins, univariate_kde, auto_fit
 from turbopanda.utils import instance_check, as_flattened_numpy, nonnegative,\
     bounds_check
 
+from ._default import _ArrayLike, _ListLike
+
 """ Helper methods for redundant code such as plotting, getting bin type, smoothing etc. """
 
 
@@ -74,9 +76,9 @@ def _assign_x_label(title, series_x_l, is_kde, auto_fitted, frozen_dist):
 """ The meat and bones """
 
 
-def histogram(X: Union[np.ndarray, pd.Series, List, Tuple],
+def histogram(X: _ArrayLike,
               kde: Optional[str] = "freeform",
-              bins: Optional[Union[int, np.ndarray]] = None,
+              bins: Optional[Union[int, _ListLike]] = None,
               density: bool = True,
               stat: bool = False,
               ax: Optional[mpl.axes.Axes] = None,

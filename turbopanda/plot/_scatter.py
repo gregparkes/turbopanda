@@ -3,7 +3,7 @@
 """Code for intelligent scatterplots in primitive matplotlib."""
 
 import numpy as np
-import matplotlib
+import matplotlib as mpl
 import itertools as it
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -17,9 +17,11 @@ from turbopanda.utils import remove_na, instance_check,\
     arrays_equal_size, belongs, as_flattened_numpy, unique_ordered
 from turbopanda.stats._kde import freedman_diaconis_bins
 
-from turbopanda.plot._annotate import annotate
-from turbopanda.plot._palette import palette_mixed, darken, lighten, color_qualitative
-from turbopanda.plot._widgets import legend_scatter
+from ._default import _ArrayLike, _ListLike, _Numeric
+from ._annotate import annotate
+from ._palette import darken, lighten, \
+    color_qualitative, convert_categories_to_colors
+from ._widgets import map_legend
 
 
 def _marker_set():
@@ -70,52 +72,13 @@ def _draw_line_best_fit(x, y, c, ax, deg):
     ax.plot(xl, np.polyval(z, xl), color=line_color, linestyle="--")
 
 
-def _associate_legend(raw_c, palette_c, marker, ax, legend_outside=False):
-    names = unique_ordered(raw_c)
-    cols = unique_ordered(palette_c)
-
-    if isinstance(marker, str):
-        markers = [marker] * len(names)
-    else:
-        mnames = unique_ordered(marker)
-        markers = tuple(it.islice(it.cycle(_marker_set()), 0, len(mnames)))
-
-    leg = legend_scatter(markers, cols, names)
-    # add to ax
-    if legend_outside:
-        ax.legend(leg, names, bbox_to_anchor=(1, 1))
-    else:
-        ax.legend(leg, names, loc='best')
-
-
 def _make_colorbar(data, ax, cmap):
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="4%", pad=0.05)
-    norm = matplotlib.colors.Normalize(data.min(), data.max())
-    cbar = plt.colorbar(matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax)
+    norm = mpl.colors.Normalize(data.min(), data.max())
+    cbar = plt.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax)
     if isinstance(data, Series):
         cbar.set_label(data.name)
-
-
-def _reconfigure_color_array(c):
-    """Given c array, reconfigure into an array that ax.scatter(c=c) will accept."""
-    if c.dtype.kind == 'b':
-        # convert to 'string' type and use below code.
-        c = c.astype(np.str)
-    if c.dtype.kind == "U" or isinstance(c.dtype, CategoricalDtype):
-        # i.e we have a string array
-        names = unique_ordered(c)
-        # map a qualitative 'name' to each value
-        colors = color_qualitative(len(names))
-        # create new color array
-        c2 = np.zeros_like(c)
-        for n, col in zip(names, colors):
-            c2[c == n] = col
-        cmode = "discrete"
-        return c2, cmode
-    else:
-        cmode = "continuous"
-        return c, cmode
 
 
 def _draw_scatter(x, y, c, s, m, alpha, ax, **kwargs):
@@ -147,14 +110,14 @@ def _draw_scatter(x, y, c, s, m, alpha, ax, **kwargs):
         return scatters
 
 
-def scatter(X: Union[np.ndarray, Series, List, Tuple],
-            Y: Union[np.ndarray, Series, List, Tuple],
-            c: Union[str, np.ndarray, Series, List, Tuple] = 'k',
-            marker: Union[str, np.ndarray, Series, List, Tuple] = 'o',
-            s: Optional[Union[int, float, np.ndarray, Series, List, Tuple]] = None,
+def scatter(X: _ArrayLike,
+            Y: _ArrayLike,
+            c: Union[str, _ArrayLike] = 'k',
+            marker: Union[str, _ArrayLike] = 'o',
+            s: Optional[Union[_Numeric, _ArrayLike]] = None,
             dense: bool = False,
             fit_line: bool = False,
-            ax: Optional[matplotlib.axes.Axes] = None,
+            ax: Optional[mpl.axes.Axes] = None,
             alpha: Optional[float] = None,
             cmap: str = "viridis",
             legend: bool = True,
@@ -237,7 +200,7 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
     instance_check((c, marker), (str, list, tuple, np.ndarray, Series, Index))
     instance_check(s, (type(None), int, float, list, tuple, np.ndarray, Series, Index))
     instance_check(alpha, (type(None), float))
-    instance_check(ax, (type(None), matplotlib.axes.Axes))
+    instance_check(ax, (type(None), mpl.axes.Axes))
     instance_check((dense, with_jitter, fit_line, with_grid, legend, legend_outside), bool)
     instance_check((x_label, y_label, title, x_scale, y_scale), str)
     instance_check(fit_line_degree, int)
@@ -264,7 +227,7 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
 
     if not isinstance(c, str):
         # do some prep work on the color variable.
-        palette, _cmode = _reconfigure_color_array(np.asarray(c))
+        palette, _cmode = convert_categories_to_colors(c, cmap=cmap)
         # perform size check
         arrays_equal_size(X, Y, palette)
     else:
@@ -309,7 +272,7 @@ def scatter(X: Union[np.ndarray, Series, List, Tuple],
 
     # associate legend if colour map is used
     if _cmode == "discrete" and legend:
-        _associate_legend(c, palette, marker, ax, legend_outside)
+        map_legend(c, palette, marker, ax, legend_outside)
     elif _cmode == "continuous" and colorbar:
         # add colorbar
         _make_colorbar(c, ax, cmap)

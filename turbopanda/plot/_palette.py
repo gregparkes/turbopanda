@@ -10,11 +10,15 @@ from matplotlib import cm
 from matplotlib import colors
 from random import shuffle
 
-from turbopanda.utils import instance_check
+from turbopanda.utils import instance_check, unique_ordered
 
 
 def _tuple_to_hex(t):
     return "#%02x%02x%02x" % (int(t[0]), int(t[1]), int(t[2]))
+
+
+def _color_scale_off_pair(cmap):
+    return _colormap_to_hex(cm.get_cmap(cmap)(np.linspace(.25, .75, 2)))
 
 
 def _luminance(arr):
@@ -126,48 +130,36 @@ def contrast(c):
 
 def palette_black(n: int):
     """Returns a qualitiative set of black-white colors"""
-    options_ = ["k", "dimgray", "gray", "darkgray",
-                "silver", "lightgray", "gainsboro",
-                "whitesmoke", "w"]
-    return list(it.islice(it.cycle(options_), 0, n))
+    return palette_cmap(n, "Greys")
 
 
 def palette_red(n: int):
     """Returns a qualitiative set of red colors"""
-    options_ = ["r", "maroon", "firebrick", "indianred",
-                "lightcoral", "rosybrown"]
-    return list(it.islice(it.cycle(options_), 0, n))
+    return palette_cmap(n, "Reds")
 
 
 def palette_green(n: int):
     """Returns a qualitiative set of green colors"""
-    options_ = ["g", "olivedrab", "yellowgreen", "darkolivegreen",
-                "lawngreen", "sage", "lightsage", "darksage", "palegreen",
-                "forestgreen", "limegreen", "springgreen"]
-    return list(it.islice(it.cycle(options_), 0, n))
+    return palette_cmap(n, "Greens")
 
 
 def palette_blue(n: int):
     """Returns a qualitiative set of blue colors"""
-    options_ = ["b", "steelblue", "dodgerblue", "cyan",
-                "c", "deepskyblue", "powderblue", "navy", "slateblue",
-                "skyblue", "midnightblue", "royalblue"]
-    return list(it.islice(it.cycle(options_), 0, n))
+    return palette_cmap(n, "Blues")
 
 
-def palette_pair():
+def palette_pairs(n: int):
     """Returns a palette-pair (2 colors), as (darker, lighter)"""
-    options_ = [("k", "gray"), ('maroon', 'r'), ('gold', 'r'), ('g', 'yellowgreen'), ('b', 'skyblue'),
-                ('orange', 'navajowhite'), ('darkorchid', 'plum'), ('sienna', 'sandybrown'),
-                ("magenta", 'pink')]
-    return list(it.islice(it.cycle(options_), 0, 1))
+    options_ = ('Greys', "Blues", "Reds", "Greens", "Purples", "Oranges")
+    cols = map(_color_scale_off_pair, options_)
+    return list(it.islice(it.cycle(cols), 0, n))
 
 
-def palette_mixed(n: int):
-    """Returns a qualitiative set of mixed-spectrum default colors"""
-    options_ = ['b', 'r', 'g', 'silver', 'orange',
-                'purple', 'pink', 'gold']
-    return list(it.islice(it.cycle(options_), 0, n))
+def palette_cmap(n: int, cmap: str):
+    """given n, calculate the linspace searched for monocolor scales"""
+    start = lambda _n: .4 / _n
+    end = lambda _n: 1. - .4 / _n
+    return _colormap_to_hex(cm.get_cmap(cmap)(np.linspace(start(n), end(n), n)))
 
 
 def color_qualitative(n: Union[int, List, Tuple],
@@ -216,3 +208,26 @@ def color_qualitative(n: Union[int, List, Tuple],
     else:
         # we cycle one of the lt20s
         return list(it.islice(it.cycle(_colormap_to_hex(getattr(cm, np.random.choice(lt20))(np.linspace(0, 1, 20)))), 0, n))
+
+
+def convert_categories_to_colors(array, cmap="Blues"):
+    """Given some list/array of values, find some way of mapping this to colour values"""
+    # map to numpy
+    _array = np.asarray(array) if not isinstance(array, (np.ndarray, pd.Series)) else array
+    # if boolean, cast as a 'string'
+    if _array.dtype.kind == 'b':
+        _array = _array.astype(np.str)
+    if _array.dtype.kind == "U":
+        # i.e we have a string array
+        names = unique_ordered(_array)
+        cols = palette_cmap(len(names), cmap=cmap)
+        # create color array
+        c2 = np.zeros_like(_array, dtype='U8')
+        for n, color in zip(names, cols):
+            c2[_array == n] = color
+        return c2, "discrete"
+    else:
+        return _array, "continuous"
+
+
+

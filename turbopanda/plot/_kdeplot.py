@@ -3,7 +3,7 @@
 """Code for plotting pretty 2D KDEs in primitive matplotlib."""
 
 import numpy as np
-import matplotlib
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from typing import Union, List, Tuple
 from pandas import Series
@@ -17,7 +17,7 @@ from turbopanda.utils import remove_na, instance_check, arrays_equal_size
 def kde2d(X: Union[np.ndarray, Series, List, Tuple],
           Y: Union[np.ndarray, Series, List, Tuple],
           c: str = 'red',
-          ax: matplotlib.axes.Axes = None,
+          ax: mpl.axes.Axes = None,
           fill: bool = False,
           with_scatter: bool = False,
           **contour_kwargs):

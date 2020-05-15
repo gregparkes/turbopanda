@@ -7,7 +7,11 @@ import pandas as pd
 import matplotlib as mpl
 from matplotlib.lines import Line2D
 
-from turbopanda.utils import is_twotuple
+from turbopanda.utils import is_twotuple, unique_ordered
+
+
+def _marker_set():
+    return 'o', '^', 'x', 'd', '8', 'p', 'h', '+', 'v', '*'
 
 
 def legend_line(group_to_colors, lw=3.):
@@ -44,3 +48,25 @@ def legend_scatter(markers, colors, labels, msize=15):
                            markerfacecolor=c, markersize=msize)
                     for m, c, l in it.zip_longest(markers, colors, labels)]
     return custom_scats
+
+
+def map_legend(raw_color_data,
+               palette_data,
+               marker,
+               ax,
+               is_legend_outside):
+    """Creates and plots a legend to a figure."""
+    names = unique_ordered(raw_color_data)
+    cols = unique_ordered(palette_data)
+    if isinstance(marker, str):
+        markers = [marker] * len(names)
+    else:
+        marker_names = unique_ordered(marker)
+        markers = tuple(it.islice(it.cycle(_marker_set()), 0, len(marker_names)))
+
+    leg = legend_scatter(markers, cols, names)
+    # add to an axes
+    if is_legend_outside:
+        ax.legend(leg, names, bbox_to_anchor=(1, 1))
+    else:
+        ax.legend(leg, names, loc="best")

@@ -14,7 +14,10 @@ from turbopanda._deprecator import unimplemented
 from turbopanda.utils import instance_check, as_flattened_numpy, intersect, \
     difference, arrays_equal_size, listify, bounds_check
 from turbopanda.str import shorten
+
+from ._default import _ListLike, _ArrayLike
 from ._palette import color_qualitative, contrast, noncontrast, autoshade
+
 
 __all__ = ('box1d', 'bibox1d', 'widebox')
 
@@ -160,7 +163,7 @@ def _overlay_stripplot(X, ax, n, width, color, vert, outliers=True, strip_jitter
     if not outliers:
         # calculate outliers
         _m = np.mean(X)
-        _std3 = np.std(X)*3.
+        _std3 = np.std(X) * 3.
         nonoutliers = (_m - _std3 < X) & (_m + _std3 > X)
         # select subset
         X = X[nonoutliers]
@@ -172,7 +175,7 @@ def _overlay_stripplot(X, ax, n, width, color, vert, outliers=True, strip_jitter
         ax.scatter(X, x_range, alpha=.3, color=x_strip_color, edgecolors=x_strip_edge_color)
 
 
-def box1d(X: Union[np.ndarray, pd.Series, List, Tuple],
+def box1d(X: _ArrayLike,
           color: Optional[str] = None,
           label: Optional[str] = None,
           ax: Optional[mpl.axes.Axes] = None,
@@ -186,7 +189,7 @@ def box1d(X: Union[np.ndarray, pd.Series, List, Tuple],
           width: float = 0.7,
           label_rotation: float = 0.,
           label_max_length: int = 25,
-          spines: Optional[List] = None,
+          spines: Optional[_ListLike] = None,
           theme: str = "white_circle",
           **plot_kwargs):
     """Plots a 1-dimensional boxplot using a vector.
@@ -286,10 +289,10 @@ def box1d(X: Union[np.ndarray, pd.Series, List, Tuple],
     return ax
 
 
-def bibox1d(X: Union[np.ndarray, pd.Series, List, Tuple],
-            Y: Union[np.ndarray, pd.Series, List, Tuple],
-            colors: Optional[List] = None,
-            labels: Optional[List] = None,
+def bibox1d(X: _ArrayLike,
+            Y: _ArrayLike,
+            colors: Optional[_ListLike] = None,
+            labels: Optional[_ListLike] = None,
             measured: Optional[str] = None,
             ax: Optional[mpl.axes.Axes] = None,
             mannwhitney: bool = True,
@@ -302,7 +305,7 @@ def bibox1d(X: Union[np.ndarray, pd.Series, List, Tuple],
             width: Union[float, List[float]] = 0.7,
             label_rotation: float = 0.0,
             label_max_length: int = 25,
-            spines: Optional[List] = None,
+            spines: Optional[_ListLike] = None,
             strip_jitter: float = 0.15,
             theme: str = "white_circle",
             **plot_kwargs):
@@ -453,22 +456,22 @@ def bibox1d(X: Union[np.ndarray, pd.Series, List, Tuple],
 
 
 def widebox(data: Union[List, np.ndarray, pd.DataFrame],
-             colors: Optional[List] = None,
-             measured: Optional[str] = None,
-             ax: Optional[mpl.axes.Axes] = None,
-             vertical: bool = True,
-             outliers: bool = True,
-             notch: bool = False,
-             with_strip: bool = False,
-             capsize: float = 1.0,
-             width: float = 0.7,
-             grid: bool = True,
-             label_rotation: float = 0.0,
-             label_max_length: int = 25,
-             spines: Optional[List] = None,
-             strip_jitter: float = 0.15,
-             theme="white_circle",
-             **plot_kwargs):
+            colors: Optional[_ListLike] = None,
+            measured: Optional[str] = None,
+            ax: Optional[mpl.axes.Axes] = None,
+            vertical: bool = True,
+            outliers: bool = True,
+            notch: bool = False,
+            with_strip: bool = False,
+            capsize: float = 1.0,
+            width: float = 0.7,
+            grid: bool = True,
+            label_rotation: float = 0.0,
+            label_max_length: int = 25,
+            spines: Optional[_ListLike] = None,
+            strip_jitter: float = 0.15,
+            theme="white_circle",
+            **plot_kwargs):
     """Plots a 2D boxplot with data oriented in wide-form"""
     instance_check(data, (list, np.ndarray, pd.DataFrame))
     instance_check((colors, spines), (type(None), list, pd.Index))
@@ -492,15 +495,17 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
         raise TypeError("data matrix is not of type np.ndarray")
 
     _style = _get_flier_style(theme)
+
     # negative-exponential increase in figure size with more features
-    figure_spacing = lambda x: (np.exp(-.35 * x) * x)
+    def _figure_spacing(x):
+        return np.exp(-.35 * x) * x
 
     if with_strip:
         outliers = False
     if ax is None and vertical:
-        fig, ax = plt.subplots(figsize=(2.5 + figure_spacing(_data.shape[1]), 7))
+        fig, ax = plt.subplots(figsize=(2.5 + _figure_spacing(_data.shape[1]), 7))
     elif ax is None and not vertical:
-        fig, ax = plt.subplots(figsize=(7, 2.5 + figure_spacing(_data.shape[1])))
+        fig, ax = plt.subplots(figsize=(7, 2.5 + _figure_spacing(_data.shape[1])))
     if spines is None:
         spines = ('left', 'top', 'right', 'bottom')
 
@@ -508,7 +513,7 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
 
     patch_obj = ax.boxplot(
         _data, vert=vertical, patch_artist=True,
-        widths=width,showfliers=outliers, notch=notch,
+        widths=width, showfliers=outliers, notch=notch,
         flierprops=_style, boxprops=dict(alpha=box_alpha),
         **plot_kwargs
     )

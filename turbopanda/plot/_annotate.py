@@ -5,7 +5,7 @@
 from typing import Union, List, Tuple, Optional
 import itertools as it
 import numpy as np
-import matplotlib
+import matplotlib as mpl
 from pandas import Series, Index
 import matplotlib.pyplot as plt
 
@@ -18,7 +18,7 @@ def annotate(X: Union[np.ndarray, Series, List, Tuple],
              Y: Union[np.ndarray, Series, List, Tuple],
              T: Union[np.ndarray, Series, List, Tuple],
              subset: Optional[Union[np.ndarray, Series, List, Tuple]] = None,
-             ax: matplotlib.axes.Axes = None,
+             ax: mpl.axes.Axes = None,
              word_shorten: Optional[int] = None,
              **annotate_kws):
     """Annotates a matplotlib plot with text.
@@ -53,7 +53,7 @@ def annotate(X: Union[np.ndarray, Series, List, Tuple],
     instance_check((X, Y), (list, tuple, np.ndarray, Series))
     instance_check(T, (list, tuple, np.ndarray, Series, Index))
     instance_check(subset, (type(None), list, tuple, np.ndarray, Series, Index))
-    instance_check(ax, (type(None), matplotlib.axes.Axes))
+    instance_check(ax, (type(None), mpl.axes.Axes))
     arrays_equal_size(X, Y, T)
     # convert to numpy.
     _X = as_flattened_numpy(X)

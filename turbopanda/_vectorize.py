@@ -27,11 +27,10 @@ import itertools as it
 import operator
 import functools
 import numpy as np
-from joblib import Parallel, delayed, cpu_count
+from joblib import Parallel, delayed, cpu_count, load, dump
 from pandas import Series, Index, DataFrame
 
 from .utils._error_raise import belongs, instance_check
-from .dev._cache import cached
 
 
 def _expand_dict(k, vs):
@@ -73,7 +72,7 @@ class Param(list):
 def vectorize(_func=None,
               *,
               parallel=False,
-              # cache=False,
+              cache=False,
               return_as="list"):
     """A decorator for making vectorizable function calls.
 
@@ -82,12 +81,11 @@ def vectorize(_func=None,
     .. note:: Currently in v0.2.6, with cache=True, parallel=False, as there is no current way we know of
     incorporating persistence with parallelism.
 
-    Parameters
+    Keyword Parameters
     ----------
     parallel : bool, default=False
         If True, uses `joblib` to parallelize the list comprehension
     cache : bool, default=False
-        TODO: Implement chunked caching for each vectorizable
         If True, creates a cache for each step using `joblib`. If code breaks part way through,
         reloads all steps from the last cache.
     return_as : str, default="list"
@@ -95,7 +93,7 @@ def vectorize(_func=None,
         Specifies how you want the returned data to look like. Be careful when you use this as you may
         get results you don't expect!
     """
-    instance_check(parallel, bool)
+    instance_check((parallel, cache), bool)
     belongs(return_as, ("list", 'tuple', 'numpy', 'pandas'))
 
     def _decorator_vectorize(f):
@@ -109,31 +107,54 @@ def vectorize(_func=None,
                               kwargs.items()]
                 # get the product of the arguments
                 combined = tuple(it.product(*iterargs, *iterkwargs))
-                # filter for arguments
-                filtered_args = [list(filter(lambda x: not isinstance(x, dict), y)) for y in combined]
-                # filter for keyword arguments
-                filtered_kwargs = [_dictchain(list(filter(lambda x: isinstance(x, dict), y))) for y in combined]
-                # map these arguments and return each type
-                # NEW in v0.2.5: parallelize with joblib.
-                # NEW in v0.2.6: caching (with parallel!)
-                """
+                # filter out non-dictionaries
+                argc = [list(filter(lambda x: not isinstance(x, dict), y)) for y in combined]
+                argkc = [_dictchain(list(filter(lambda x: isinstance(x, dict), y))) for y in combined]
+                # zip together the  arguments
+                pkg = zip(argc, argkc)
+                # calculate effective number of CPUs
+                n_cpus = len(argc) if len(argc) <= cpu_count() else cpu_count() - 1
+
+                # caching function - which is parallelized.
+                def _cache_function(i, *args_i, **kwargs_i):
+                    file_chunk = fsubname + i + ".pkl"
+                    # check if appropriate cache file exists, if it does use the IO to read it in.
+                    if os.path.isfile(file_chunk):
+                        # read in file
+                        return load(file_chunk)
+                    # else do the calculation and save the cache to file.
+                    else:
+                        # execute
+                        result_i = f(*args_i, **kwargs_i)
+                        # dump result - no compression
+                        dump(result_i, file_chunk)
+                        return result_i
+
                 if cache:
                     savedir = mkdtemp()
-                    fsubname = os.path.join(savedir, "cache.vectorize")
-                    # perform operation here
-
+                    filename_path = "cache_vectorize_"
+                    fsubname = os.path.join(savedir, filename_path)
+                    # parallelize on the cache function
+                    if parallel:
+                        result = Parallel(n_jobs=n_cpus)(
+                            delayed(_cache_function)(i, *arg, **kwarg) for i, (arg, kwarg) in enumerate(pkg)
+                        )
+                    else:
+                        result = [_cache_function(i, *arg, **kwarg) for i, (arg, kwarg) in enumerate(pkg)]
+                    # clear directory once completed
                     try:
                         shutil.rmtree(savedir)
                     except OSError:
-                        pass # this can fail with windows
-                
+                        pass  # this can fail with windows
+
                 else:
-                """
-                if parallel:
-                    result = Parallel(n_jobs=cpu_count() - 1)(
-                        delayed(f)(*arg, **kwarg) for arg, kwarg in zip(filtered_args, filtered_kwargs))
-                else:
-                    result = [f(*arg, **kwarg) for arg, kwarg in zip(filtered_args, filtered_kwargs)]
+                    if parallel:
+                        # perform parallel operation
+                        result = Parallel(n_jobs=n_cpus)(
+                            delayed(f)(*arg, **kwarg) for arg, kwarg in pkg
+                        )
+                    else:
+                        result = [f(*arg, **kwarg) for arg, kwarg in pkg]
 
                 if len(result) == 1:
                     return result[0]

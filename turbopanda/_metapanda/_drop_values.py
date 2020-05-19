@@ -10,7 +10,7 @@ from turbopanda._deprecator import deprecated
 from ._inspect import inspect
 from ._types import SelectorType
 
-__all__ = ('drop', 'keep', 'filter_rows', 'drop_columns')
+__all__ = ('drop', 'keep', 'drop_columns')
 
 
 def _remove_unused_categories(meta):
@@ -75,44 +75,4 @@ def keep(self, *selector: SelectorType) -> "MetaPanda":
     drop : Drops the selected columns from `df_`.
     """
     drop_columns(self.df_, self.meta_, self.view_not(*selector))
-    return self
-
-
-@deprecated("0.2.4", "0.2.8", instead="use custom pipe", reason="This method is too verbose and needs rethinking")
-def filter_rows(self,
-                func: Callable,
-                selector: SelectorType = None,
-                *args) -> "MetaPanda":
-    """Filter j rows using boolean-index returned from `function`.
-
-    Given a function, filter out rows that do not meet the functions' criteria.
-
-    .. note:: if `selector` is set, the filtering only factors in these columns.
-
-    Parameters
-    --------
-    func : function
-        A function taking the whole dataset or subset, and returning a boolean
-        `pd.Series` with True rows kept and False rows dropped
-    selector : str or tuple args, optional
-        Contains either types, meta column names, column names or regex-compliant strings.
-        If None, applies `func` to all columns.
-    args : list, optional
-        Additional arguments to pass as `func(x, *args)`
-
-    Returns
-    -------
-    self
-    """
-    # perform inplace
-    selection = inspect(self.df_, self.meta_, self.selectors_, selector, axis=1)
-    # modify
-    if callable(func) and selection.shape[0] == 1:
-        bs = func(self.df_[selection[0]], *args)
-    elif callable(func) and selection.shape[0] > 1:
-        bs = func(self.df_.loc[:, selection], *args)
-    else:
-        raise ValueError("parameter '{}' not callable".format(func))
-    # check that bs is boolean series
-    self._df = self.df_.loc[bs, :]
     return self

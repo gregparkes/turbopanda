@@ -9,8 +9,8 @@ from typing import Union, Optional, Dict, List
 
 from turbopanda import vectorize, Param
 from turbopanda._metapanda import SelectorType, MetaPanda
-from turbopanda.pipe import zscore, clean1
 from turbopanda.str import patproduct, common_substrings
+from turbopanda.ml import preprocess_continuous_X
 from turbopanda.ml.plot import overview_pca
 from turbopanda.utils import instance_check, upcast, bounds_check, nonnegative
 
@@ -103,11 +103,7 @@ def pca(df: Union[np.ndarray, pd.DataFrame, MetaPanda],
 
     # generate ML ready subset
     if preprocess and not isinstance(df, np.ndarray):
-        _x = (df[cols]
-              .pipe(zscore)
-              .pipe(clean1)
-              .select_dtypes(exclude=['category', 'object'])
-              .dropna())
+        _x = preprocess_continuous_X(df, cols)
     else:
         _x = df
 

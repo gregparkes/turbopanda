@@ -49,15 +49,6 @@ def _write_json(self, filename: str):
         f.write(compile_string.encode())
 
 
-@unimplemented
-def _write_hdf(self, filename: str):
-    """Saves a file in special HDF5 format.
-
-    TODO: Implement `_write_hdf` function.
-    """
-    return NotImplemented
-
-
 def write(self,
           filename: Optional[str] = None,
           with_meta: bool = False,

@@ -267,32 +267,3 @@ def aggregate_k(self,
         # call aggregate on each name, selector pair.
         self.aggregate(func, name=n, selector=s, keep=keep)
     return self
-
-
-def eval(self, expr: str):
-    """Evaluate a Python expression as a string on `df_`.
-
-    See `pandas.eval` documentation for more details.
-
-    TODO: Implement `eval()` function.
-        Allows "c = a + b" for single operations; by default keeps a, b; creates c inplace
-        Allows "a + b" to return pd.DataFrame of c, not inplace
-        Allows regex-style selection of columns to perform multiple evaluations.
-
-    Parameters
-    ----------
-    expr : str
-        The expression to evaluate. This string cannot contain any Python statements, only Python expressions.
-        We allow cached 'selectors' to emulate group-like evaluations.
-
-    Returns
-    -------
-    self
-
-    Examples
-    --------
-    >>> import turbopanda as turb
-    >>> mdf = turb.read("somefile.csv")
-    >>> mdf.eval("c=a+b") # creates column c by adding a + b
-    """
-    return NotImplemented

@@ -10,6 +10,10 @@ from sklearn.preprocessing import normalize, power_transform, quantile_transform
 
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.utils import belongs, instance_check, union, intersect
+from turbopanda.pipe import zscore, clean1
+
+
+__all__ = ('ml_ready', 'preprocess_continuous_X', 'preprocess_continuous_X_y')
 
 
 def ml_ready(df: "MetaPanda",
@@ -102,3 +106,18 @@ def ml_ready(df: "MetaPanda",
         return __df, _x, xcols
     else:
         return __df, _x, np.asarray(__df[y]), xcols
+
+
+def preprocess_continuous_X(df, cols):
+    """df is a pandas.DataFrame matrix of X."""
+    return (df[cols]
+            .pipe(zscore)
+            .pipe(clean1)
+            .select_dtypes(exclude=['category', 'object'])
+            .dropna())
+
+
+def preprocess_continuous_X_y(df, xcols, ycols):
+    """df is a pandas.DataFrame matrix"""
+    __data = preprocess_continuous_X(df, union(xcols, ycols))
+    return __data[xcols], __data[ycols]

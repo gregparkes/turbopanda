@@ -172,9 +172,9 @@ class MetaPanda(object):
     """ ########################### IMPORTED FUNCTIONS ####################################### """
 
     # inspecting columns
-    from ._inspect import view_not, view, search, select
+    from ._inspect import view_not, view, select
     # dropping rows
-    from ._drop_values import drop, keep, filter_rows
+    from ._drop_values import drop, keep
     # shadowed columns
     from ._shadow import head, dtypes, copy, info
     # saving files
@@ -296,31 +296,6 @@ class MetaPanda(object):
         mpf.source_ = filename
         # return
         return mpf
-
-    @classmethod
-    @unimplemented
-    def from_hdf(cls, filename: str, **kwargs):
-        """Read in a MetaPanda from a custom HDF5 file.
-
-        TODO: Implement `from_hdf` function.
-
-        Reads in a datafile from hdf and creates a MetaPanda object from it.
-        There may be issues with storing pipe_, selector_ and
-        mapper_ objects due to their complexity.
-
-        Parameters
-        -------
-        filename : str
-            A relative/absolute link to the HDF file.
-        **kwargs : dict, optional
-            Other keyword arguments to pass to MetaPanda constructor
-
-        Returns
-        ------
-        mpf : MetaPanda
-            A MetaPanda object.
-        """
-        return NotImplemented
 
     """ ############################## OVERRIDDEN OPERATIONS ###################################### """
 

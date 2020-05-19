@@ -13,7 +13,7 @@ from turbopanda.utils import instance_check, intersect, union, join
 
 """ INSPECTING COLUMNS """
 
-__all__ = ('view', 'search', 'view_not', 'inspect')
+__all__ = ('view', 'view_not', 'inspect', 'select')
 
 
 def _handle_mode(df, v, mode='view'):
@@ -100,41 +100,6 @@ def view(self, *selector: SelectorType, **selector_kwargs) -> pd.Index:
         sel = inspect(self.df_, self.meta_, self.selectors_, _ms, join_t='union', mode='view')
         # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
         return sel
-
-
-@deprecated("0.2.5", "0.2.8", instead="`MetaPanda.select`", reason="redundancy with view, view_not.")
-def search(self, *selector: SelectorType) -> pd.Index:
-    """View the intersection of columns in `df_`.
-
-    Select merely returns the columns of interest selected using this selector.
-    Selections of columns can be done by:
-        type [object, int, float, numpy.dtype*, pandas.CategoricalDtype]
-        callable (function) that returns [bool list] of length p
-        pd.Index
-        str [regex, df.column name, cached name, meta.column name (that references a boolean column)]
-        list/tuple of the above
-
-    .. note:: `view` *preserves* the order in which columns appear within the DataFrame.
-    Parameters
-    -------
-    selector : str or tuple args
-        See above for what constitutes an *appropriate selector*.
-    Warnings
-    --------
-    UserWarning
-        If the selection returned is empty.
-    Returns
-    ------
-    sel : pd.Index
-        The list of column names selected, or empty
-    See Also
-    --------
-    view_not : Views the non-selected columns in `df_`.
-    view : View a selection of columns in `df_`.
-    """
-    sel = inspect(self.df_, self.meta_, self.selectors_, list(selector), join_t='intersect', mode='search')
-    # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
-    return sel
 
 
 def view_not(self, *selector: SelectorType) -> pd.Index:

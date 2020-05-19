@@ -34,7 +34,9 @@ def _explained_variance_plot(model, ax: mpl.axes.Axes, cutoff: float = .9):
     n = len(model.explained_variance_ratio_)
     _x = np.arange(1, n + 1)
     _ycum = np.cumsum(model.explained_variance_ratio_)
-    best_index = np.where(_ycum > cutoff)[0][0]
+    best_index = np.where(_ycum > cutoff)[0]
+    # modify in case we dont have one
+    best_index = best_index[0] if best_index.shape[0] > 0 else n - 1
     # calculate AUC
     auc = np.trapz(_ycum, _x / n)
     # plot
@@ -95,7 +97,7 @@ def _best_eigenvector_plot(x, y, labels: pd.Index,
 def overview_pca(model,
                  distance_color: bool = True,
                  labels: Optional[pd.Index] = None,
-                 cutoff_selection=0.9,
+                 cutoff_selection:float=0.9,
                  n_samples_annotate: int = 6,
                  n_pcs: int = 5,
                  ax_size: int = 4):

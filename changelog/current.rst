@@ -18,3 +18,6 @@ keyword argument `cache`, default set to False
 .................
 - |Feature| Added `bar1d` function to efficiently draw barplots, with automatic sorting and colouring
 - |Fix| An issue in `scatter` where colors were not corresponding to legend
+
+`turbopanda.merge`
+- |Enhancement| Includes proper verbose outputs to see which columns are merging together

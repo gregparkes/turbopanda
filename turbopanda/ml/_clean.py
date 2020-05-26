@@ -108,8 +108,14 @@ def ml_ready(df: "MetaPanda",
         return __df, _x, np.asarray(__df[y]), xcols
 
 
-def preprocess_continuous_X(df, cols):
-    """df is a pandas.DataFrame matrix of X."""
+def preprocess_continuous_X(df, cols=None):
+    """df is a pandas.DataFrame matrix of X.
+
+    if cols is None, uses all of them.
+    """
+    if cols is None:
+        cols = df.columns
+
     return (df[cols]
             .pipe(zscore)
             .pipe(clean1)

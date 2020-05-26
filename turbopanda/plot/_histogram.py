@@ -156,11 +156,13 @@ def histogram(X: _ArrayLike,
         stat_label = "mean: {:0.2f}, sd: {:0.3f},\n skew: {:0.3f} kurt: {:0.3f}".format(
             np.nanmean(_X), np.nanstd(_X), stats.skew(_X), stats.kurtosis(_X))
         # plot the histogram
-        _plot_hist(_X, ax, bins=bins, density=density, rwidth=.9, label=stat_label, *hist_args, **hist_kwargs)
-        ax.legend()
+        _plot_hist(_X, ax, bins=bins, density=density, rwidth=.9,
+                   label=stat_label, *hist_args, **hist_kwargs)
+        ax.legend(loc='best')
     else:
         # plot the histogram
-        _plot_hist(_X, ax, bins=bins, density=density, rwidth=.9, *hist_args, **hist_kwargs)
+        _plot_hist(_X, ax, bins=bins, density=density, rwidth=.9,
+                   *hist_args, **hist_kwargs)
 
     ax.set_title(title)
 

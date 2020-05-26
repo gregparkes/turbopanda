@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import RepeatedKFold, cross_val_predict, cross_validate
+from sklearn.model_selection import RepeatedKFold, cross_val_predict, cross_validate, KFold
 
 # internal functions, objects.
 from turbopanda._metapanda import MetaPanda, SelectorType
@@ -16,6 +16,15 @@ from turbopanda.utils import insert_suffix, instance_check, listify, union, boun
 from turbopanda.ml._clean import ml_ready
 from turbopanda.ml._package import find_sklearn_model, is_sklearn_model
 from turbopanda.ml.plot._plot_overview import overview
+
+
+def _define_regression_kfold_object(cv):
+    # if cv is an int, make KFold
+    # if cv is a tuple (2,) make RepeatedKFold
+    if isinstance(cv, (list, tuple)):
+        return RepeatedKFold(n_splits=cv[0], n_repeats=cv[1])
+    else:
+        return KFold(n_splits=cv)
 
 
 def _extract_coefficients_from_model(cv, x, pkg_name):
@@ -117,11 +126,8 @@ def basic(df: Union[pd.DataFrame, "MetaPanda"],
 
     if x is None:
         x = _df.columns.difference(pd.Index([y]))
-    if isinstance(cv, tuple):
-        k, repeats = cv
-    else:
-        k, repeats = cv, 1
 
+    rep = _define_regression_kfold_object(cv)
     lm, pkg_name = find_sklearn_model(model, "regression")
     # assign keywords to lm
     lm.set_params(**model_kws)
@@ -133,19 +139,20 @@ def basic(df: Union[pd.DataFrame, "MetaPanda"],
 
     # function 1: performing cross-validated fit.
     def _perform_cv_fit(_x: np.ndarray,
-                        _xcols: pd.Index,
+                        _columns: pd.Index,
                         _y: np.ndarray,
-                        _k: int,
-                        _repeats: int,
+                        _rep,
                         _lm,
                         package_name: str) -> "MetaPanda":
-        # generate repeatedkfold.
-        rep = RepeatedKFold(n_splits=_k, n_repeats=_repeats)
         # cv cross-validate and wrap.
-        score_mat = pd.DataFrame(cross_validate(_lm, _x, _y, cv=rep, scoring="neg_root_mean_squared_error",
+        score_mat = pd.DataFrame(cross_validate(_lm, _x, _y, cv=_rep, scoring="neg_root_mean_squared_error",
                                                 return_estimator=True, return_train_score=True, n_jobs=-2))
         # append results to cv
-        score_mat['k'] = np.repeat(np.arange(_k), _repeats)
+        # if repeatedkfold, add n_repeats
+        if isinstance(rep, RepeatedKFold):
+            score_mat['k'] = np.repeat(np.arange(rep.n_splits), rep.n_repeats)
+        else:
+            score_mat['k'] = np.arange(rep.n_splits)
         # extract coefficients
         coef = _extract_coefficients_from_model(score_mat, _xcols, package_name)
         # integrate coefficients
@@ -161,23 +168,24 @@ def basic(df: Union[pd.DataFrame, "MetaPanda"],
                                 _x: np.ndarray,
                                 _y: np.ndarray,
                                 _yn: str,
-                                _k: int,
+                                _rep,
                                 _lm) -> pd.Series:
-        return pd.Series(cross_val_predict(_lm, _x, _y, cv=_k), index=_df.index).to_frame(_yn)
+        return pd.Series(cross_val_predict(_lm, _x, _y, cv=_rep), index=_df.index).to_frame(_yn)
 
     if cache is not None:
         cache_cv = insert_suffix(cache, "_cv")
         cache_yp = insert_suffix(cache, "_yp")
         _cv = cached(
-            _perform_cv_fit, cache_cv, verbose, _x=_x, _xcols=_xcols, _y=_y, _k=k,
-            _repeats=repeats, _lm=lm, package_name=pkg_name
+            _perform_cv_fit, cache_cv, verbose, _x=_x, _xcols=_xcols, _y=_y, _rep=rep,
+            _lm=lm, package_name=pkg_name
         )
         _yp = cached(
-            _perform_prediction_fit, cache_yp, verbose, _df=__df, _x=_x, _y=_y, _yn=y, _k=k, _lm=lm
+            _perform_prediction_fit, cache_yp,
+            verbose, _df=__df, _x=_x, _y=_y, _yn=y, _rep=rep, _lm=lm
         )
     else:
-        _cv = _perform_cv_fit(_x, _xcols, _y, k, repeats, lm, pkg_name)
-        _yp = _perform_prediction_fit(__df, _x, _y, y, k, lm)
+        _cv = _perform_cv_fit(_x, _xcols, _y, rep, lm, pkg_name)
+        _yp = _perform_prediction_fit(__df, _x, _y, y, rep, lm)
 
     if plot:
         overview(_df, x, y, _cv, _yp)

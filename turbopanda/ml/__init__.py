@@ -8,5 +8,6 @@ The most basic beginning support we provide is automatic JSON caching of ML mode
 from ._clean import *
 from ._pgrid import make_parameter_grid
 from ._select_model import get_best_model
+from ._reduction import *
 # global inputs
 from . import plot, fit

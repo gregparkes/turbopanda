@@ -114,10 +114,9 @@ def vectorize(_func=None,
                 pkg = zip(argc, argkc)
                 # calculate effective number of CPUs
                 n_cpus = len(argc) if len(argc) <= cpu_count() else cpu_count() - 1
-
                 # caching function - which is parallelized.
-                def _cache_function(i, *args_i, **kwargs_i):
-                    file_chunk = fsubname + i + ".pkl"
+                def _cache_function(i, fn, *args_i, **kwargs_i):
+                    file_chunk = fn + i + ".pkl"
                     # check if appropriate cache file exists, if it does use the IO to read it in.
                     if os.path.isfile(file_chunk):
                         # read in file
@@ -131,22 +130,22 @@ def vectorize(_func=None,
                         return result_i
 
                 if cache:
+                    # create a temporary directory cache
                     savedir = mkdtemp()
                     filename_path = "cache_vectorize_"
                     fsubname = os.path.join(savedir, filename_path)
                     # parallelize on the cache function
                     if parallel:
                         result = Parallel(n_jobs=n_cpus)(
-                            delayed(_cache_function)(i, *arg, **kwarg) for i, (arg, kwarg) in enumerate(pkg)
+                            delayed(_cache_function)(i, fsubname, *arg, **kwarg) for i, (arg, kwarg) in enumerate(pkg)
                         )
                     else:
-                        result = [_cache_function(i, *arg, **kwarg) for i, (arg, kwarg) in enumerate(pkg)]
-                    # clear directory once completed
+                        result = [_cache_function(i, fsubname, *arg, **kwarg) for i, (arg, kwarg) in enumerate(pkg)]
+                    # clear temporary directory once completed
                     try:
                         shutil.rmtree(savedir)
                     except OSError:
                         pass  # this can fail with windows
-
                 else:
                     if parallel:
                         # perform parallel operation

@@ -12,7 +12,6 @@ from turbopanda.str import patcolumnmatch
 from turbopanda.utils import float_to_integer, bounds_check
 from ._conditions import select_float, select_numeric
 
-
 __all__ = ('all_float_to_int', 'downcast_all',
            'all_low_cardinality_to_categorical',
            'zscore', 'yeo_johnson', 'clean1', 'clean2',

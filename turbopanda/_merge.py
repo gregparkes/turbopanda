@@ -25,8 +25,11 @@ DataSetType = Union[Series, DataFrame, MetaPanda]
 
 def _has_majority_index_overlap(df1: DataFrame, df2: DataFrame) -> bool:
     """Checks whether the indices overlap in majority. Bool"""
-    ins = intersect(df1.index, df2.index)
-    return ins.shape[0] > (np.mean((df1.shape[0], df2.shape[0])) // 2)
+    if df1.index.dtype.kind == "U" and df2.index.dtype.kind == "U":
+        ins = intersect(df1.index, df2.index)
+        return ins.shape[0] > (np.mean((df1.shape[0], df2.shape[0])) // 2)
+    else:
+        return False
 
 
 def _intersecting_pairs(sdf1: DataFrame, sdf2: DataFrame) -> DataFrame:
@@ -64,7 +67,8 @@ def _maximum_likelihood_pairs(pairings: DataFrame, ret_largest: bool = True):
 
 def _single_merge(sdf1: DataSetType,
                   sdf2: DataSetType,
-                  how: str = 'inner') -> Union[DataFrame, MetaPanda]:
+                  how: str = 'inner',
+                  verbose: int = 0) -> Union[DataFrame, MetaPanda]:
     """
     Check different use cases and merge d1 and d2 together.
 
@@ -76,6 +80,8 @@ def _single_merge(sdf1: DataSetType,
         Dataset 2. If str, reads it in as if a file.
     how : str
         How to join on concat or merge between sdf1, sdf2.
+    verbose : int
+        print line step.
     """
     instance_check(sdf1, (Series, DataFrame, MetaPanda))
     instance_check(sdf2, (Series, DataFrame, MetaPanda))
@@ -83,10 +89,14 @@ def _single_merge(sdf1: DataSetType,
     # both are series.
     if isinstance(sdf1, Series) and isinstance(sdf2, Series):
         # perform pd.concat on the indexes.
+        if verbose:
+            print("{}:{} Joining on series".format(sdf1.name, sdf2.name))
         return concat((sdf1, sdf2), join=how, axis=1, sort=False, copy=True)
     elif (isinstance(sdf1, DataFrame) and isinstance(sdf2, Series)) \
             or (not (not isinstance(sdf1, Series) or not isinstance(sdf2, DataFrame))):
         # join on index. TODO: This if case may produce weird behavior.
+        if verbose:
+            print("Joining DataFrame/Series")
         return concat((sdf1, sdf2), join=how, axis=1, sort=False, copy=True)
     else:
         # assign attributes based on instance types, etc.
@@ -104,6 +114,8 @@ def _single_merge(sdf1: DataSetType,
         if _has_majority_index_overlap(d1, d2):
             # simply use concat
             df_m = concat((d1, d2), sort=False, join=how, axis=1, copy=True)
+            if verbose:
+                print("[{}:{} Joining on indices]".format(n1, n2))
         else:
             # find the best union pair
             pair, value = _maximum_likelihood_pairs(_intersecting_pairs(d1, d2))
@@ -127,8 +139,14 @@ def _single_merge(sdf1: DataSetType,
                 df_m.drop("counter__%s" % n1, axis=1, inplace=True)
             elif "counter__%s" % n2 in df_m.columns:
                 df_m.drop("counter__%s" % n2, axis=1, inplace=True)
-            # rename
-            # df_m.rename(columns=dict(zip(df_m.columns.tolist(), d1.columns.tolist())), inplace=True)
+
+            if verbose == 1:
+                print("[{}:'{}' | {}:'{}']".format(n1, pair[0], n2, pair[1]))
+            elif verbose > 1:
+                print("[{}({},{}):'{}' | {}({},{}):'{}' -> {}/{:0.2f}]".format(
+                    n1, d1.shape[0], d1.shape[1], pair[0], n2, d2.shape[0], d2.shape[1],
+                    pair[1], int(value), value / min(d1.shape[0], d2.shape[0])
+                ))
 
         # create a copy metapanda, and set new attributes.
         mpf = MetaPanda(df_m, name=new_name, with_clean=False, with_warnings=False)
@@ -144,7 +162,6 @@ def _single_merge(sdf1: DataSetType,
 def merge(mdfs: Union[str, List[DataSetType]],
           name: Optional[str] = None,
           how: str = 'inner',
-          clean_pipe: Optional[PipeMetaPandaType] = None,
           verbose: int = 0):
     """Merge together K datasets.
 
@@ -167,9 +184,6 @@ def merge(mdfs: Union[str, List[DataSetType]],
         'inner': drops rows that aren't found in all Datasets
         'outer': keeps all rows
         'left': drops rows that aren't found in first Dataset
-    clean_pipe : Pipe, optional
-        A set of instructions to pass to the fully-merged DataFrame once we're done.
-        See turb.Pipe() for details.
     verbose : int, optional
         If greater than 0, prints out various useful debugging messages.
 
@@ -209,11 +223,11 @@ def merge(mdfs: Union[str, List[DataSetType]],
     if len(mdfs) < 2:
         raise ValueError("mdfs must be at least length 2")
     elif len(mdfs) == 2:
-        nmdf = _single_merge(mdfs[0], mdfs[1], how=how)
+        nmdf = _single_merge(mdfs[0], mdfs[1], how=how, verbose=verbose)
     else:
         nmdf = mdfs[0]
         for ds in mdfs[1:]:
-            nmdf = _single_merge(nmdf, ds, how=how)
+            nmdf = _single_merge(nmdf, ds, how=how, verbose=verbose)
 
     # do some additional things if the return type is a MetaPanda object.
     if check_list_type(mdfs, MetaPanda, raised=False):
@@ -234,9 +248,6 @@ def merge(mdfs: Union[str, List[DataSetType]],
         # override name if given
         if name is not None:
             nmdf.name_ = name
-        # compute clean if applicable
-        if clean_pipe is not None:
-            nmdf.compute(clean_pipe, inplace=True)
 
     # return
     return nmdf

@@ -18,7 +18,7 @@ from ._widgets import map_legend
 
 def bar1d(X: _ArrayLike,
           Y: Optional[_ListLike] = None,
-          c: Optional[Union[_ArrayLike, str]] = None,
+          c: Optional[Union[_ArrayLike, str]] = 'k',
           vert: bool = True,
           sort: bool = True,
           ax: Optional[mpl.axes.Axes] = None,
@@ -147,6 +147,3 @@ def bar1d(X: _ArrayLike,
         map_legend(c, pal, 'o', ax, False)
 
     return ax
-
-
-

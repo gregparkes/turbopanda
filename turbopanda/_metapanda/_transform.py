@@ -140,7 +140,7 @@ def transform_k(self, ops: Tuple[Callable, SelectorType]) -> "MetaPanda":
 def aggregate(self,
               func: Union[Callable, str],
               name: Optional[str] = None,
-              selector: SelectorType = None,
+              selector: Optional[SelectorType] = None,
               keep: bool = False) -> "MetaPanda":
     """Perform inplace column-wise aggregations using a selector.
 

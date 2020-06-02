@@ -9,7 +9,6 @@ Changelog
 - |Enhancement| `vectorize` now supports caching for each step with
 keyword argument `cache`, default set to False
 
-
 `turbopanda.dev`
 ................
 - |Enhancement| `cache` for non-pandas objects uses `joblib` to serialize/pickle the object

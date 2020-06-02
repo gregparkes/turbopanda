@@ -136,7 +136,7 @@ def _bicorr_inner(x, y, tail='two-sided', method='spearman', verbose=0):
             'r2': round(r2, 3),
             'adj_r2': round(adj_r2, 3),
             'CI95_lower': ci[0], 'CI95_upper': ci[1],
-            'p-val': pval if tail == 'two-sided' else .5 * pval,
+            'p_val': pval if tail == 'two-sided' else .5 * pval,
             'power': pr,
             'outliers': sum(outliers) if method in ('shepherd', 'skipped') else np.nan}
 

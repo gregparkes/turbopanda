@@ -15,6 +15,7 @@ ArrayLike = Union[np.ndarray, pd.Series, pd.DataFrame]
 __all__ = ('as_flattened_numpy', 'listify', 'switcheroo',
            'integer_to_boolean', "upcast",
            'object_to_categorical', 'boolean_to_integer',
+           'boolean_to_categorical',
            'float_to_integer', 'ordinal')
 
 
@@ -85,6 +86,13 @@ def object_to_categorical(ser: pd.Series,
             return ser.astype(pd.CategoricalDtype(order, ordered=True))
     else:
         return ser
+
+
+def boolean_to_categorical(ser: pd.Series,
+                           true: str,
+                           false: str) -> pd.Series:
+    """Converts a boolean series into two-categorical state with labels."""
+    return ser.astype("category").cat.rename_categories({True: true, False: false})
 
 
 def boolean_to_integer(ser: pd.Series) -> pd.Series:

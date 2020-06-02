@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from typing import Union, Optional, List, Tuple
 
 from turbopanda.utils import as_flattened_numpy, instance_check
+from turbopanda._deprecator import unimplemented
 
 from ._palette import palette_cmap, convert_categories_to_colors
 from ._annotate import annotate as annotate_labels
@@ -147,3 +148,43 @@ def bar1d(X: _ArrayLike,
         map_legend(c, pal, 'o', ax, False)
 
     return ax
+
+
+@unimplemented
+def widebar(data: pd.DataFrame,
+            X: Optional[str] = None,
+            Y: Optional[Union[str, _ListLike]] = None,
+            c: Optional[Union[_ArrayLike, str]] = 'k',
+            vert: bool = True,
+            sort: bool = True,
+            ax: Optional[mpl.axes.Axes] = None,
+            total_width: float = 0.9):
+    """Plots a barplot with hues.
+
+    Note that columns in the data correspond to data that is to be 'hued'.
+
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(8, 5))
+
+    _n, _p = data.shape
+    if X is None:
+        _labels = data.index
+    else:
+        # assumes x must be a column name
+        _labels = data[x]
+    # modify _p based on the size of y if given
+    if Y is not None:
+        _values = data[Y]
+        _p = 1 if isinstance(Y, str) else len(Y)
+    else:
+        if X is not None:
+            _values = data.drop(X, axis=1)
+            _p -= 1
+        else:
+            _values = data
+
+    _ticks = np.arange(_n)
+    prop_tick = (1. / _p) - (1. - total_width)
+    # toy palette
+    pal = palette_cmap(_p, "Reds")

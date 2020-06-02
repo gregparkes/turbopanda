@@ -227,7 +227,8 @@ def cached_chunk(func: Callable,
 
 def cache(_func=None, *,
           filename: str = "example1.pkl",
-          compress=0) -> Callable:
+          compress=0,
+          return_as="MetaPanda") -> Callable:
     """Provides automatic decorator caching for objects.
 
     Especially compatible with `turb.MetaPanda` or `pd.DataFrame`.
@@ -249,6 +250,11 @@ def cache(_func=None, *,
         between supported compressors (e.g 'zlib', 'gzip', 'bz2', 'lzma'
         'xz'), the second element must be an integer from 0 to 9, corresponding
         to the compression level.
+    return_as : str, default="MetaPanda"
+        Accepts {'pandas', 'MetaPanda'}
+        Only applies if filename is "csv" or "json". Attempts to cast the return object
+        as something palatable to the user.
+
     Warnings
     --------
     ImportWarning
@@ -289,6 +295,7 @@ def cache(_func=None, *,
     # define decorator
     def _decorator_cache(func):
         """Basic decorator."""
+
         @functools.wraps(func)
         def _wrapper_cache(*args, **kwargs):
             # if we find the file
@@ -298,7 +305,10 @@ def cache(_func=None, *,
                     # read it in
                     mdf = read(filename)
                     _set_index_def(mdf.df_)
-                    return mdf
+                    if return_as == "MetaPanda":
+                        return mdf
+                    else:
+                        return mdf.df_
                 else:
                     mdf = joblib.load(filename)
                     return mdf
@@ -308,11 +318,17 @@ def cache(_func=None, *,
                 if isinstance(mpf, MetaPanda):
                     # save file
                     mpf.write(filename)
-                    return mpf
+                    if return_as == "MetaPanda":
+                        return mpf
+                    else:
+                        return mpf.df_
                 elif isinstance(mpf, DataFrame):
                     # save - bumping index into the file.
                     mpf.reset_index().to_csv(filename, index=None)
-                    return MetaPanda(mpf)
+                    if return_as == "MetaPanda":
+                        return MetaPanda(mpf)
+                    else:
+                        return mpf
                 else:
                     # attempt to use joblib to dump
                     joblib.dump(mpf, filename, compress=compress)

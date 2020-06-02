@@ -123,7 +123,18 @@ def preprocess_continuous_X(df, cols=None):
             .dropna())
 
 
-def preprocess_continuous_X_y(df, xcols, ycols):
-    """df is a pandas.DataFrame matrix"""
+def preprocess_continuous_X_y(df, xcols, ycols, for_sklearn=True):
+    """df is a pandas.DataFrame matrix.
+
+    Preprocesses especially for sklearn estimator object fit methods.
+    """
     __data = preprocess_continuous_X(df, union(xcols, ycols))
-    return __data[xcols], __data[ycols]
+    if for_sklearn:
+        # returns np.ndarray objects properly configured
+        _x = np.asarray(__data[xcols])
+        _y = np.asarray(__data[ycols])
+        if isinstance(xcols, str) or (isinstance(xcols, (list, tuple)) and len(xcols) == 1):
+            _x = _x.reshape(-1, 1)
+        return _x, _y
+    else:
+        return __data[xcols], __data[ycols]

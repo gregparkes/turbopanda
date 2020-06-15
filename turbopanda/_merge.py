@@ -15,7 +15,6 @@ from pandas import DataFrame, Series, concat, merge as pmerge
 from ._fileio import read
 # locals
 from ._metapanda import MetaPanda
-from ._pipe import PipeMetaPandaType
 from .utils import belongs, check_list_type, \
     get_file_expanded, instance_check, intersect, union, bounds_check
 

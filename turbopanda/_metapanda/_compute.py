@@ -6,6 +6,7 @@ import warnings
 from typing import List, Optional
 
 from turbopanda._pipe import Pipe, PipeMetaPandaType, is_pipe_structure
+from turbopanda._deprecator import deprecated_param
 
 __all__ = ('compute', 'compute_k' '_apply_pipe')
 
@@ -35,6 +36,7 @@ def _apply_pipe(self, pipe):
                     getattr(self, fn)(*args, **kwargs)
 
 
+@deprecated_param("0.2.7", "pipe", reason="deprecation of Pipe object")
 def compute(self,
             pipe: Optional[PipeMetaPandaType] = None,
             inplace: bool = False,
@@ -87,6 +89,7 @@ def compute(self,
         return cpy
 
 
+@deprecated_param("0.2.7", "pipes", reason="deprecation of Pipe object")
 def compute_k(self,
               pipes: List[PipeMetaPandaType],
               inplace: bool = False) -> "MetaPanda":

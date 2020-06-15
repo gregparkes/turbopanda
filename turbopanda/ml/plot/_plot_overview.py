@@ -61,7 +61,7 @@ def coefficient(cv, plot=None):
         if plot is None:
             fig, plot = plt.subplots(figsize=(8, 5))
 
-        widebox(coef, vertical=False, outliers=False,
+        widebox(coef, vert=False, outliers=False,
                 measured=r"$\beta$", ax=plot)
         plot.set_title("Coefficients")
 

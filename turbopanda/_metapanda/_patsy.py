@@ -3,7 +3,6 @@
 """Provides an interface to the patsy interface for matrix design."""
 
 from typing import Optional
-
 from turbopanda.utils import intersect
 
 

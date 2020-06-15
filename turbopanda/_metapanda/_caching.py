@@ -6,9 +6,10 @@ import warnings
 
 import pandas as pd
 
-from turbopanda._pipe import Pipe, PipeMetaPandaType
+from turbopanda._pipe import Pipe
 from turbopanda.utils import dictmap, t_numpy
 from ._types import SelectorType
+from turbopanda._deprecator import deprecated
 
 __all__ = ('cache', 'cache_k', 'cache_pipe')
 
@@ -93,7 +94,8 @@ def cache_k(self, **caches: SelectorType) -> "MetaPanda":
     return self
 
 
-def cache_pipe(self, name: str, pipeline: PipeMetaPandaType) -> "MetaPanda":
+@deprecated("0.2.7", "0.3", reason="duplicates with pipe functions", instead="turbopanda.pipe")
+def cache_pipe(self, name: str, pipeline) -> "MetaPanda":
     """Add a pipe element to `pipe_`.
 
     Saves a pipeline to use at a later date. Calls to `compute` can reference the name

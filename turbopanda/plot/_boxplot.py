@@ -459,7 +459,8 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
             colors: Optional[_ListLike] = None,
             measured: Optional[str] = None,
             ax: Optional[mpl.axes.Axes] = None,
-            vertical: bool = True,
+            vert: bool = True,
+            sort: bool = True,
             outliers: bool = True,
             notch: bool = False,
             with_strip: bool = False,
@@ -472,11 +473,13 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
             strip_jitter: float = 0.15,
             theme="white_circle",
             **plot_kwargs):
-    """Plots a 2D boxplot with data oriented in wide-form"""
+    """Plots a 2D boxplot with data oriented in wide-form.
+
+    """
     instance_check(data, (list, np.ndarray, pd.DataFrame))
     instance_check((colors, spines), (type(None), list, pd.Index))
     instance_check(ax, (type(None), mpl.axes.Axes))
-    instance_check((vertical, notch, outliers, grid, with_strip), bool)
+    instance_check((vert, sort, notch, outliers, grid, with_strip), bool)
     instance_check((capsize, width, strip_jitter, label_rotation), (float, int))
     instance_check(theme, str)
     instance_check(label_max_length, int)
@@ -502,35 +505,41 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
 
     if with_strip:
         outliers = False
-    if ax is None and vertical:
+    if ax is None and vert:
         fig, ax = plt.subplots(figsize=(2.5 + _figure_spacing(_data.shape[1]), 7))
-    elif ax is None and not vertical:
+    elif ax is None and not vert:
         fig, ax = plt.subplots(figsize=(7, 2.5 + _figure_spacing(_data.shape[1])))
     if spines is None:
         spines = ('left', 'top', 'right', 'bottom')
 
+    # sort the data by the mean if selected
+    if sort:
+        _order = np.argsort(np.mean(_data, axis=0))
+        _data = _data[:, _order]
+        _labels = _labels[_order]
+
     box_alpha = 1. if not with_strip else .5
 
     patch_obj = ax.boxplot(
-        _data, vert=vertical, patch_artist=True,
+        _data, vert=vert, patch_artist=True,
         widths=width, showfliers=outliers, notch=notch,
         flierprops=_style, boxprops=dict(alpha=box_alpha),
         **plot_kwargs
     )
 
     # define boxplot extras
-    _define_boxplot_arguments(ax, patch_obj, vertical, measured,
+    _define_boxplot_arguments(ax, patch_obj, vert, measured,
                               grid, spines, capsize, None)
     # define basic colours - overrides if needs be
     colors = _kcolor_arrangement(patch_obj, colors, k=_data.shape[1])
     # label axes
-    _label_axes(ax, _labels, vertical, label_rotation, label_max_length)
+    _label_axes(ax, _labels, vert, label_rotation, label_max_length)
     # perform stripplots
     if with_strip:
         for n in range(_data.shape[1]):
             # plot x strips
             _overlay_stripplot(_data[:, n], ax, n + 1,
-                               width, colors[n], vertical,
+                               width, colors[n], vert,
                                outliers, strip_jitter)
 
     return ax

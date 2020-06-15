@@ -10,12 +10,12 @@ from turbopanda._deprecator import deprecated
 from turbopanda.str import string_replace
 from turbopanda.utils import belongs, is_twotuple
 from ._inspect import inspect
-from ._types import PandaIndex, SelectorType
+from ._types import SelectorType
 
 __all__ = ('rename_axis', 'add_prefix', 'add_suffix')
 
 
-def _rename_axis(df: pd.DataFrame, meta: pd.DataFrame, old: PandaIndex, new: PandaIndex, axis: int = 1):
+def _rename_axis(df, meta, old, new, axis: int = 1):
     if axis == 1:
         df.rename(columns=dict(zip(old, new)), inplace=True)
         meta.rename(index=dict(zip(old, new)), inplace=True)
@@ -61,7 +61,7 @@ def rename_axis(self,
     return self
 
 
-@deprecated("0.2.5", "0.3.0", instead="apply('add_prefix')",
+@deprecated("0.2.5", "0.3.0", instead="apply('add_prefix', ...)",
             reason="This pandas replacement is not necessary to warrant a function")
 def add_prefix(self, pref: str,
                selector: SelectorType = None) -> "MetaPanda":
@@ -89,7 +89,7 @@ def add_prefix(self, pref: str,
     return self
 
 
-@deprecated("0.2.5", "0.3.0", instead="apply('add_suffix')",
+@deprecated("0.2.5", "0.3.0", instead="apply('add_suffix', ...)",
             reason="This pandas replacement is not necessary to warrant a function")
 def add_suffix(self, suf: str,
                selector: SelectorType = None) -> "MetaPanda":

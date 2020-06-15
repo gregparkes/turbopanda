@@ -52,7 +52,10 @@ def _colormap_to_hex(cm_array: np.ndarray):
 
 
 def lighten(c, frac_change=.3):
-    """Given a color name, returns a slightly lighter version of that color"""
+    """Given a color name, returns a slightly lighter version of that color.
+
+        c can be a str or list of str.
+    """
     x = np.asarray(colors.to_rgba(c))
     other = np.array([frac_change, frac_change, frac_change, 0])
     clipped = np.clip(x + other, 0., 1.)

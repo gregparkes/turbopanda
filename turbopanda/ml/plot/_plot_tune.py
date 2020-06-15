@@ -5,7 +5,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from turbopanda._pipe import Pipe
 from turbopanda.pipe import absolute, filter_rows_by_column
 from turbopanda.plot import color_qualitative, gridplot, box1d
 from turbopanda.utils import belongs, difference, set_like, instance_check, nonnegative
@@ -55,7 +54,6 @@ def _model_selection_parameters(cv_results,
         if _basic_p(prim_param) in log_params:
             plot.set_xscale("log")
         # sort values based on x
-        # fr_sort = Pipe(['apply', 'sort_values', 'by={}'.format(prim_param)])
         subset_sorted = subset.sort_values(by=prim_param)
 
         # the number of dimensions affects how we plot this.

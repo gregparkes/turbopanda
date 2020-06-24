@@ -7,7 +7,7 @@ from ._histogram import histogram
 from ._scatter import scatter
 from ._heatmap import heatmap
 from ._boxplot import box1d, bibox1d, widebox
-from ._bar import bar1d, errorbar1d
+from ._bar import bar1d, errorbar1d, widebar
 # from ._kdeplot import kde2d
 
 from ._annotate import annotate

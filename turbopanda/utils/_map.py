@@ -92,6 +92,7 @@ def umapc(fn: str, f: Callable, *args):
     """
     if os.path.isfile(fn):
         # use joblib.load to read in the data
+        print("loading file '%s'" % fn)
         return load(fn)
     else:
         # perform list comprehension
@@ -152,6 +153,7 @@ def umappc(fn: str, f: Callable, *args):
     See `turb.utils.umap` for examples.
     """
     if os.path.isfile(fn):
+        print("loading file '%s'" % fn)
         return load(fn)
     else:
         um = _parallel_list_comprehension(f, *args)
@@ -190,16 +192,19 @@ def umapcc(fn: str, f: Callable, *args):
     See `turb.utils.umap` for examples.
     """
     if os.path.isfile(fn):
+        print("loading file '%s'" % fn)
         return load(fn)
     else:
-        nargs = len(args)
+        n = len(args[0])
         # run and do chunked caching, using item cache
         um = [_item_cache(add_suf(fn, str(i)), f, *arg) for i, arg in enumerate(zip(*args))]
         # save final version
         dump(um, fn)
         # delete temp versions
-        for i in range(nargs):
-            os.remove(add_suf(fn, str(i)))
+        for i in range(n):
+            fni = add_suf(fn, str(i))
+            if os.path.isfile(fni):
+                os.remove(fni)
         # return
         return um
 
@@ -237,9 +242,9 @@ def umappcc(fn: str, f: Callable, *args):
     See `turb.utils.umap` for examples.
     """
     if os.path.isfile(fn):
+        print("loading file '%s'" % fn)
         return load(fn)
     else:
-        nargs = len(args)
         n = len(args[0])
         ncpu = n if n < cpu_count() else (cpu_count() - 1)
         # do list comprehension using parallelism
@@ -248,7 +253,9 @@ def umappcc(fn: str, f: Callable, *args):
         # save final version
         dump(um, fn)
         # delete temp versions
-        for i in range(nargs):
-            os.remove(add_suf(fn, str(i)))
+        for i in range(n):
+            fni = add_suf(fn, str(i))
+            if os.path.isfile(fni):
+                os.remove(fni)
         # return
         return um

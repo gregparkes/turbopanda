@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from typing import Union, Optional, List, Tuple
 
 from turbopanda.utils import as_flattened_numpy, instance_check, belongs
-from turbopanda._deprecator import unimplemented
+from turbopanda._deprecator import unstable
 
 from ._palette import palette_cmap, convert_categories_to_colors, lighten
 from ._annotate import annotate as annotate_labels
@@ -19,48 +19,42 @@ from ._widgets import map_legend
 __all__ = ('bar1d', 'widebar', 'errorbar1d')
 
 
-def _plot_bar_vert(ax, ticks, labels, values, sd=None, c='k', w=0.8,
-                   lrot=0., annotate=False, lines=None, vlabel=None):
+def _plot_bar_orient(ax, ticks, labels,
+                     values, sd=None, vert=True,
+                     c='k', w=0.8,
+                     lrot=0., annotate=False,
+                     lines=None, vlabel=None):
     bar_args = {'ecolor': 'k', 'capsize': 4}
     # plot bar here
+    bar_f = ax.bar if vert else ax.barh
+    tick_pos_f = ax.set_xticks if vert else ax.set_yticks
+    tick_label_f = ax.set_xticklabels if vert else ax.set_yticklabels
+    bar_line_f = ax.hlines if vert else ax.vlines
+    ax_label_f = ax.set_ylabel if vert else ax.set_xlabel
+
     if sd is not None:
+        err_args = {"yerr": sd, "width": w} if vert else {"xerr": sd, "height": w}
         err_c = lighten(c, .2)
-        ax.bar(ticks, values, yerr=sd, width=w, color=err_c, **bar_args)
+        bar_f(ticks, values, color=err_c, **err_args, **bar_args)
     else:
-        ax.bar(ticks, values, width=w, color=c)
+        err_args = {"width": w} if vert else {"height": w}
+        bar_f(ticks, values, color=c, **err_args)
+
     # set ticks and labels
-    ax.set_xticks(ticks)
-    ax.set_xticklabels(labels, rotation=lrot)
+    tick_pos_f(ticks)
+    tick_label_f(labels, rotation=lrot)
     # add optional horizontal lines
     if lines:
-        ax.hlines(lines, xmin=-.5, xmax=ticks.shape[0] - .5, linestyle="--", color="k")
+        line_args = {'xmin': -.5, 'xmax': ticks.shape[0] - .5} if vert else {'ymin': -.5, 'ymax': ticks.shape[0] - .5}
+        bar_line_f(lines, linestyle="--", color="k", **line_args)
     # add optional annotations
     if annotate:
-        annotate_labels(ticks, values, values, ax=ax)
+        if vert:
+            annotate_labels(ticks, values, values, ax=ax)
+        else:
+            annotate_labels(values, ticks, values, ax=ax)
     # set the value label
-    ax.set_ylabel(vlabel)
-
-
-def _plot_bar_hoz(ax, ticks, labels, values, sd=None, c='k', w=0.8,
-                  lrot=0., annotate=False, lines=None, vlabel=None):
-    # plot vbar
-    bar_args = {'ecolor': 'k', 'capsize': 4}
-    if sd is not None:
-        err_c = lighten(c, .2)
-        ax.barh(ticks, values, xerr=sd, height=w, color=err_c, **bar_args)
-    else:
-        ax.barh(ticks, values, height=w, color=c)
-    # set ticks and labels
-    ax.set_yticks(ticks)
-    ax.set_yticklabels(labels, rotation=lrot)
-    # add optional vertical lines
-    if lines:
-        ax.vlines(lines, ymin=-.5, ymax=ticks.shape[0] - .5, linestyle="--", color='k')
-    # add optional annotations
-    if annotate:
-        annotate_labels(values, ticks, values, ax=ax)
-    # set the value label
-    ax.set_xlabel(vlabel)
+    ax_label_f(vlabel)
 
 
 def _determine_color_palette(cval, nticks, cmap):
@@ -139,6 +133,7 @@ def bar1d(X: _ArrayLike,
         Allows further modifications to the axes post-boxplot
     """
     # define plot if not set
+
     belongs(sort_by, ('values', 'labels'))
 
     if ax is None:
@@ -178,12 +173,9 @@ def bar1d(X: _ArrayLike,
         else:
             _labels, _values = _apply_data_sort(_order, _labels, _values)
 
-    if vert:
-        _plot_bar_vert(ax, _ticks, _labels, _values, c=pal, w=width, lrot=label_rotation,
-                       annotate=annotate, lines=vlinesAt, vlabel=value_label)
-    else:
-        _plot_bar_hoz(ax, _ticks, _labels, _values, c=pal, w=width, lrot=label_rotation,
-                      annotate=annotate, lines=hlinesAt, vlabel=value_label)
+    # plot the bar
+    _plot_bar_orient(ax, _ticks, _labels, _values, c=pal, w=width, vert=vert, lrot=label_rotation,
+                     annotate=annotate, lines=vlinesAt, vlabel=value_label)
 
     # map a legend to it
     if legend and not isinstance(c, str):
@@ -258,51 +250,83 @@ def errorbar1d(data: pd.DataFrame,
             _labels, m_v, m_sd = _apply_data_sort(_ord, _labels, m_v, m_sd)
 
     # now plot
-    if vert:
-        _plot_bar_vert(ax, _ticks, _labels, m_v, m_sd, c=pal,
-                       w=width, lrot=label_rotation)
-    else:
-        _plot_bar_hoz(ax, _ticks, _labels, m_v, m_sd, c=pal,
-                      w=width, lrot=label_rotation)
+    _plot_bar_orient(ax, _ticks, _labels, m_v, m_sd, c=pal,
+                     w=width, vert=vert, lrot=label_rotation)
 
     return ax
 
 
-@unimplemented
 def widebar(data: pd.DataFrame,
-            X: Optional[str] = None,
-            Y: Optional[Union[str, _ListLike]] = None,
-            c: Optional[Union[_ArrayLike, str]] = 'k',
+            c: Optional[_ArrayLike] = None,
             vert: bool = True,
-            sort: bool = True,
             ax: Optional[mpl.axes.Axes] = None,
-            total_width: float = 0.9):
+            measured: Optional[str] = None,
+            total_width: float = 0.8,
+            label_rotation: float = 0.0,
+            cmap: str = 'Blues'):
     """Plots a barplot with hues.
 
-    Note that columns in the data correspond to data that is to be 'hued'.
+    Note that columns in the data correspond to data that
+        is to be 'hued'.
 
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The data to plot on. Columns correspond to hue variable (see seaborn).
+    c : list/tuple/np.ndarray/pd.Series (1d), optional
+        Defines the colour of each bar.
+        If array/list, must be a categorical type.
+        If None, uses an automatic qualitative palette
+    vert : bool, default=True
+        Determines whether the plot is vertical or horizontal
+    ax : matplotlib.ax.Axes, optional, default=None
+        If None, creates one.
+    measured : str, optional
+        Defines the label to describe the measured variable
+    total_width : float, default=0.8
+        The total width of each variable (before hued)
+    label_rotation : float, default=0
+        The degrees of rotation to the ticklabels
+    cmap : str, default="Blues"
+        Defines a colormap if color values are specified
+
+    Returns
+    -------
+    ax : matplotlib.ax object
+        Allows further modifications to the axes post-boxplot
     """
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 5))
 
     _n, _p = data.shape
-    if X is None:
-        _labels = data.index
-    else:
-        # assumes x must be a column name
-        _labels = data[x]
-    # modify _p based on the size of y if given
-    if Y is not None:
-        _values = data[Y]
-        _p = 1 if isinstance(Y, str) else len(Y)
-    else:
-        if X is not None:
-            _values = data.drop(X, axis=1)
-            _p -= 1
-        else:
-            _values = data
+    # calculate each width
+    w = total_width / _p
+    # set column ticks
+    x = np.arange(_n)
 
-    _ticks = np.arange(_n)
-    prop_tick = (1. / _p) - (1. - total_width)
-    # toy palette
-    pal = palette_cmap(_p, "Reds")
+    if c is None:
+        pal = palette_cmap(_p, cmap=cmap)
+    else:
+        if len(c) != _p:
+            raise ValueError("'c' must be the number of dimensions")
+        pal = list(c)
+
+    # draw differently based whether vertical or not
+
+    bar_plot_f = ax.bar if vert else ax.barh
+    ticks_f = ax.set_xticks if vert else ax.set_yticks
+    labels_f = ax.set_xticklabels if vert else ax.set_yticklabels
+
+    # using the appropriate functions, map with vert considered.
+    for j in range(_p):
+        bar_plot_f(x + j * w, data.iloc[:, j], w, label=data.columns[j], color=pal[j])
+    ticks_f((x - w / 2.) + (total_width / 2.))
+    labels_f(data.index, rotation=label_rotation)
+    # add legend
+    ax.legend()
+    # add label if measured is set
+    if measured is not None:
+        ylabel_f = ax.set_ylabel if vert else ax.set_xlabel
+        ylabel_f(measured)
+    # return
+    return ax

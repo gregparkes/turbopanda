@@ -4,11 +4,12 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from turbopanda.pipe import absolute, filter_rows_by_column
 from turbopanda.plot import color_qualitative, gridplot, box1d
 from turbopanda.utils import belongs, difference, set_like, instance_check, nonnegative
-from turbopanda.str import patcolumnmatch
+from turbopanda.str import patcolumnmatch, strpattern
 
 from turbopanda.ml._default import model_types, param_types
 
@@ -35,7 +36,7 @@ def _model_selection_parameters(cv_results,
     plot.set_title(model_name)
 
     # subset is pandas.DataFrame
-    subset = (cv_results.df_
+    subset = (cv_results
               .pipe(filter_rows_by_column, lambda z: z['model'] == model_name)
               .pipe(absolute, "(?:split[0-9]+|mean)_(?:train|test)_score")
               )
@@ -61,12 +62,17 @@ def _model_selection_parameters(cv_results,
             # mean, sd
             test_m = subset_sorted['mean_%s_score' % y_name]
             test_sd = subset_sorted['std_%s_score' % y_name]
-            _p = subset_sorted[prim_param]
+            # coerce p into float if it is.
+            _p = pd.to_numeric(subset_sorted[prim_param], errors="ignore")
             # generate a random qualitative color
             color = color_qualitative(1)[0]
             # plotting
             plot.plot(_p, test_m, 'x-', color=color)
-            plot.fill_between(_p, test_m + test_sd, test_m - test_sd, alpha=.3, color=color)
+            plot.fill_between(_p,
+                              test_m + test_sd,
+                              test_m - test_sd,
+                              alpha=.3,
+                              color=color)
         elif len(params) == 2:
             non_prim = difference([prim_param], params)[0]
             non_prim_uniq = subset_sorted[non_prim].unique()
@@ -74,15 +80,21 @@ def _model_selection_parameters(cv_results,
             # fetch non-primary column.
             for line, c in zip(non_prim_uniq, colors):
                 # mean, sd
-                _p = subset_sorted.loc[subset_sorted[non_prim] == line,
-                                       prim_param]
+                _p = pd.to_numeric(subset_sorted.loc[subset_sorted[non_prim] == line, prim_param],
+                                   errors="ignore")
                 test_m = subset_sorted.loc[subset_sorted[non_prim] == line,
                                            'mean_%s_score' % y_name]
                 test_sd = subset_sorted.loc[subset_sorted[non_prim] == line,
                                             'std_%s_score' % y_name]
-
-                plot.plot(_p, test_m, 'x-', label="{}={}".format(non_prim.split("__")[-1], line), color=c)
-                plot.fill_between(_p, test_m + test_sd, test_m - test_sd, alpha=.3, color=c)
+                # organise plot label based on prim param type
+                lf = "{}={:0.3f}" if np.isreal(line) else "{}={}"
+                plot.plot(_p, test_m, 'x-',
+                          label=lf.format(non_prim.split("__")[-1], line), color=c)
+                plot.fill_between(_p,
+                                  test_m + test_sd,
+                                  test_m - test_sd,
+                                  alpha=.3,
+                                  color=c)
             plot.legend(loc="best")
 
         plot.set_xlabel(_basic_p(prim_param))
@@ -117,6 +129,9 @@ def parameter_tune(cv_results,
     belongs(arrange, ('square', 'column', 'row'))
     nonnegative(ax_size, int)
 
+    # make cv_results dataframe
+    cv_results = cv_results.df_ if not isinstance(cv_results, pd.DataFrame) else cv_results
+
     # determine the models found within.
     if "model" in cv_results.columns:
         # get unique models
@@ -125,8 +140,9 @@ def parameter_tune(cv_results,
         fig, axes = gridplot(len(models), ax_size=ax_size, arrange=arrange)
         for i, m in enumerate(models):
             # determine parameter names from results.
-            _P = [p for p in cv_results.view("param_model__") if
-                  cv_results.df_.loc[cv_results['model'] == m, p].dropna().shape[0] > 0]
+            param_columns = strpattern("param_model__", cv_results.columns)
+            _P = [p for p in param_columns if
+                  cv_results.loc[cv_results['model'] == m, p].dropna().shape[0] > 0]
             _model_selection_parameters(cv_results, m, _P, axes[i], y_name=y)
         fig.tight_layout()
         plt.show()

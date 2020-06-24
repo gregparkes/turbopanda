@@ -9,7 +9,7 @@ import sys
 import warnings
 import functools
 
-__all__ = ('unimplemented', 'deprecated', 'deprecated_param')
+__all__ = ('unimplemented', 'unstable', 'deprecated', 'deprecated_param')
 
 
 def unimplemented(_func=None, *, to_complete: str = "<unknown>"):
@@ -20,6 +20,26 @@ def unimplemented(_func=None, *, to_complete: str = "<unknown>"):
         def _wrapper_unimplemented(*args, **kwargs):
             warnings.warn(("{} is unimplemented, "
                            "parts or whole of this function may not work; "
+                           "to be completed in version: {}")
+                          .format(func.__name__, to_complete), FutureWarning)
+            return func(*args, **kwargs)
+
+        return _wrapper_unimplemented
+
+    if _func is None:
+        return _decorator_unimplemented
+    else:
+        return _decorator_unimplemented(_func)
+
+
+def unstable(_func=None, *, to_complete: str = "<unknown>"):
+    """A decorator for declaring a function written to be incomplete, with possible unstable parts"""
+
+    def _decorator_unimplemented(func):
+        @functools.wraps(func)
+        def _wrapper_unimplemented(*args, **kwargs):
+            warnings.warn(("{} may be unstable, "
+                           "parts of this function may not work as expected; "
                            "to be completed in version: {}")
                           .format(func.__name__, to_complete), FutureWarning)
             return func(*args, **kwargs)

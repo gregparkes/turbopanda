@@ -67,6 +67,8 @@ def patproduct(pat: str, *args: Iterable) -> List[str]:
 
 
 def _shorten_string(s: str, approp_len: int = 15, method: str = "middle") -> str:
+    instance_check(s, str)
+
     if len(s) <= approp_len:
         return s
     else:

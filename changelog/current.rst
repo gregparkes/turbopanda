@@ -17,6 +17,7 @@ keyword argument `cache`, default set to False
 .................
 - |Feature| Added `errorbar1d` function to draw barplots with errorbars.
 - |Feature| Added `bar1d` function to efficiently draw barplots, with automatic sorting and colouring
+- |Feature| Added `widebar` to provide a hued barplot functionality instinctively to pandas.DataFrames.
 - |Enhancement| `widebox` function now has a `sort` parameter which sorts variables by the mean.
 - |Fix| An issue in `scatter` where colors were not corresponding to legend
 

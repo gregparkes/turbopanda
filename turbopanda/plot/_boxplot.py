@@ -467,6 +467,7 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
             capsize: float = 1.0,
             width: float = 0.7,
             grid: bool = True,
+            title: Optional[str] = None,
             label_rotation: float = 0.0,
             label_max_length: int = 25,
             spines: Optional[_ListLike] = None,
@@ -485,6 +486,7 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
     instance_check(label_max_length, int)
     bounds_check(width, 0., 1.)
     bounds_check(strip_jitter, 0., 1.)
+    bounds_check(label_rotation, 0., 360.)
 
     if isinstance(data, pd.DataFrame):
         # select float, int subset
@@ -534,6 +536,8 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
     colors = _kcolor_arrangement(patch_obj, colors, k=_data.shape[1])
     # label axes
     _label_axes(ax, _labels, vert, label_rotation, label_max_length)
+    if title is not None:
+        ax.set_title(title)
     # perform stripplots
     if with_strip:
         for n in range(_data.shape[1]):

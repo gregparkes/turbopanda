@@ -4,10 +4,13 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from turbopanda.plot import color_qualitative, legend_line
 from turbopanda.utils import belongs, dictzip, instance_check, set_like, switcheroo
 from turbopanda.ml._package import find_model_family
+from turbopanda.str import strpattern
+from turbopanda.pipe import absolute
 
 
 def best_model(cv_results: "MetaPanda",
@@ -41,20 +44,20 @@ def best_model(cv_results: "MetaPanda",
     instance_check(score, str)
     belongs(y_var, ('train', 'test'))
 
-    block_y = "mean_%s_score" % y_var
+    sely = strpattern("mean_%s_score" % y_var, cv_results.columns)
     # create figures
     fig = plt.figure(figsize=(8, 5))
     ax = fig.add_subplot(111)
     # create a copy
-    res = cv_results.copy()
+    res = cv_results.df_ if not isinstance(cv_results, pd.DataFrame) else cv_results
     # transform.
-    if res[block_y].mean() < 0.:
-        res.transform(np.abs, "(?:split[0-9]+|mean)_(?:train|test)_score")
+    if res[sely].mean() < 0.:
+        res = res.pipe(absolute, "(?:split[0-9]+|mean)_(?:train|test)_score")
     # for each 'model', arrange data into boxplot
     if minimize:
-        indices = res.df_.groupby("model")[block_y].idxmin()
+        indices = res.groupby("model")[sely].idxmin()
     else:
-        indices = res.df_.groupby("model")[block_y].idxmax()
+        indices = res.groupby("model")[sely].idxmax()
     # arrange data
     result_p = res.df_.loc[indices, res.view("split[0-9]+_%s_score" % y_var)]
     # reorder based on the best score

@@ -3,7 +3,7 @@
 """Handles selecting the best model from a fit.grid call."""
 
 from turbopanda.ml._package import find_sklearn_model
-from turbopanda.str import strpattern
+from turbopanda.str import pattern
 
 
 def get_best_model(cv_results: "MetaPanda",
@@ -42,8 +42,8 @@ def get_best_model(cv_results: "MetaPanda",
     # instantiate a model from text M
     inst_M = find_sklearn_model(M)[0]
     # get dict params
-    param_columns = strpattern(
-        "param_model__", cv_results.df_.loc[select].dropna().index
+    param_columns = pattern(
+        "param_model__", cv_results.df_.loc[select].dropna().index, False
     )
     # preprocess dict params to eliminate the header for sklearn models
     _old_params = cv_results.df_.loc[select, param_columns]

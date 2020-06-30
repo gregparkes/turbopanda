@@ -9,7 +9,7 @@ import pandas as pd
 from turbopanda.plot import color_qualitative, legend_line
 from turbopanda.utils import belongs, dictzip, instance_check, set_like, switcheroo
 from turbopanda.ml._package import find_model_family
-from turbopanda.str import strpattern
+from turbopanda.str import pattern
 from turbopanda.pipe import absolute
 
 
@@ -44,7 +44,7 @@ def best_model(cv_results: "MetaPanda",
     instance_check(score, str)
     belongs(y_var, ('train', 'test'))
 
-    sely = strpattern("mean_%s_score" % y_var, cv_results.columns)
+    sely = pattern("mean_%s_score" % y_var, cv_results.columns, False)
     # create figures
     fig = plt.figure(figsize=(8, 5))
     ax = fig.add_subplot(111)

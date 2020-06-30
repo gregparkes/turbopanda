@@ -19,6 +19,7 @@ del hard_dependencies, dependency, missing_dependencies
 from ._fileio import read
 from ._merge import merge
 from ._vectorize import vectorize, Param
+from ._melt import melt
 # import Objects and critical global functions
 from ._metapanda import MetaPanda
 # vectorization methods

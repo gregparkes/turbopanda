@@ -11,7 +11,7 @@ SetLike = Union[type(None), str, Set, Index, List, Tuple, Series]
 
 __all__ = ("dictsplit", "dict_to_tuple", "dictzip", "dictmap",
            "dictchunk", "join", 'pairwise',
-           "set_like", "union", "intersect", "difference", 'dictcopy')
+           "set_like", "union", "intersect", "difference", "absdifference", 'dictcopy')
 
 """ DICTIONARY CONVENIENCE """
 
@@ -280,9 +280,31 @@ def difference(a: SetLike, b: SetLike) -> Index:
     Returns
     -------
     c : pd.Index
-        Symmetric difference between a & b
+        Symmetric difference between a - b
     """
     return set_like(a).symmetric_difference(set_like(b))
+
+
+def absdifference(a: SetLike, b: SetLike) -> Index:
+    """Performs absolute set difference on a and b, whatever type they are.
+
+    Parameters
+    ----------
+    a : list, tuple, pd.Series, set, pd.Index
+        List-like a
+    b : list, tuple, pd.Series, set, pd.Index
+        List-like b
+
+    Returns
+    -------
+    c : pd.Index
+        Difference between a - b
+    """
+    # check that a is greater size than b
+    if len(a) > len(b):
+        return set_like(a).difference(set_like(b))
+    else:
+        raise ValueError("a: {} must be greater than b: {}".format(len(a), len(b)))
 
 
 def pairwise(f: Callable, x: SetLike, *args, **kwargs) -> List:

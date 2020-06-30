@@ -15,7 +15,7 @@ from pandas import CategoricalDtype, DataFrame, Index, Series, concat
 # locals
 from turbopanda.utils import dictzip, \
     difference, intersect, join, t_numpy, union
-from turbopanda.str import patcolumnmatch
+from turbopanda.str import pattern
 from ._types import SelectorType
 
 __all__ = ("get_selector", "selector_types")
@@ -89,7 +89,7 @@ def _get_selector_item(df: DataFrame,
         # check if key does not exists in df.columns
         elif selector not in df:
             # try regex
-            return patcolumnmatch(selector, df)
+            return pattern(selector, df, extended_regex=False)
         else:
             # we assume it's in the index, and we return it, else allow pandas to raise the error.
             return Index([selector], name=df.columns.name)

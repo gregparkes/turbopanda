@@ -10,26 +10,7 @@ from pandas import DataFrame, Index, Series
 
 from turbopanda.utils import set_like, belongs, instance_check
 
-__all__ = ('strpattern', 'patproduct', 'patcolumnmatch', 'string_replace',
-           'reformat', 'shorten')
-
-
-def strpattern(pat: str, K: Iterable) -> Index:
-    """Determines if pattern `pat` exists in list of str `K`."""
-    # compile pattern - improves performance
-    _p = re.compile(pat)
-    # iterate over and return
-    return set_like([s for s in K if re.search(_p, s)])
-
-
-def patcolumnmatch(pat: str, df: DataFrame) -> Index:
-    """Use regex to match to column names in a pandas.DataFrame."""
-    _p = re.compile(pat)
-    c_fetch = [s for s in df.columns if re.search(_p, s)]
-    if len(c_fetch) > 0:
-        return Index(c_fetch, dtype=object, name=df.columns.name, tupleize_cols=False)
-    else:
-        return Index([], name=df.columns.name)
+__all__ = ('patproduct', 'string_replace', 'reformat', 'shorten')
 
 
 def patproduct(pat: str, *args: Iterable) -> List[str]:

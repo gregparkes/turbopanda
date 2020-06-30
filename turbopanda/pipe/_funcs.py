@@ -8,7 +8,7 @@ import pandas as pd
 from typing import Callable, List, TypeVar, Optional
 from sklearn.preprocessing import scale, power_transform
 
-from turbopanda.str import patcolumnmatch
+from turbopanda.str import pattern
 from turbopanda.utils import float_to_integer, bounds_check
 from ._conditions import select_float, select_numeric
 
@@ -37,7 +37,7 @@ def _multi_assign(df: pd.DataFrame,
 
 def absolute(df: pd.DataFrame, pat: str = None) -> pd.DataFrame:
     """Performs subselected absolute operation on certain columns."""
-    condition = lambda x: list(patcolumnmatch(pat, x)) if pat is not None else df.columns.tolist()
+    condition = lambda x: list(pattern(pat, x, extended_regex=False)) if pat is not None else df.columns.tolist()
     return _multi_assign(df, np.abs, condition)
 
 

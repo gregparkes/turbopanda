@@ -9,7 +9,7 @@ import pandas as pd
 from turbopanda.pipe import absolute, filter_rows_by_column
 from turbopanda.plot import color_qualitative, gridplot, box1d
 from turbopanda.utils import belongs, difference, set_like, instance_check, nonnegative
-from turbopanda.str import patcolumnmatch, strpattern
+from turbopanda.str import pattern
 
 from turbopanda.ml._default import model_types, param_types
 
@@ -45,7 +45,7 @@ def _model_selection_parameters(cv_results,
         fig, plot = plt.subplots(figsize=(6, 4))
 
     if subset.shape[0] == 1:
-        pcols = patcolumnmatch('split[0-9]+_%s_score' % y_name, subset)
+        pcols = pattern('split[0-9]+_%s_score' % y_name, subset, False)
         box1d(np.asarray(subset[pcols]), ax=plot, label=score, notch=True)
         return
     else:
@@ -140,7 +140,7 @@ def parameter_tune(cv_results,
         fig, axes = gridplot(len(models), ax_size=ax_size, arrange=arrange)
         for i, m in enumerate(models):
             # determine parameter names from results.
-            param_columns = strpattern("param_model__", cv_results.columns)
+            param_columns = pattern("param_model__", cv_results.columns, False)
             _P = [p for p in param_columns if
                   cv_results.loc[cv_results['model'] == m, p].dropna().shape[0] > 0]
             _model_selection_parameters(cv_results, m, _P, axes[i], y_name=y)

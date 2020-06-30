@@ -13,9 +13,6 @@ from turbopanda._deprecator import deprecated
 from turbopanda.utils import pairwise, instance_check, nonnegative, disallow_instance_pair
 
 
-__all__ = ('common_substrings', 'score_pairwise_common_substring')
-
-
 def _single_common_substring_match(a: str, b: str) -> str:
     """Given two strings, find the longest common substring.
 
@@ -67,6 +64,9 @@ def common_substrings(a: Union[str, List[str]],
             a = [a]
         elif isinstance(b, str):
             b = [b]
+        # if a is a list of length 1 with no b, return a[0]
+        elif isinstance(a, (list, tuple)) and len(a) == 1:
+            return a[0]
         # determine pair set.
         if b is None:
             # combination iterator

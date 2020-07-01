@@ -13,7 +13,7 @@ from turbopanda.utils import set_like, union, intersect, absdifference, \
     instance_check
 
 
-def _strpattern(pat: str, K: Iterable) -> Index:
+def _strpattern(pat, K):
     """Determines if pattern `pat` exists in list of str `K`."""
     # compile pattern - improves performance
     _p = re.compile(pat)
@@ -21,7 +21,7 @@ def _strpattern(pat: str, K: Iterable) -> Index:
     return set_like([s for s in K if re.search(_p, s)])
 
 
-def _patcolumnmatch(pat: str, df: DataFrame) -> Index:
+def _patcolumnmatch(pat, df):
     """Use regex to match to column names in a pandas.DataFrame."""
     _p = re.compile(pat)
     c_fetch = [s for s in df.columns if re.search(_p, s)]

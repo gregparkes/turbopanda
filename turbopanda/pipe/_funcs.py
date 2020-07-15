@@ -8,14 +8,15 @@ import pandas as pd
 from typing import Callable, List, TypeVar, Optional
 from sklearn.preprocessing import scale, power_transform
 
-from turbopanda.str import pattern
+from turbopanda.str import pattern, string_replace
 from turbopanda.utils import float_to_integer, bounds_check
 from ._conditions import select_float, select_numeric
 
 __all__ = ('all_float_to_int', 'downcast_all',
            'all_low_cardinality_to_categorical',
            'zscore', 'yeo_johnson', 'clean1', 'clean2',
-           'filter_rows_by_column', 'absolute')
+           'filter_rows_by_column', 'absolute',
+           'rename_index', 'rename_columns')
 
 
 def _multi_assign(df: pd.DataFrame,
@@ -112,6 +113,28 @@ def filter_rows_by_column(df: pd.DataFrame,
     >>> df.pipe(turb.pipe.filter_rows_by_column, lambda z: z['column'] == 3)
     """
     return df[expression(df)]
+
+
+""" Column-based functions """
+
+
+def rename_columns(df: pd.DataFrame, operations) -> pd.DataFrame:
+    """Renames the columns of a pandas.DataFrame using the operations"""
+    ncol = string_replace(df.columns, operations)
+    # return, mapping new names to the cols
+    return df.rename(columns=dict(zip(df.columns, ncol)))
+
+
+def rename_index(df: pd.DataFrame, operations) -> pd.DataFrame:
+    """Renames the index of a pandas.DataFrame using ops """
+    nind = string_replace(df.index, operations)
+    return df.rename(index=dict(zip(df.index, nind)))
+
+
+def replace(df: pd.DataFrame, column: str, operations) -> pd.DataFrame:
+    """Renames a given column with given operations """
+    df[column] = string_replace(df[column], operations)
+    return df
 
 
 """ Some global cleaning functions... """

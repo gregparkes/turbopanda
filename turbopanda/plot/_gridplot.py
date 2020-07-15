@@ -8,6 +8,7 @@ import itertools as it
 import string
 import matplotlib.pyplot as plt
 import numpy as np
+from typing import Tuple, Union
 
 from turbopanda.utils import belongs, nearest_factors, instance_check, nonnegative
 
@@ -25,26 +26,29 @@ def _clean_axes_objects(n, axes):
     return axes
 
 
-def _generate_square_like_grid(n, ax_size=2):
+def _generate_square_like_grid(n, ax_size):
     """
     Given n, returns a fig, ax pairing of square-like grid objects
     """
     f1, f2 = nearest_factors(n, shape="square")
-    fig, axes = plt.subplots(ncols=f1, nrows=f2, figsize=(ax_size * f1, ax_size * f2))
+    # split ax size
+    axf1, axf2 = ax_size
+    fig, axes = plt.subplots(ncols=f1, nrows=f2, figsize=(axf1 * f1, axf2 * f2))
     # update axes with clean
     axes = _clean_axes_objects(n, axes)
     return fig, axes
 
 
-def _generate_diag_like_grid(n, direction, ax_size=2):
+def _generate_diag_like_grid(n, direction, ax_size):
     """ Direction is in [row, column]"""
     belongs(direction, ["row", "column"])
 
     f1, f2 = nearest_factors(n, shape="diag")
+    axf1, axf2 = ax_size
     fmax, fmin = max(f1, f2), min(f1, f2)
     # get longest one
-    tup, nc, nr = ((ax_size * fmin, ax_size * fmax), fmin, fmax) \
-        if direction == 'row' else ((ax_size * fmax, ax_size * fmin), fmax, fmin)
+    tup, nc, nr = ((axf1 * fmin, axf2 * fmax), fmin, fmax) \
+        if direction == 'row' else ((axf1 * fmax, axf2 * fmin), fmax, fmin)
     fig, axes = plt.subplots(ncols=nc, nrows=nr, figsize=tup)
     axes = _clean_axes_objects(n, axes)
     return fig, axes
@@ -52,9 +56,10 @@ def _generate_diag_like_grid(n, direction, ax_size=2):
 
 def gridplot(n_plots: int,
              arrange: str = "square",
-             ax_size: int = 2,
+             ax_size: Union[int, Tuple[int, int]] = 2,
              annotate_labels: bool = False,
-             annotate_offset: float = 0.01):
+             annotate_offset: float = 0.01,
+             **annotate_args):
     """Determines the most optimal shape for a set of plots.
 
     Parameters
@@ -77,21 +82,28 @@ def gridplot(n_plots: int,
     axes : list of matplotlib.ax.Axes
         A list of axes to use.
     """
-    nonnegative((n_plots, ax_size,), int)
+    instance_check(annotate_labels, bool)
+    nonnegative((n_plots,), int)
     belongs(arrange, ['square', 'row', 'column'])
 
     annot_props = {'weight': 'bold', 'horizontalalignment': 'left',
                    'verticalalignment': 'center'}
+    # update with args
+    annot_props.update(annotate_args)
+    if isinstance(ax_size, int):
+        fs = np.array([ax_size, ax_size])
+    else:
+        fs = np.array(ax_size)
 
     if n_plots == 1:
-        fig, ax = plt.subplots(figsize=(ax_size, ax_size))  #
+        fig, ax = plt.subplots(figsize=fs)  #
         # wrap ax as a list to iterate over.
         if annotate_labels:
             fig.text(0.01, .98, "A", **annot_props)
         return fig, [ax]
     else:
-        fig, ax = _generate_square_like_grid(n_plots, ax_size=ax_size) \
-            if arrange == 'square' else _generate_diag_like_grid(n_plots, arrange, ax_size=ax_size)
+        fig, ax = _generate_square_like_grid(n_plots, ax_size=fs) \
+            if arrange == 'square' else _generate_diag_like_grid(n_plots, arrange, ax_size=fs)
         # add annotation labels, hmmm
         if annotate_labels:
             # we use tight layout to make sure text isnt overlapping

@@ -21,7 +21,12 @@ regex (flex) support and more. Includes an example.
 - |Feature| Added `bar1d` function to efficiently draw barplots, with automatic sorting and colouring
 - |Feature| Added `widebar` to provide a hued barplot functionality instinctively to pandas.DataFrames.
 - |Enhancement| `widebox` function now has a `sort` parameter which sorts variables by the mean.
+- |Enhancement| `gridplot` function parameter `ax_size` now accepts tuples as well as an integer for non-square shapes
 - |Fix| An issue in `scatter` where colors were not corresponding to legend
+
+`turbopanda.pipe`
+.................
+- |Feature| Added `rename_index`, `rename_columns` and `replace` pipeable functions
 
 `turbopanda.str`
 ................

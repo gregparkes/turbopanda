@@ -4,9 +4,11 @@
 Provides a cleaner way to melt pandas.DataFrames than is provided by the package as-is.
 """
 
+import numpy as np
 import pandas as pd
 
 from turbopanda.str import common_substrings, pattern
+from turbopanda.utils import instance_check
 
 
 def melt(df,
@@ -30,9 +32,7 @@ def melt(df,
         Column(s) to use as identifier variables.
         If None: No identifier columns are used
         If str: uses a regex pattern if `include_regex` is True
-    not_id_vars : str, tuple, list or ndarray, optional
-        Column(s) deliberately NOT to use as identifier variables
-    value_vars : tuple, list, or ndarray, optional
+    value_vars : str, tuple, list, or ndarray, optional
         Column(s) to unpivot. If not specified, uses all columns that
             are not set as `id_vars`
         If str: uses a regex pattern if `include_regex` is True
@@ -62,6 +62,12 @@ def melt(df,
     pandas.DataFrame.melt
     pandas.DataFrame.pivot_table
     """
+    # check inputs
+    instance_check(df, pd.DataFrame)
+    instance_check((id_vars, value_vars), (type(None), str, list, tuple, np.ndarray, pd.Series, pd.Index))
+    instance_check((var_name, value_name, index_name), (type(None), str))
+    instance_check((include_regex, include_question_guess, include_index), bool)
+
     _columns = df.columns.tolist()
     _index = df.index
 

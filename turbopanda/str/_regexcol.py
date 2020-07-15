@@ -23,8 +23,7 @@ def _strpattern(pat, K):
 
 def _patcolumnmatch(pat, df):
     """Use regex to match to column names in a pandas.DataFrame."""
-    _p = re.compile(pat)
-    c_fetch = [s for s in df.columns if re.search(_p, s)]
+    c_fetch = _strpattern(pat, df.columns)
     if len(c_fetch) > 0:
         return Index(c_fetch, dtype=object, name=df.columns.name,
                      tupleize_cols=False)

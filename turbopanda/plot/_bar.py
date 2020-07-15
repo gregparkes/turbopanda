@@ -260,6 +260,7 @@ def widebar(data: pd.DataFrame,
             c: Optional[_ArrayLike] = None,
             vert: bool = True,
             ax: Optional[mpl.axes.Axes] = None,
+            legend: bool = True,
             measured: Optional[str] = None,
             total_width: float = 0.8,
             label_rotation: float = 0.0,
@@ -281,6 +282,8 @@ def widebar(data: pd.DataFrame,
         Determines whether the plot is vertical or horizontal
     ax : matplotlib.ax.Axes, optional, default=None
         If None, creates one.
+    legend : bool, default=True
+        Draws the legend bar if True, otherwise hides it
     measured : str, optional
         Defines the label to describe the measured variable
     total_width : float, default=0.8
@@ -312,7 +315,6 @@ def widebar(data: pd.DataFrame,
         pal = list(c)
 
     # draw differently based whether vertical or not
-
     bar_plot_f = ax.bar if vert else ax.barh
     ticks_f = ax.set_xticks if vert else ax.set_yticks
     labels_f = ax.set_xticklabels if vert else ax.set_yticklabels
@@ -323,7 +325,8 @@ def widebar(data: pd.DataFrame,
     ticks_f((x - w / 2.) + (total_width / 2.))
     labels_f(data.index, rotation=label_rotation)
     # add legend
-    ax.legend()
+    if legend:
+        ax.legend()
     # add label if measured is set
     if measured is not None:
         ylabel_f = ax.set_ylabel if vert else ax.set_xlabel

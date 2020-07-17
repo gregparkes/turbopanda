@@ -9,7 +9,25 @@ import sys
 import warnings
 import functools
 
-__all__ = ('unimplemented', 'unstable', 'deprecated', 'deprecated_param')
+__all__ = ('new', 'unimplemented', 'unstable', 'deprecated', 'deprecated_param')
+
+
+def new(_func=None, *, version: str = "<unknown>"):
+    """A decorator for painting a new function as 'new'."""
+    def _decorator_new(func):
+        @functools.wraps(func)
+        def _wrapper_new(*args, **kwargs):
+            warnings.warn(("'{}' is new from {}, "
+                           "hence parts of this function may behave unexpectedly")
+                          .format(func.__name__, version), FutureWarning)
+            return func(*args, **kwargs)
+
+        return _wrapper_new
+
+    if _func is None:
+        return _decorator_new
+    else:
+        return _decorator_new(_func)
 
 
 def unimplemented(_func=None, *, to_complete: str = "<unknown>"):
@@ -18,7 +36,7 @@ def unimplemented(_func=None, *, to_complete: str = "<unknown>"):
     def _decorator_unimplemented(func):
         @functools.wraps(func)
         def _wrapper_unimplemented(*args, **kwargs):
-            warnings.warn(("{} is unimplemented, "
+            warnings.warn(("'{}' is unimplemented, "
                            "parts or whole of this function may not work; "
                            "to be completed in version: {}")
                           .format(func.__name__, to_complete), FutureWarning)
@@ -38,9 +56,9 @@ def unstable(_func=None, *, to_complete: str = "<unknown>"):
     def _decorator_unimplemented(func):
         @functools.wraps(func)
         def _wrapper_unimplemented(*args, **kwargs):
-            warnings.warn(("{} may be unstable, "
+            warnings.warn(("'{}' may be unstable, "
                            "parts of this function may not work as expected; "
-                           "to be completed in version: {}")
+                           "to be completed in version {}")
                           .format(func.__name__, to_complete), FutureWarning)
             return func(*args, **kwargs)
 
@@ -113,7 +131,7 @@ def deprecated_param(version: str,
         def _caching_function(*args, **kwargs):
             # splits arguments into words
             dep_arg = re.findall(r"[\w'_]+", deprecated_args)
-            segments = ["Parameter(s) {} deprecated since version {}".format(dep_arg, version)]
+            segments = ["Parameter(s) '{}' deprecated since version {}".format(dep_arg, version)]
             if remove is not None:
                 segments.append(", to be removed in version {}".format(remove))
             if reason is not None:

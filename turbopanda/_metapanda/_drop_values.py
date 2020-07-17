@@ -6,7 +6,6 @@ from typing import Callable
 
 import pandas as pd
 
-from turbopanda._deprecator import deprecated
 from ._inspect import inspect
 from ._types import SelectorType
 

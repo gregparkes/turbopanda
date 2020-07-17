@@ -85,8 +85,7 @@ def bar1d(X: _ArrayLike,
           value_label: Optional[str] = None,
           sort_by: str = "values",
           cmap: str = "Blues",
-          vlinesAt: Optional[Union[_Numeric, _ListLike]] = None,
-          hlinesAt: Optional[Union[_Numeric, _ListLike]] = None):
+          linesAt: Optional[Union[_Numeric, _ListLike]] = None):
     """Plots a 1 dimensional barplot.
 
     Parameters
@@ -122,10 +121,8 @@ def bar1d(X: _ArrayLike,
         Choose from {'values', 'labels'}
     cmap : str, default="Blues"
         Defines a colormap if color values are specified
-    vlinesAt : int, float, list, tuple, optional
+    linesAt : int, float, list, tuple, optional
         If set, defines one or more vertical lines to add to the barplot
-    hlinesAt : int, float, list, tuple, optional
-        If set, defines one or more horizontal lines to add to the barplot
 
     Returns
     -------
@@ -175,7 +172,7 @@ def bar1d(X: _ArrayLike,
 
     # plot the bar
     _plot_bar_orient(ax, _ticks, _labels, _values, c=pal, w=width, vert=vert, lrot=label_rotation,
-                     annotate=annotate, lines=vlinesAt, vlabel=value_label)
+                     annotate=annotate, lines=linesAt, vlabel=value_label)
 
     # map a legend to it
     if legend and not isinstance(c, str):
@@ -297,6 +294,11 @@ def widebar(data: pd.DataFrame,
     -------
     ax : matplotlib.ax object
         Allows further modifications to the axes post-boxplot
+
+    See Also
+    --------
+    matplotlib.pyplot.bar
+    seaborn.barplot
     """
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 5))

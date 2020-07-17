@@ -8,7 +8,6 @@ from typing import Optional
 
 import pandas as pd
 
-from turbopanda._deprecator import unimplemented
 from turbopanda.utils import split_file_directory, union
 from ._metadata import default_columns
 

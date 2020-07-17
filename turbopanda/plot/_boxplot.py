@@ -10,7 +10,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.stats import mannwhitneyu
 
-from turbopanda._deprecator import unimplemented
 from turbopanda.utils import instance_check, as_flattened_numpy, intersect, \
     difference, arrays_equal_size, listify, bounds_check
 from turbopanda.str import shorten
@@ -338,7 +337,7 @@ def bibox1d(X: _ArrayLike,
     capsize : float, default=1.0
         Defines the length of the caps
     outliers : bool, default=True
-        If True, displays outfliers as outliers
+        If True, displays fliers as outliers
     grid : bool, default=True
         If True: draws gridlines for the numeric axis
     width : float, default=0.7
@@ -363,6 +362,10 @@ def bibox1d(X: _ArrayLike,
     -------
     ax : matplotlib.ax object
         Allows further modifications to the axes post-boxplot
+
+    See Also
+    --------
+    matplotlib.pyplot.boxplot
 
     References
     ----------
@@ -476,6 +479,66 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
             **plot_kwargs):
     """Plots a 2D boxplot with data oriented in wide-form.
 
+    Parameters
+    ----------
+    data : list, np.ndarray or pd.DataFrame (2d)
+        The raw data to plot as a box.
+        If data is of type pd.DataFrame: columns represent X-axis
+    colors : list, tuple, optional
+        Represents colors for each x-variable
+    measured : str, optional
+        A name for the measured variable
+    ax : matplotlib.ax object, optional, default=None
+        If None, creates a plot.
+    vert : bool, default=True
+        Determines whether to draw the plot vertically or horizontally
+    sort : bool, default=True
+        Determines whether to sort the data by numerical value
+    outliers : bool, default=True
+        If True, displays fliers as outliers
+    notch : bool, default=False
+        Determines whether to draw a notched plot
+    with_strip : bool, default=False
+        If True, draws a stripplot over the top of the boxplot, in a similar colour
+        `outliers` are set to False in this case
+    capsize : float, default=1.0
+        Defines the length of the caps
+    width : float, default=0.7
+        Determines the width/height of the box
+    grid : bool, default=True
+        If True: draws gridlines for the numeric axis
+    title : str, optional
+        Sets the title of the axes if a string is passed
+    label_rotation : float, default=0
+        The degrees of rotation to the ticklabels
+    label_max_length : int, default=25
+        If any label exceeds this length, it truncates it
+    spines : tuple, default=('top','left',bottom','right')
+        Defines which spines are to be visible
+    strip_jitter : float, default=0.15
+        With stripplot, defines the amount of jitter in the variables
+    theme : str, default="white_circle"
+        Choose a 'theme' for the outliers, from {'red_square', 'green_diamond'}
+
+    Other Parameters
+    ----------------
+    plot_kwargs : dict
+        keyword arguments to pass to `ax.boxplot`
+
+    Returns
+    -------
+    ax : matplotlib.ax object
+        Allows further modifications to the axes post-boxplot
+
+    See Also
+    --------
+    matplotlib.pyplot.boxplot
+    seaborn.boxplot
+    seaborn.boxenplot
+
+    References
+    ----------
+    Inspiration from https://github.com/jbmouret/matplotlib_for_papers#colored-boxes
     """
     instance_check(data, (list, np.ndarray, pd.DataFrame))
     instance_check((colors, spines), (type(None), list, pd.Index))
@@ -547,9 +610,3 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
                                outliers, strip_jitter)
 
     return ax
-
-
-@unimplemented
-def longbox():
-    """Plots a 2D boxplot with data oriented in long-form"""
-    pass

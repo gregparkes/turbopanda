@@ -16,7 +16,7 @@ __all__ = ('all_float_to_int', 'downcast_all',
            'all_low_cardinality_to_categorical',
            'zscore', 'yeo_johnson', 'clean1', 'clean2',
            'filter_rows_by_column', 'absolute',
-           'rename_index', 'rename_columns')
+           'rename_index', 'rename_columns', 'replace')
 
 
 def _multi_assign(df: pd.DataFrame,

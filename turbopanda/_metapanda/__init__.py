@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 
 # from turbopanda._pipe import Pipe
-from turbopanda._deprecator import unimplemented
 from turbopanda.utils._files import split_file_directory
 from turbopanda.utils._sets import join
 from ._drop_values import drop_columns
@@ -116,8 +115,6 @@ class MetaPanda(object):
         Expands out a 'unstacked' id column to a shorter-form DataFrame
     split_categories(column, sep=",", renames=None)
         Splits a column into j categorical variables to be associated with `df_`
-    eval()
-        Evaluates an operation(s) using an expr
     compute(pipe=None, inplace=False, update_meta=False)
         Executes a pipeline on `df_`
     compute_k(pipes=None, inplace=False)

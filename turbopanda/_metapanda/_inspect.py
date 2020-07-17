@@ -8,7 +8,6 @@ import pandas as pd
 from ._selection import get_selector
 from ._types import SelectorType
 
-from turbopanda._deprecator import deprecated
 from turbopanda.utils import instance_check, intersect, union, join
 
 """ INSPECTING COLUMNS """

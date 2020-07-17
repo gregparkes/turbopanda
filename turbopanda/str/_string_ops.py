@@ -8,7 +8,7 @@ import numpy as np
 from typing import Tuple, Union, Iterable, List
 from pandas import DataFrame, Index, Series
 
-from turbopanda.utils import set_like, belongs, instance_check
+from turbopanda.utils import set_like, belongs, instance_check, umap
 
 __all__ = ('patproduct', 'string_replace', 'reformat', 'shorten')
 
@@ -91,12 +91,19 @@ def shorten(s, newl: int = 15, method: str = "middle"):
         return [_shorten_string(_s, newl, method) for _s in s]
 
 
-def string_replace(strings: Union[Series, Index],
-                   operations: Tuple[str, str]) -> Series:
+def string_replace(strings: Union[List[str], Tuple[str, ...], Series, Index],
+                   operations: List[Tuple[str, str]]):
     """ Performs all replace operations on the string inplace """
-    for op in operations:
-        strings = strings.str.replace(*op)
-    return strings
+    string_copy = strings
+    if isinstance(strings, (list, tuple)):
+        for op in operations:
+            string_copy = umap(lambda s: s.replace(*op), string_copy)
+    elif isinstance(strings, (Series, Index)):
+        for op in operations:
+            string_copy = string_copy.str.replace(*op)
+    else:
+        raise TypeError("'strings' of type '{}' must be of type [list, tuple, Series, Index]".format(type(strings)))
+    return string_copy
 
 
 def reformat(s: str, df: DataFrame) -> Series:

@@ -8,7 +8,7 @@ Turbo-charging the Pandas library in an integrative, meta-orientated style.
 ![commit activity](https://img.shields.io/github/commit-activity/m/gregparkes/turbopanda)
 ![License](https://img.shields.io/badge/LICENSE-GPLv3-blue)
 
-**Current version: 0.2.7**
+**Current version: 0.2.8**
 
 The aim of this library is extend the functionality of a number of Python packages,
 including the `pandas` library, to integrate cohesively together a unified approach to data

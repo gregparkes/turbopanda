@@ -38,3 +38,14 @@ def unique_ordered(a: np.ndarray) -> np.ndarray:
     _a = np.asarray(a)
     _, idx = np.unique(_a, return_index=True)
     return _a[np.sort(idx)]
+
+
+def retuple(tup: List[Tuple]) -> List[Tuple]:
+    """Reshapes a list of tuples into a set of arguments that are mappable."""
+    # length must be greater than 1
+    assert len(tup) > 1, "must be more than one tuple"
+    L = len(tup[0])
+    # firstly assert that every tuple is of the same length
+    assert all(map(lambda t: len(t) == L, tup)), "not all tuples are same length"
+    # now reshape according to this length
+    return [tuple(map(lambda t: t[i], tup)) for i in range(L)]

@@ -11,7 +11,7 @@ from typing import Union, Optional, List, Tuple
 from turbopanda.utils import as_flattened_numpy, instance_check, belongs
 from turbopanda._deprecator import unstable
 
-from ._palette import palette_cmap, convert_categories_to_colors, lighten
+from ._palette import palette_cmap, cat_array_to_color, lighten
 from ._annotate import annotate as annotate_labels
 from ._default import _Numeric, _ArrayLike, _ListLike
 from ._widgets import map_legend
@@ -61,7 +61,7 @@ def _determine_color_palette(cval, nticks, cmap):
     if cval is None:
         return palette_cmap(nticks, cmap=cmap)
     elif not isinstance(cval, str):
-        pal, _ = convert_categories_to_colors(np.asarray(cval), cmap=cmap)
+        pal, _ = cat_array_to_color(np.asarray(cval), cmap=cmap)
         return pal
     else:
         return cval
@@ -261,8 +261,9 @@ def widebar(data: pd.DataFrame,
             measured: Optional[str] = None,
             total_width: float = 0.8,
             label_rotation: float = 0.0,
-            cmap: str = 'Blues'):
-    """Plots a barplot with hues.
+            cmap: str = 'Blues',
+            **bar_kws):
+    """Plots a barplot with column data as hues.
 
     Note that columns in the data correspond to data that
         is to be 'hued'.
@@ -289,6 +290,11 @@ def widebar(data: pd.DataFrame,
         The degrees of rotation to the ticklabels
     cmap : str, default="Blues"
         Defines a colormap if color values are specified
+
+    Other Parameters
+    ----------------
+    bar_kws : keywords
+        additional arguments to pass to plt.bar or plt.barh depending on application
 
     Returns
     -------
@@ -323,7 +329,7 @@ def widebar(data: pd.DataFrame,
 
     # using the appropriate functions, map with vert considered.
     for j in range(_p):
-        bar_plot_f(x + j * w, data.iloc[:, j], w, label=data.columns[j], color=pal[j])
+        bar_plot_f(x + j * w, data.iloc[:, j], w, label=data.columns[j], color=pal[j], **bar_kws)
     ticks_f((x - w / 2.) + (total_width / 2.))
     labels_f(data.index, rotation=label_rotation)
     # add legend

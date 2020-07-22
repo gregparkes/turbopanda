@@ -13,6 +13,9 @@ from random import shuffle
 from turbopanda.utils import instance_check, unique_ordered
 
 
+__all__ = ('color_qualitative', 'cat_array_to_color', 'palette_cmap')
+
+
 def _tuple_to_hex(t):
     return "#%02x%02x%02x" % (int(t[0]), int(t[1]), int(t[2]))
 
@@ -213,14 +216,14 @@ def color_qualitative(n: Union[int, List, Tuple],
         return list(it.islice(it.cycle(_colormap_to_hex(getattr(cm, np.random.choice(lt20))(np.linspace(0, 1, 20)))), 0, n))
 
 
-def convert_categories_to_colors(array, cmap="Blues"):
+def cat_array_to_color(array, cmap="Blues"):
     """Given some list/array of values, find some way of mapping this to colour values"""
     # map to numpy
-    _array = np.asarray(array) if not isinstance(array, (np.ndarray, pd.Series)) else array
+    _array = np.asarray(array).flatten() if not isinstance(array, (np.ndarray, pd.Series)) else array
     # if boolean, cast as a 'string'
     if _array.dtype.kind == 'b':
         _array = _array.astype(np.str)
-    if _array.dtype.kind == "U":
+    if (_array.dtype.kind == "U") | (_array.dtype.kind == "O"):
         # i.e we have a string array
         names = unique_ordered(_array)
         cols = palette_cmap(len(names), cmap=cmap)

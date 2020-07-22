@@ -6,21 +6,11 @@ import os
 from typing import Callable
 from joblib import load, dump, delayed, Parallel, cpu_count
 
+from ._cache import cache
 from ._files import insert_suffix as add_suf
 
 
 __all__ = ('umap', 'umapc', 'umapp', 'umapcc', 'umappc', 'umappcc')
-
-
-def _item_cache(fn, f, *args):
-    if os.path.isfile(fn):
-        print("loading file '%s'" % fn)
-        return load(fn)
-    else:
-        print("running chunk '%s'" % fn)
-        res = f(*args)
-        dump(res, fn)
-        return res
 
 
 def _parallel_list_comprehension(f, *args):
@@ -197,7 +187,7 @@ def umapcc(fn: str, f: Callable, *args):
     else:
         n = len(args[0])
         # run and do chunked caching, using item cache
-        um = [_item_cache(add_suf(fn, str(i)), f, *arg) for i, arg in enumerate(zip(*args))]
+        um = [cache(add_suf(fn, str(i)), f, *arg) for i, arg in enumerate(zip(*args))]
         # save final version
         dump(um, fn)
         # delete temp versions
@@ -248,7 +238,7 @@ def umappcc(fn: str, f: Callable, *args):
         n = len(args[0])
         ncpu = n if n < cpu_count() else (cpu_count() - 1)
         # do list comprehension using parallelism
-        um = Parallel(ncpu)(delayed(_item_cache)(add_suf(fn, str(i)), f, *arg) \
+        um = Parallel(ncpu)(delayed(cache)(add_suf(fn, str(i)), f, *arg) \
                             for i, arg in enumerate(zip(*args)))
         # save final version
         dump(um, fn)

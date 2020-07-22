@@ -12,7 +12,7 @@ from ._bar import bar1d, errorbar1d, widebar
 
 from ._annotate import annotate
 from ._widgets import legend_line, legend_scatter
-from ._palette import color_qualitative
+from ._palette import *
 from ._save_fig import save
 # import statements here
 from ._visualise import *

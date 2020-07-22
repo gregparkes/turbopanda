@@ -6,6 +6,7 @@ from ._bool_series import *
 from ._convert import *
 from ._error_raise import *
 from ._factor import nearest_factors
+from ._cache import cache
 from ._files import *
 from ._map import *
 from ._panderize import panderfy, lparallel

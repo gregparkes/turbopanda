@@ -20,7 +20,7 @@ from turbopanda.stats._kde import freedman_diaconis_bins
 from ._default import _ArrayLike, _ListLike, _Numeric
 from ._annotate import annotate
 from ._palette import darken, lighten, \
-    color_qualitative, convert_categories_to_colors
+    color_qualitative, cat_array_to_color
 from ._widgets import map_legend
 
 
@@ -227,7 +227,7 @@ def scatter(X: _ArrayLike,
 
     if not isinstance(c, str):
         # do some prep work on the color variable.
-        palette, _cmode = convert_categories_to_colors(c, cmap=cmap)
+        palette, _cmode = cat_array_to_color(c, cmap=cmap)
         # perform size check
         arrays_equal_size(X, Y, palette)
     else:

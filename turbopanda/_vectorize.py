@@ -31,6 +31,7 @@ from joblib import Parallel, delayed, cpu_count, load, dump
 from pandas import Series, Index, DataFrame
 
 from .utils._error_raise import belongs, instance_check
+from .utils._cache import cache as cache_function
 
 
 def _expand_dict(k, vs):

@@ -11,9 +11,7 @@ from ._error_raise import belongs
 
 
 def _factor(n: int) -> List[int]:
-    """
-    Collect a list of factors given an integer, excluding 1 and n
-    """
+    """Collect a list of factors given an integer, excluding 1 and n"""
     if not isinstance(n, (int, np.int, np.int64)):
         raise TypeError("'n' must be an integer")
 

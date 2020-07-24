@@ -6,7 +6,7 @@ import os
 from joblib import load, dump
 
 
-def cache(fn, f, *args):
+def cache(fn, f, *args, **kwargs):
     """Provides automatic caching for anything using joblib.
 
     Parameters
@@ -17,6 +17,8 @@ def cache(fn, f, *args):
         A custom function returning the object to cache
     *args : list, optional
         Arguments to pass to f(...)
+    **kwargs : dict, optional
+        Keyword Arguments to pass to f(...)
 
     Returns
     -------
@@ -28,6 +30,6 @@ def cache(fn, f, *args):
         return load(fn)
     else:
         print("running chunk '%s'" % fn)
-        res = f(*args)
+        res = f(*args, **kwargs)
         dump(res, fn)
         return res

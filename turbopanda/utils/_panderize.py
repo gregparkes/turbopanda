@@ -8,6 +8,8 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed, cpu_count
 
+from turbopanda._deprecator import deprecated
+
 
 def panderfy(func: Callable):
     """A decorator to convert a list-like output into a pandas.Series or pandas.DataFrame."""
@@ -32,6 +34,7 @@ def panderfy(func: Callable):
     return _wrapper
 
 
+@deprecated("0.2.8", "0.3", instead=".utils.umapp")
 def lparallel(func: Callable, *args):
     """Performs a parallel list comprehension operation on f(*args)"""
     if len(args) == 0:

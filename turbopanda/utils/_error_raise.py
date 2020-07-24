@@ -126,7 +126,15 @@ def arrays_dimension(X: Union[np.ndarray, pd.Series, pd.DataFrame],
     if isinstance(X, pd.Series):
         if d_int != 1:
             if raised:
-                raise ValueError("array is %dD, not %dD".format(d_int, X.shape[1]))
+                raise ValueError("series is %dD, not %dD".format(d_int, X.shape[1]))
+            else:
+                return False
+        else:
+            return True
+    elif isinstance(X, pd.DataFrame):
+        if d_int != 2:
+            if raised:
+                raise ValueError("dataframe is %dD, not %dD".format(d_int, X.shape[1]))
             else:
                 return False
         else:

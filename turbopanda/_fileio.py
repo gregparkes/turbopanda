@@ -9,7 +9,7 @@ from __future__ import absolute_import, division, print_function
 from typing import List, Optional, Union
 
 from ._metapanda import MetaPanda
-from .utils import instance_check
+from .utils import instance_check, join
 
 
 def read(filename: str,
@@ -22,20 +22,17 @@ def read(filename: str,
     necessarily the order in the file directory. If a list of `name` is passed, this is
     sorted so as to match the filename ordering returned.
 
-    TODO:
-        Write an extension to allow for .hdf files.
-
     Parameters
     ----------
     filename : str
         A relative/absolute link to the file, with extension provided.
-        Accepted extensions: {'csv'', 'xls', 'xlsx', 'sql', 'json', 'hdf'}
+        Accepted extensions: {'csv'', 'xls', 'xlsx', 'sql', 'json', 'pkl'}
         .json is a special use case and will use the MetaPanda format, NOT the pd.read_json function.
-        .hdf is a special use and stores both df_ and meta_ attributes.
+        .pkl is a pickable object which will use `joblib` to load in.
         `filename` now accepts glob-compliant input to read in multiple files if selected.
     name : str/list of str, optional
         A custom name to use for the MetaPanda, else `filename` is used. Where this is a `list`, this
-        is sorted to alphabetically match `filename`.
+        is sorted to alphabetically match `filename`. Not compatible with .pkl file types.
     args : list, optional
         Additional args to pass to pd.read_[ext]/MetaPanda()
     kwargs : dict, optional
@@ -57,6 +54,7 @@ def read(filename: str,
     # imports for this function
     import glob
     import itertools as it
+    import joblib
 
     # checks
     instance_check(filename, str)
@@ -69,6 +67,7 @@ def read(filename: str,
     else:
         # maps the file type to a potential pandas function.
         pandas_types = ("csv", "xls", "xlsx", "sql")
+        extra_types = ('json', 'pkl')
 
         def ext(s):
             """Extracts the file extension (in lower)"""
@@ -80,9 +79,11 @@ def read(filename: str,
                 return MetaPanda.from_pandas(fl, n, *args, **kwargs)
             elif ext(fl) == 'json':
                 return MetaPanda.from_json(fl, name=n, **kwargs)
+            elif ext(fl) == 'pkl':
+                return joblib.load(fl)
             else:
                 raise ValueError(
-                    "non-pandas file ending '{}' not recognized, must end with {}".format(fl, pandas_types))
+                    "file ending '.{}' not recognized, must end with {}".format(fl, join(pandas_types, extra_types)))
 
         if isinstance(name, (list, tuple)):
             ds = [fetch_db(f, n) for f, n in it.zip_longest(glob_name, sorted(name))]

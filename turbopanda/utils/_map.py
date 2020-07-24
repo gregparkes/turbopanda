@@ -8,9 +8,19 @@ from joblib import load, dump, delayed, Parallel, cpu_count
 
 from ._cache import cache
 from ._files import insert_suffix as add_suf
-
+from ._error_raise import is_iterable
 
 __all__ = ('umap', 'umapc', 'umapp', 'umapcc', 'umappc', 'umappcc')
+
+
+def _map_comp(f, *args):
+    # check to make sure every argument is an iterable, and make it one if not
+    if (len(args)) == 0:
+        return f()
+    elif (len(args)) == 1 and not is_iterable(args[0]):
+        raise TypeError("single argument must be an 'iterable' not '{}'".format(type(args[0])))
+    else:
+        return list(map(f, *args))
 
 
 def _parallel_list_comprehension(f, *args):
@@ -27,16 +37,16 @@ def _parallel_list_comprehension(f, *args):
 
 
 def umap(f: Callable, *args):
-    """Performs Map comprehension as arguments a, b, ..., k to function f(a, b, ..., k)
+    """Performs Map list comprehension.
 
-    Given function f(x) and arguments a, ..., k; map f(a), ..., f(k).
+    Given function f(x) and arguments a, ..., k; map f(a_i, ..., k_i), ..., f(a_z, ..., k_z) .
 
     Parameters
     ----------
     f : function
         The function to call
     *args : list-like
-        Arguments to pass as f(*args)
+        Arguments to pass as f(*args), as a, ..., k
 
     Returns
     -------
@@ -53,7 +63,8 @@ def umap(f: Callable, *args):
     >>> turb.utils.umap(lambda x, y: x + y, [2, 4, 6], [1, 2, 4])
     >>> [3, 6, 10]
     """
-    return list(map(f, *args))
+    # check to make sure every argument is an iterable, and make it one if not
+    return _map_comp(f, *args)
 
 
 def umapc(fn: str, f: Callable, *args):
@@ -86,7 +97,7 @@ def umapc(fn: str, f: Callable, *args):
         return load(fn)
     else:
         # perform list comprehension
-        um = list(map(f, *args))
+        um = _map_comp(f, *args)
         dump(um, fn)
         return um
 

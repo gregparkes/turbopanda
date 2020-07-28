@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from turbopanda._dependency import is_statsmodels_installed
-from turbopanda.ml._clean import ml_ready
+from turbopanda.ml._clean import preprocess_continuous_X_y, select_xcols
 from turbopanda.utils import instance_check
 
 __all__ = ('vif', 'cook_distance', 'hat', 'leverage')
@@ -79,7 +79,10 @@ def vif(df, x, y):
         from statsmodels.stats.outliers_influence import variance_inflation_factor as _vif
 
         instance_check(y, str)
-        _df, _x, _y, _xcol = ml_ready(df, x, y)
+        _df = df.df_ if not isinstance(df, pd.DataFrame) else df
+        _xcols = select_xcols(df, x, y)
+        _x, _y = preprocess_continuous_X_y(_df, _xcols, y)
+
         if _x.shape[1] > 1:
             # for every column, extract vif
             vifs = [_vif(_x, i) for i in range(_x.shape[1])]
@@ -115,7 +118,10 @@ def cook_distance(df, x, y, yp):
         Cook's value for each in y.
     """
     # we clean df by choosing consistent subset, no NA.
-    _df, _x, _y, _xcol = ml_ready(df, x, y)
+    _df = df.df_ if not isinstance(df, pd.DataFrame) else df
+    _xcols = select_xcols(df, x, y)
+    _x, _y = preprocess_continuous_X_y(_df, _xcols, y)
+
     _p = len(_xcol)
     # determine squared-residuals
     resid_sq = np.square(_y - yp)

@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 """Handles selecting the best model from a fit.grid call."""
 
+from turbopanda._deprecator import deprecated
 from turbopanda.ml._package import find_sklearn_model
 from turbopanda.str import pattern
 
 
+@deprecated("0.2.8", "0.3", reason="This move is to reduce dependency on MetaPanda objects.")
 def get_best_model(cv_results: "MetaPanda",
                    minimize: bool = True):
     """Returns the best model (with correct params) given the cv_results from a `fit_grid` call.

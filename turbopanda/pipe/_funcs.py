@@ -5,18 +5,20 @@
 from __future__ import absolute_import, division, print_function
 import numpy as np
 import pandas as pd
-from typing import Callable, List, TypeVar, Optional
+from typing import Callable, List, TypeVar, Optional, Union
 from sklearn.preprocessing import scale, power_transform
 
 from turbopanda.str import pattern, string_replace
-from turbopanda.utils import float_to_integer, bounds_check
-from ._conditions import select_float, select_numeric
+from turbopanda.utils import float_to_integer, bounds_check, intersect
+from ._conditions import *
+
 
 __all__ = ('all_float_to_int', 'downcast_all',
            'all_low_cardinality_to_categorical',
            'zscore', 'yeo_johnson', 'clean1', 'clean2',
            'filter_rows_by_column', 'absolute',
-           'rename_index', 'rename_columns', 'replace')
+           'rename_index', 'rename_columns', 'replace',
+           'impute_missing')
 
 
 def _multi_assign(df: pd.DataFrame,
@@ -183,3 +185,24 @@ def clean2(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     return cleaned
+
+
+""" Imputation functions """
+
+
+def impute_missing(df: pd.DataFrame,
+                   strategy: Union[int, str] = "mean"):
+    """Performs simple imputation on every numeric column within a DataFrame.
+
+    Following the strategy, attempts to impute missing values from any
+    column that has them.
+    """
+    df_to_use = df.copy()
+    strat = {
+        "mean": np.mean, "median": np.median,
+    }
+    _sf = strat[strategy] if isinstance(strategy, str) else strategy
+
+    transform_fn = lambda x: x.fillna(_sf(x)) if callable(_sf) else x.fillna(_sf)
+    condition = lambda x: list(intersect(select_missing_values(x), select_numeric(x)))
+    return _multi_assign(df_to_use, transform_fn, condition)

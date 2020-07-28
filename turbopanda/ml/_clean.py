@@ -8,14 +8,27 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import normalize, power_transform, quantile_transform, scale
 
+from turbopanda._deprecator import deprecated
 from turbopanda._metapanda import MetaPanda, SelectorType
+from turbopanda.str import pattern
 from turbopanda.utils import belongs, instance_check, union, intersect
 from turbopanda.pipe import zscore, clean1
 
 
-__all__ = ('ml_ready', 'preprocess_continuous_X', 'preprocess_continuous_X_y')
+__all__ = ('ml_ready', 'select_xcols', 'preprocess_continuous_X', 'preprocess_continuous_X_y')
 
 
+def select_xcols(df: pd.DataFrame, xs, y):
+    """Selects the appropriate x-column selection from a dataset for ML use."""
+    if x is None:
+        return df.columns.difference(pd.Index([y]))
+    elif isinstance(x, str):
+        return pattern(xs, df.columns)
+    else:
+        return xs
+
+
+@deprecated("0.2.8", "0.3.0", instead="preprocess_continuous_X_y", reason="reliance on MetaPanda object and pipes")
 def ml_ready(df: "MetaPanda",
              x: SelectorType,
              y: Optional[str] = None,
@@ -86,8 +99,6 @@ def ml_ready(df: "MetaPanda",
     elim_cols = union(elim_cols, _df.view("object"))
     # drop here
     _df.drop(elim_cols)
-    # 4. perform one-hot encoding of categorical columns
-
     # view x columns as pd.Index
     xcols = df.view(x).difference(elim_cols)
     # if we have no y, just prepare for x

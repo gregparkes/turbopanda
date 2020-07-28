@@ -18,8 +18,9 @@ from sklearn.utils.estimator_checks import check_estimator
 from turbopanda._deprecator import unimplemented
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.dev import cached, cached_chunk
+from turbopanda.str import pattern
 from turbopanda.utils import dictchunk, instance_check, bounds_check, nonnegative
-from turbopanda.ml._clean import ml_ready
+from turbopanda.ml._clean import select_xcols, preprocess_continuous_X_y
 from turbopanda.ml.plot import parameter_tune
 from turbopanda.ml._pgrid import make_parameter_grid, make_optimize_grid, \
     optimize_grid_for_model
@@ -135,17 +136,11 @@ def grid(df: Union[pd.DataFrame, "MetaPanda"],
         instance_check(models, (list, dict))
 
     # set dataset if a pandas object
-    _df = MetaPanda(df) if isinstance(df, pd.DataFrame) else df
-
+    _df = df.df_ if not isinstance(df, pd.DataFrame) else df
     # retrieve x columns if none
-    if x is None:
-        x = _df.columns.difference(pd.Index([y]))
-
+    _xcols = select_xcols(_df, x, y)
     # set up cv, repeats
-    if isinstance(cv, tuple):
-        k, repeats = cv
-    else:
-        k, repeats = cv, 1
+    k, repeats = cv if isinstance(cv, tuple) else cv, 1
 
     # do caching
     def _perform_fit(_df: MetaPanda, _x, _y, _k: int, _repeats: int, _models):
@@ -163,7 +158,7 @@ def grid(df: Union[pd.DataFrame, "MetaPanda"],
         # create gridsearch
         gs = GridSearchCV(pipe, param_grid=pgrid, cv=rep, **def_grid_params)
         # make ml ready
-        __df, __xnp, __y, _xcols = ml_ready(_df, _x, _y)
+        __xnp, __y = preprocess_continuous_X_y(_df, _x, _y)
         # fit the grid - expensive.
         gs.fit(__xnp, __y)
         # generate result
@@ -262,7 +257,9 @@ def optimize(df: "MetaPanda",
     instance_check(models, (tuple, list, dict))
     bounds_check(verbose, 0, 4)
 
-    _df, _xnp, _y, _xcols = ml_ready(df, x, y)
+    _df = df.df_ if not isinstance(df, pd.DataFrame) else df
+    _xcols = select_xcols(_df, x, y)
+    _xnp, _y = preprocess_continuous_X_y(_df, _xcols, y)
 
     # define the parameter sets
     param_sets = make_optimize_grid(models)

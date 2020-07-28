@@ -35,7 +35,7 @@ def _choose_regex(pat, K):
     if isinstance(K, pd.DataFrame):
         return _patcolumnmatch(pat, K)
     elif isinstance(K, pd.Series):
-        return _strpattern(pat, K.values)
+        return _strpattern(pat, K.dropna().values)
     else:
         return _strpattern(pat, K)
 

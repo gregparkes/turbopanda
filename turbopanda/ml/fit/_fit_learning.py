@@ -12,7 +12,8 @@ from sklearn.model_selection import RepeatedKFold, permutation_test_score, learn
 
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.utils import instance_check, difference, bounds_check
-from turbopanda.ml._clean import ml_ready
+from turbopanda.str import pattern
+from turbopanda.ml._clean import preprocess_continuous_X_y, select_xcols
 from turbopanda.ml._package import find_sklearn_model
 from turbopanda.ml.plot._plot_learning import learning_curve as lcurve
 
@@ -27,7 +28,7 @@ def learning(df: "MetaPanda",
              cache: Optional[str] = None,
              plot: bool = False,
              verbose: int = 0,
-             **model_kws) -> "MetaPanda":
+             **model_kws):
     """Fits a basic model to generate cross-validated training/test scores for different training set sizes.
 
     A cross-validation generator splits the whole dataset `k` times in training and test data. Subsets of the training set with
@@ -105,30 +106,20 @@ def learning(df: "MetaPanda",
     bounds_check(verbose, 0, 4)
 
     # set dataset if a pandas object
-    _df = MetaPanda(df) if isinstance(df, pd.DataFrame) else df
-
+    _df = df.df_ if not isinstance(df, pd.DataFrame) else df
     # retrieve x columns if none
-    if x is None:
-        x = _df.columns.difference(pd.Index([y]))
-
-    if isinstance(cv, tuple):
-        k, repeats = cv
-    else:
-        k, repeats = cv, 1
-
+    _xcols = select_xcols(_df, x, y)
+    k, repeats = cv if isinstance(cv, tuple) else cv, 1
     lm, pkg_name = find_sklearn_model(model, "regression")
     # assign keywords to lm
     lm.set_params(**model_kws)
+
     if train_n is None:
         train_n = np.linspace(.1, .9, 8)
     elif isinstance(train_n, int):
         train_n = np.linspace(.1, .9, train_n)
     # ml ready
-    __df, _x, _y, _xcols = ml_ready(_df, x, y)
-    if verbose > 0:
-        print("full dataset: {}/{} -> ML: {}/{}({},{})".format(_df.n_, _df.p_,
-                                                             __df.shape[0], __df.shape[1],
-                                                             _x.shape[1], 1))
+    _x, _y = preprocess_continuous_X_y(_df, _xcols, y)
 
     rep = RepeatedKFold(n_splits=k, n_repeats=repeats)
     vars_ = learning_curve(lm, _x, _y, train_sizes=train_n,

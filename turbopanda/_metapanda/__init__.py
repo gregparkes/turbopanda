@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Provides an interface to the MetaPanda object."""
 
+import os
 import hashlib
 import json
 import warnings
@@ -11,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 # from turbopanda._pipe import Pipe
+from turbopanda._deprecator import deprecated, deprecated_param
 from turbopanda.utils._files import split_file_directory
 from turbopanda.utils._sets import join
 from ._drop_values import drop_columns
@@ -127,8 +129,7 @@ class MetaPanda(object):
                  dataset: pd.DataFrame,
                  name: Optional[str] = None,
                  with_clean: bool = True,
-                 with_warnings: bool = False,
-                 select_def: str = "union"):
+                 with_warnings: bool = False):
         """Define a MetaPanda frame.
 
         Creates a Meta DataFrame with the raw data and parametrization of
@@ -144,10 +145,6 @@ class MetaPanda(object):
             If True, uses Pipe.clean() to perform minor preprocessing on `dataset`
         with_warnings : bool, optional
             If True, prints warnings when strange things happen, for instance during selection
-        select_def : str, optional
-            Choose between {'union', 'intersect'}
-            If 'union': any selector parameters return the `union` set of searched terms
-            If 'intersect': any selector parameters return the `intersect` overlap set of searched terms
         """
         self._with_warnings = with_warnings
         self._with_clean = with_clean
@@ -161,7 +158,6 @@ class MetaPanda(object):
         # set empty meta
         self._meta = None
         self._source = ""
-        self.select_crit_ = select_def
         # set using property
         self.df_ = dataset
         self.name_ = name if name is not None else 'DataSet'
@@ -175,7 +171,7 @@ class MetaPanda(object):
     # shadowed columns
     from ._shadow import head, dtypes, copy, info
     # saving files
-    from ._write import write, _write_csv, _write_json, printf
+    from ._write import write, _write_csv, _write_json, _write_pickle, printf
     # application to pandas.api functions
     from ._apply import apply, apply_index, apply_columns, _apply_function, \
         _apply_index_function, _apply_column_function
@@ -302,7 +298,7 @@ class MetaPanda(object):
     def __getitem__(self, *selector: SelectorType):
         """Fetch a subset determined by the selector."""
         # we take the columns that are NOT this selection, then drop to keep order.
-        sel = inspect(self.df_, self.meta_, self.selectors_, selector, join_t=self.select_crit_, mode='view')
+        sel = inspect(self.df_, self.meta_, self.selectors_, selector, join_t="union", mode='view')
         if sel.size > 0:
             # drop anti-selection to maintain order/sorting
             return self.df_[sel].squeeze()
@@ -344,8 +340,14 @@ class MetaPanda(object):
 
     @source_.setter
     def source_(self, source):
-        if isinstance(source, (str, list, tuple)):
+        if isinstance(source, str):
             self._source = source
+            # if the file doesn't exist, write this object to the named source
+            if not os.path.isfile(source):
+                # write to the source, assuming file extension at the end
+                self.write(source)
+        else:
+            raise TypeError("source_ must be of type str, not {}".format(type(source)))
 
     @property
     def df_(self) -> pd.DataFrame:
@@ -359,11 +361,6 @@ class MetaPanda(object):
             self._df = df
             # define meta
             self.update_meta()
-            # compute cleaning.
-            """
-            if self._with_clean:
-                self.compute(Pipe.clean(with_drop=False), inplace=True)
-            """
             if "colnames" not in self._df.columns:
                 self._df.columns.name = "colnames"
             if "counter" not in self._df.columns:
@@ -404,19 +401,6 @@ class MetaPanda(object):
         return tuple(join(self._select, self.meta_.columns[self.meta_.dtypes == np.bool]))
 
     @property
-    def select_crit_(self) -> str:
-        """Determines the default action when `inspect` is called."""
-        return self._select_crit
-
-    @select_crit_.setter
-    def select_crit_(self, s):
-        opt = ('union', 'intersect')
-        if s in opt:
-            self._select_crit = s
-        else:
-            raise ValueError("selection criteria '{}' not found, choose from {}".format(s, opt))
-
-    @property
     def memory_(self) -> str:
         """Fetch the memory consumption of the MetaPanda."""
         df_m = self.df_.memory_usage(deep=False).sum() / 1000000
@@ -438,6 +422,7 @@ class MetaPanda(object):
         else:
             raise TypeError("'name_' must be of type str")
 
+    @deprecated_param("0.2.8", "pipe_", "0.3", "pipe object is being phased out")
     @property
     def pipe_(self) -> Dict[str, Any]:
         """Fetch the cached pipelines."""

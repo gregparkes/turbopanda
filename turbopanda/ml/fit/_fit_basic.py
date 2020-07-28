@@ -10,10 +10,12 @@ from sklearn.model_selection import RepeatedKFold, cross_val_predict, cross_vali
 
 # internal functions, objects.
 from turbopanda._metapanda import MetaPanda, SelectorType
-from turbopanda.dev import cached
-from turbopanda.utils import insert_suffix, instance_check, listify, union, bounds_check
+from turbopanda.utils import insert_suffix, instance_check, \
+    listify, union, bounds_check
+from turbopanda.utils import cache as cache_function
 
-from turbopanda.ml._clean import ml_ready
+from turbopanda.str import pattern
+from turbopanda.ml._clean import preprocess_continuous_X_y, select_xcols
 from turbopanda.ml._package import find_sklearn_model, is_sklearn_model
 from turbopanda.ml.plot._plot_overview import overview
 
@@ -122,20 +124,20 @@ def basic(df: Union[pd.DataFrame, "MetaPanda"],
     bounds_check(verbose, 0, 4)
     assert is_sklearn_model(model), "model '{}' is not a valid sklearn model."
 
-    _df = MetaPanda(df) if isinstance(df, pd.DataFrame) else df
-
-    if x is None:
-        x = _df.columns.difference(pd.Index([y]))
+    _df = df.df_ if not isinstance(df, pd.DataFrame) else df
+    _xcols = select_xcols(_df, x, y)
 
     rep = _define_regression_kfold_object(cv)
     lm, pkg_name = find_sklearn_model(model, "regression")
     # assign keywords to lm
     lm.set_params(**model_kws)
     # make data set machine learning ready.
-    __df, _x, _y, _xcols = ml_ready(_df, x, y)
+    _x, _y = preprocess_continuous_X_y(_df, _xcols, y)
+
     if verbose > 0:
         print(
-            "full dataset: {}/{} -> ML: {}/{}({},{})".format(_df.n_, _df.p_, __df.shape[0], __df.shape[1], _x.shape[1], 1))
+            "full dataset: {}/{} -> ML: {}/{}({},{})".format(_df.n_, _df.p_, __df.shape[0], __df.shape[1], _x.shape[1],
+                                                             1))
 
     # function 1: performing cross-validated fit.
     def _perform_cv_fit(_x: np.ndarray,
@@ -164,25 +166,24 @@ def basic(df: Union[pd.DataFrame, "MetaPanda"],
         return MetaPanda(score_mat)
 
     # function 2: performing cross-validated predictions.
-    def _perform_prediction_fit(_df: pd.DataFrame,
-                                _x: np.ndarray,
+    def _perform_prediction_fit(_x: np.ndarray,
                                 _y: np.ndarray,
+                                _ind: pd.Index,
                                 _yn: str,
                                 _rep,
                                 _lm) -> pd.Series:
-        return pd.Series(cross_val_predict(_lm, _x, _y, cv=_rep), index=_df.index).to_frame(_yn)
+        return pd.Series(cross_val_predict(_lm, _x, _y, cv=_rep), index=_ind).to_frame(_yn)
 
     if cache is not None:
         cache_cv = insert_suffix(cache, "_cv")
         cache_yp = insert_suffix(cache, "_yp")
-        _cv = cached(
-            _perform_cv_fit, cache_cv, verbose, _x=_x, _xcols=_xcols, _y=_y, _rep=rep,
-            _lm=lm, package_name=pkg_name
-        )
-        _yp = cached(
-            _perform_prediction_fit, cache_yp,
-            verbose, _df=__df, _x=_x, _y=_y, _yn=y, _rep=rep, _lm=lm
-        )
+        _cv = cache_function(cache_cv,
+                             _perform_cv_fit, _x=_x, _xcols=_xcols, _y=_y, _rep=rep,
+                             _lm=lm, package_name=pkg_name
+                             )
+        _yp = cache_function(cache_yp, _perform_prediction_fit,
+                             _x=_x, _y=_y, _ind=_df.index, _yn=y, _rep=rep, _lm=lm
+                             )
     else:
         _cv = _perform_cv_fit(_x, _xcols, _y, rep, lm, pkg_name)
         _yp = _perform_prediction_fit(__df, _x, _y, y, rep, lm)

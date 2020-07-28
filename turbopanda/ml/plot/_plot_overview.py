@@ -17,7 +17,7 @@ from turbopanda.str import shorten
 from turbopanda.pipe import absolute
 from turbopanda.plot import gridplot, bibox1d, widebox
 from turbopanda.utils import instance_check, intersect
-from turbopanda.ml._clean import ml_ready
+from turbopanda.ml._clean import select_xcols, preprocess_continuous_X_y
 
 __all__ = ('coefficient', 'overview')
 
@@ -161,7 +161,10 @@ def overview(df: "MetaPanda",
     # set yp as series
     yp = yp[y].squeeze()
     # pair them and remove NA
-    _df, _x, _y, _xcols = ml_ready(df, x, y)
+    _df = df.df_ if not isinstance(df, pd.DataFrame) else df
+    _xcols = select_xcols(_df, x, y)
+    _x, _y = preprocess_continuous_X_y(_df, _xcols, y)
+
     options_yes_ = (True, True, True, True, 1 < len(_xcols) < 50,
                     (len(_xcols) > 1) and is_statsmodels_installed(),
                     True, True)

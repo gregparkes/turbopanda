@@ -19,6 +19,7 @@ from joblib import Parallel, delayed, cpu_count
 # locals
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.stats._lmfast import lm
+from turbopanda.str import pattern
 from turbopanda.utils import belongs, difference, instance_check, \
     is_column_boolean, is_column_float, remove_na, union, is_dataframe_float, \
     disallow_instance_pair, bounds_check
@@ -379,70 +380,6 @@ def _corr_combination(data, comb, covar, parallel, cart_z, method, verbose):
     return pd.concat(result_k, axis=0, sort=False).reset_index().rename(columns={"index": "method"})
 
 
-def _corr_two_matrix_diff(data, x, y, covar=None,
-                          cartesian_Z=False, method='spearman',
-                          parallel=False, verbose=0):
-    """
-    Computes the correlation between two matrices X and Y of different columns lengths.
-
-    Essentially computes multiple iterations of corr_matrix_vector.
-    """
-    # create combinations
-    comb = it.product(x, y)
-    # iterate and perform two_variable as before
-    if covar is None:
-        result_k = _parallel_bicorr(data, comb, parallel, method=method, verbose=verbose)
-    else:
-        result_k = _parallel_partial_bicorr(data, covar, comb, parallel, cartesian_Z, method=method, verbose=verbose)
-
-    result = pd.concat(result_k, axis=0, sort=False).reset_index().rename(columns={"index": "method"})
-    return result
-
-
-def _corr_matrix_singular(data, covar=None, cartesian_Z=False,
-                          method="spearman", parallel=False, verbose=0):
-    """Computes the correlation matrix on pairwise columns."""
-    # combinations with replacement diagonal
-    comb = it.combinations_with_replacement(data.columns, 2)
-    # iterate over combination column name pairs.
-    if covar is None:
-        result_k = _parallel_bicorr(data, comb, parallel, method=method, verbose=verbose)
-    else:
-        # computes the symmetric difference
-        # _x = difference(data.columns, covar)
-        result_k = _parallel_partial_bicorr(data, covar, comb, parallel, cartesian_Z, method=method, verbose=verbose)
-
-    results = pd.concat(result_k, axis=0, sort=False).reset_index().rename(columns={"index": "method"})
-    return results
-
-
-def _corr_matrix_vector(data: pd.DataFrame,
-                        x: List[str],
-                        y: str,
-                        covar: Union[str, List[str]] = None,
-                        cartesian_Z: bool = False,
-                        method: str = "spearman",
-                        verbose: int = 0) -> pd.DataFrame:
-    # join together the list/strings of column names
-    # cols = union(x, y, covar)
-    # extract data subset, no dropping yet though.
-    # _data = data[cols]
-    # create 'combination' of groups
-    comb = it.product(x, [y])
-
-    # calculate bicorr or partial bicorr based on presense of covar list
-    if covar is None:
-        result_k = _parallel_bicorr(data, comb, parallel, method=method, verbose=verbose)
-        # _x, _y = _data[x], _data[y]
-        # result_k = [_bicorr_inner(_x.iloc[:, i], _y, method=method, verbose=verbose) for i in range(_x.shape[1])]
-    else:
-        result_k = _parallel_partial_bicorr(data, covar, comb, parallel, cartesian_Z, method=method, verbose=verbose)
-
-    # concatenate, add method and return
-    result = pd.concat(result_k, axis=0, sort=False).reset_index().rename(columns={"index": "method"})
-    return result
-
-
 """##################### PUBLIC FUNCTIONS ####################################################### """
 
 
@@ -532,19 +469,18 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
     bounds_check(verbose, 0, 4)
 
     # downcast to dataframe option
-    df = data.df_ if isinstance(data, MetaPanda) else data
+    df = data.df_ if not isinstance(data, pd.DataFrame) else data
     # downcast if list/tuple/pd.index is of length 1
     x = x[0] if (isinstance(x, (tuple, list, pd.Index)) and len(x) == 1) else x
     y = y[0] if (isinstance(y, (tuple, list, pd.Index)) and len(y) == 1) else y
 
     # convert using `view` if we have string instances.
-    if isinstance(x, str) and isinstance(data, MetaPanda):
-        # new in v0.2.6 - update to `select`
-        x = data.select(x)
-    if isinstance(y, str) and isinstance(data, MetaPanda):
-        y = data.select(y)
-    if isinstance(covar, str) and isinstance(data, MetaPanda):
-        covar = data.select(covar)
+    if isinstance(x, str):
+        x = pattern(x, df.columns)
+    if isinstance(y, str):
+        y = pattern(y, df.columns)
+    if isinstance(covar, str):
+        covar = pattern(covar, df.columns)
 
     # perform a check to make sure every column in `covar` is continuous.
     if covar is not None:

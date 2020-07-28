@@ -4,6 +4,7 @@
 
 import hashlib
 import json
+from joblib import dump
 from typing import Optional
 
 import pandas as pd
@@ -11,7 +12,8 @@ import pandas as pd
 from turbopanda.utils import split_file_directory, union
 from ._metadata import default_columns
 
-__all__ = ('write', '_write_csv', '_write_json', '_write_hdf', 'printf')
+
+__all__ = ('write', '_write_csv', '_write_json', "_write_pickle", '_write_hdf', 'printf')
 
 
 def _write_csv(self, filename: str, with_meta: bool = False, *args, **kwargs):
@@ -48,6 +50,13 @@ def _write_json(self, filename: str):
         f.write(compile_string.encode())
 
 
+def _write_pickle(self, filename: str):
+    # update meta information
+    self.update_meta()
+    # simply joblib dump
+    dump(self, filename)
+
+
 def write(self,
           filename: Optional[str] = None,
           with_meta: bool = False,
@@ -59,7 +68,7 @@ def write(self,
     -------
     filename : str, optional
         The name of the file to save, or None it will create a JSON file with Data.
-        Accepts filename that end in [.csv, .json]
+        Accepts filename that end in [.csv, .json, .pkl]
         If None, writes a JSON file using `name_` attribute.
     with_meta : bool, optional
         If true, saves metafile also, else doesn't
@@ -71,7 +80,7 @@ def write(self,
     Raises
     ------
     IOException
-        File doesn't end in {'json', 'csv'}
+        File doesn't end in {'json', 'csv', 'pkl'}
 
     Returns
     -------
@@ -83,8 +92,10 @@ def write(self,
         self._write_csv(filename, with_meta, *args, **kwargs)
     elif filename.endswith(".json"):
         self._write_json(filename)
+    elif filename.endswith(".pkl"):
+        self._write_pickle(filename)
     else:
-        raise IOError("Doesn't recognize filename or type: '{}', must end in [csv, json]".format(filename))
+        raise IOError("Doesn't recognize filename or type: '{}', must end in [csv, json, pkl]".format(filename))
     return self
 
 

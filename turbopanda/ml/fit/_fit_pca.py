@@ -9,7 +9,7 @@ from typing import Union, Optional, Dict, List
 
 from turbopanda import vectorize, Param
 from turbopanda._metapanda import SelectorType, MetaPanda
-from turbopanda.str import patproduct, common_substrings
+from turbopanda.str import patproduct, common_substrings, pattern
 from turbopanda.ml import preprocess_continuous_X
 from turbopanda.ml.plot import overview_pca
 from turbopanda.utils import instance_check, upcast, bounds_check, nonnegative

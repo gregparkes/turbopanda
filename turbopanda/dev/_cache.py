@@ -21,6 +21,7 @@ from pandas import DataFrame, concat
 from joblib import Parallel, delayed, cpu_count
 
 # locals
+from turbopanda._deprecator import deprecated
 from turbopanda._fileio import read
 from turbopanda._metapanda import MetaPanda
 from turbopanda.utils import belongs, dictcopy, insert_suffix, \
@@ -41,6 +42,7 @@ def _set_index_def(df, values=('Unnamed:_0', 'Unnamed: 0', 'colnames', 'index', 
         df.set_index(_shared.tolist(), inplace=True)
 
 
+@deprecated("0.2.8", "0.3", instead=".utils.cache")
 def cached(func: Callable,
            filename: str = 'example1.json',
            verbose: int = 0,
@@ -128,6 +130,8 @@ def cached(func: Callable,
             return mpf
 
 
+@deprecated("0.2.8", "0.3", instead=".utils.umappc",
+            reason="The 'umap' suite performs this in a cleaner, more succinct way")
 def cached_chunk(func: Callable,
                  param_name: str,
                  param_values: Union[List, Tuple],

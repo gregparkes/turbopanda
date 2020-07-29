@@ -11,6 +11,7 @@ from typing import List, Optional, Union
 
 import numpy as np
 from pandas import DataFrame, Series, concat, merge as pmerge
+from functools import reduce
 
 from ._fileio import read
 # locals
@@ -24,10 +25,7 @@ DataSetType = Union[Series, DataFrame, MetaPanda]
 
 def _has_majority_index_overlap(df1: DataFrame, df2: DataFrame) -> bool:
     """Checks whether the indices overlap in majority. Bool"""
-    if df1.index.dtype.kind == "U" and df2.index.dtype.kind == "U":
-        ins = intersect(df1.index, df2.index)
-        return ins.shape[0] > (np.mean((df1.shape[0], df2.shape[0])) // 2)
-    elif df1.index.dtype.kind == "O" and df2.index.dtype.kind == "O":
+    if df1.index.dtype.kind in "OU" and df2.index.dtype.kind in "OU":
         ins = intersect(df1.index, df2.index)
         return ins.shape[0] > (np.mean((df1.shape[0], df2.shape[0])) // 2)
     else:
@@ -227,9 +225,8 @@ def merge(mdfs: Union[str, List[DataSetType]],
     elif len(mdfs) == 2:
         nmdf = _single_merge(mdfs[0], mdfs[1], how=how, verbose=verbose)
     else:
-        nmdf = mdfs[0]
-        for ds in mdfs[1:]:
-            nmdf = _single_merge(nmdf, ds, how=how, verbose=verbose)
+        # reduce operation
+        nmdf = reduce(lambda x, y: _single_merge(x, y, how=how, verbose=verbose), mdfs)
 
     # do some additional things if the return type is a MetaPanda object.
     if check_list_type(mdfs, MetaPanda, raised=False):
@@ -246,7 +243,7 @@ def merge(mdfs: Union[str, List[DataSetType]],
         # JOIN on the column to the dataframe - otherwise it throws a bloody error
         nmdf._meta = nmdf.meta_.join(col_sources.astype("category"))
         # join together sources into a list
-        nmdf.source_ = [mdf.source_ for mdf in mdfs]
+        nmdf._source = "__".join([mdf.source_ for mdf in mdfs])
         # override name if given
         if name is not None:
             nmdf.name_ = name

@@ -4,20 +4,64 @@
 
 import os
 from typing import Callable
+import itertools as it
 from joblib import load, dump, delayed, Parallel, cpu_count
+import pandas as pd
+import numpy as np
 
 from ._cache import cache
 from ._files import insert_suffix as add_suf
 from ._error_raise import is_iterable
 
-__all__ = ('umap', 'umapc', 'umapp', 'umapcc', 'umappc', 'umappcc')
+__all__ = ('zipe', 'umap', 'umapc', 'umapp', 'umapcc', 'umappc', 'umappcc')
+
+
+def _downcast_to_list(arg):
+    if isinstance(arg, np.ndarray):
+        return list(arg.flatten())
+    elif isinstance(arg, (pd.Series, pd.Index)):
+        return arg.values.tolist()
+    elif isinstance(arg, tuple):
+        return list(arg)
+    else:
+        return arg
+
+
+def zipe(*args):
+    """An extension to the zip() function.
+
+    This function converts single-element arguments into the longest-length argument. Note that
+    we use `it.zip_longest` and hence differing list lengths will introduce None elements.
+
+    Examples
+    --------
+    This works like a normal zip function when mapping arguments:
+    >>> from turbopanda.utils import zipe
+    >>> zipe([1, 3, 5], [2, 4, 6])
+    >>> [(1, 2), (3, 4), (5, 6)]
+    Further to this, single argument lists are converts to the maximum length one by duplication:
+    >>> zipe(1, [4, 6, 8])
+    >>> [(1, 4), (1, 6), (1, 8)]
+    This extends to more than two arguments, to k:
+    >>> zipe(3, 5, [1, 3], [2, 4, 6])
+    >>> [(3, 5, 1, 2), (3, 5, 3, 4), (3, 5, None, 6)]
+    """
+    if len(args) == 1:
+        return args[0]
+    else:
+        _maxlen = max(map(len, filter(lambda x: isinstance(x, list), args)))
+
+        def _singleton(arg):
+            return [arg] * _maxlen if not isinstance(arg, list) else arg
+
+        return list(it.zip_longest(map(_singleton, map(_downcast_to_list, args))))
 
 
 def _map_comp(f, *args):
     # check to make sure every argument is an iterable, and make it one if not
-    if (len(args)) == 0:
+    if len(args) == 0:
         return f()
-    elif (len(args)) == 1 and not is_iterable(args[0]):
+    elif len(args) == 1 and not is_iterable(args[0]):
         raise TypeError("single argument must be an 'iterable' not '{}'".format(type(args[0])))
     else:
         return list(map(f, *args))

@@ -4,6 +4,7 @@
 
 import re
 import pandas as pd
+from functools import reduce
 
 from ._selection import get_selector
 from ._types import SelectorType

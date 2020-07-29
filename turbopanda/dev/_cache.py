@@ -130,7 +130,7 @@ def cached(func: Callable,
             return mpf
 
 
-@deprecated("0.2.8", "0.3", instead=".utils.umappc",
+@deprecated("0.2.8", "0.3", instead=".utils.umappc or vectorize",
             reason="The 'umap' suite performs this in a cleaner, more succinct way")
 def cached_chunk(func: Callable,
                  param_name: str,

@@ -303,6 +303,12 @@ class MetaPanda(object):
             # drop anti-selection to maintain order/sorting
             return self.df_[sel].squeeze()
 
+    def __setitem__(self, cname, series):
+        """Assigns a new column to the MetaPanda."""
+        self.df_[cname] = series
+        # update the meta
+        self.update_meta()
+
     def __delitem__(self, *selector: SelectorType):
         """Delete columns determined by the selector."""
         # drops columns inplace
@@ -374,14 +380,21 @@ class MetaPanda(object):
         return self._meta
 
     @property
+    @deprecated_param("0.2.8", "n_", "0.3", "renamed to `n`")
     def n_(self) -> int:
         """Fetch the number of rows/samples within the df_ attribute."""
         return self.df_.shape[0]
 
     @property
+    @deprecated_param("0.2.8", "p_", "0.3", "renamed to `p`")
     def p_(self) -> int:
         """Fetch the number of dimensions within the df_ attribute."""
         return self.df_.shape[1]
+
+    @property
+    def shape(self) -> Tuple:
+        """Fetches the shape of the dataset."""
+        return self.df_.shape
 
     @property
     def columns(self) -> pd.Index:
@@ -422,8 +435,8 @@ class MetaPanda(object):
         else:
             raise TypeError("'name_' must be of type str")
 
-    @deprecated_param("0.2.8", "pipe_", "0.3", "pipe object is being phased out")
     @property
+    @deprecated_param("0.2.8", "pipe_", "0.3", "pipe object is being phased out")
     def pipe_(self) -> Dict[str, Any]:
         """Fetch the cached pipelines."""
         return self._pipe

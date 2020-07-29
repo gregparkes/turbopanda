@@ -86,10 +86,10 @@ def read(filename: str,
                     "file ending '.{}' not recognized, must end with {}".format(fl, join(pandas_types, extra_types)))
 
         if isinstance(name, (list, tuple)):
-            ds = [fetch_db(f, n) for f, n in it.zip_longest(glob_name, sorted(name))]
+            ds = list(map(fetch_db, glob_name, sorted(name)))
         elif isinstance(name, str):
             ds = [fetch_db(f, name) for f in glob_name]
         else:
-            ds = [fetch_db(f) for f in glob_name]
+            ds = list(map(fetch_db, glob_name))
         # if we have more than one element, return the list, else just return ds
         return ds if len(ds) > 1 else ds[0]

@@ -31,7 +31,7 @@ from joblib import Parallel, delayed, cpu_count, load, dump
 from pandas import Series, Index, DataFrame
 
 from .utils._error_raise import belongs, instance_check
-from .utils._cache import cache as cache_function
+from .utils._cache import cache as utilcache
 
 
 def _expand_dict(k, vs):
@@ -115,33 +115,19 @@ def vectorize(_func=None,
                 pkg = zip(argc, argkc)
                 # calculate effective number of CPUs
                 n_cpus = len(argc) if len(argc) <= cpu_count() else cpu_count() - 1
-                # caching function - which is parallelized.
-                def _cache_function(i, fn, *args_i, **kwargs_i):
-                    file_chunk = fn + i + ".pkl"
-                    # check if appropriate cache file exists, if it does use the IO to read it in.
-                    if os.path.isfile(file_chunk):
-                        # read in file
-                        return load(file_chunk)
-                    # else do the calculation and save the cache to file.
-                    else:
-                        # execute
-                        result_i = f(*args_i, **kwargs_i)
-                        # dump result - no compression
-                        dump(result_i, file_chunk)
-                        return result_i
 
                 if cache:
                     # create a temporary directory cache
                     savedir = mkdtemp()
                     filename_path = "cache_vectorize_"
-                    fsubname = os.path.join(savedir, filename_path)
+                    fn = os.path.join(savedir, filename_path)
                     # parallelize on the cache function
                     if parallel:
                         result = Parallel(n_jobs=n_cpus)(
-                            delayed(_cache_function)(i, fsubname, *arg, **kwarg) for i, (arg, kwarg) in enumerate(pkg)
+                            delayed(utilcache)(fn+str(i)+".pkl", f, *arg, **kwarg) for i, (arg, kwarg) in enumerate(pkg)
                         )
                     else:
-                        result = [_cache_function(i, fsubname, *arg, **kwarg) for i, (arg, kwarg) in enumerate(pkg)]
+                        result = [utilcache(fn+str(i)+".pkl", f, *arg, **kwarg) for i, (arg, kwarg) in enumerate(pkg)]
                     # clear temporary directory once completed
                     try:
                         shutil.rmtree(savedir)
@@ -150,9 +136,7 @@ def vectorize(_func=None,
                 else:
                     if parallel:
                         # perform parallel operation
-                        result = Parallel(n_jobs=n_cpus)(
-                            delayed(f)(*arg, **kwarg) for arg, kwarg in pkg
-                        )
+                        result = Parallel(n_jobs=n_cpus)(delayed(f)(*arg, **kwarg) for arg, kwarg in pkg)
                     else:
                         result = [f(*arg, **kwarg) for arg, kwarg in pkg]
 

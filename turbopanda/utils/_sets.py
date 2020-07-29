@@ -3,15 +3,17 @@
 """Operations for handling dictionaries and sets."""
 
 import itertools as it
+import operator
 from typing import Callable, Dict, Iterable, List, Set, Tuple, Union
-
+from functools import reduce
 from pandas import Index, Series
 
 SetLike = Union[type(None), str, Set, Index, List, Tuple, Series]
 
 __all__ = ("dictsplit", "dict_to_tuple", "dictzip", "dictmap",
            "dictchunk", "join", 'pairwise',
-           "set_like", "union", "intersect", "difference", "absdifference", 'dictcopy')
+           "set_like", "union", "intersect", "difference",
+           "absdifference", 'dictcopy')
 
 """ DICTIONARY CONVENIENCE """
 
@@ -236,10 +238,7 @@ def union(*args: SetLike) -> Index:
     elif len(args) == 1:
         return set_like(args[0])
     else:
-        a = set_like(args[0])
-        for b in args[1:]:
-            a |= set_like(b)
-        return a
+        return reduce(operator.or_, map(set_like, args))
 
 
 def intersect(*args: SetLike) -> Index:
@@ -260,10 +259,7 @@ def intersect(*args: SetLike) -> Index:
     elif len(args) == 1:
         return set_like(args[0])
     else:
-        a = set_like(args[0])
-        for b in args[1:]:
-            a &= set_like(b)
-        return a
+        return reduce(operator.and_, map(set_like, args))
 
 
 def difference(a: SetLike, b: SetLike) -> Index:

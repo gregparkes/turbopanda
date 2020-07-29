@@ -49,23 +49,48 @@ def _foreach_flexterm(term, K):
     return res
 
 
-def pattern(pat: str, K, extended_regex: bool = True):
+def pattern(pat: str,
+            K,
+            extended_regex: bool = True,
+            column_types: bool = False):
     """Determines if pattern `pat` exists in K.
 
     Parameters
     ----------
     pat : str
-        Regex-compliant pattern. Also supports *flexible* regex with NOT operators in the case
-        of pandas.DataFrame columns, etc.
+        Regex-compliant pattern. Also supports *flexible* regex with
+            NOT operators in the case of pandas.DataFrame columns, etc.
     K : list, tuple, pd.Series, pd.Index, pd.DataFrame
-        The full list to select a pattern from. Accepts pandas. inputs, and uses the .columns attribute
+        The full list to select a pattern from. Accepts pandas. inputs,
+            and uses the .columns attribute
     extended_regex : bool, default=True
         If True, allows for "|, &, ~" characters to form long regex patterns.
+    column_types : bool, default=False
+        If True, when K is a pandas.DataFrame, it allows for "~object", "int"
+            and object type names defined as string
 
     Returns
     -------
-    _pat : list/pd.Index
+    pat : list/pd.Index
         If K is from `pandas`, the result is a `pd.Index` object, else a list
+
+    Examples
+    --------
+    When extended regex is not on, it behaves similarly to the regex engine would
+    normally do:
+    >>> from turbopanda.str import pattern
+    >>> pattern("ellow", ["hello", "bellow", "mellow", "swellow"])
+    >>> ["bellow", "mellow", "swellow"]
+    With extended regex, you can use intersection and union operations in between
+    each regex call (space optional):
+    >>> pattern("^he | ^b")
+    >>> ["hello", "bellow"]
+    It essentially treats each block separated by | or & as a separate regex search.
+    When a pandas.DataFrame is passed, the search is applied to the *column names*, and
+    types can be search for:
+    >>> # where ... represents a dataframe with float and object columns,...
+    >>> pattern("float & pixel_", ...)
+    Here only float columns AND that contain 'pixel_' in the column name are selected
     """
     instance_check(pat, str)
 

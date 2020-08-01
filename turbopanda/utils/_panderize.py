@@ -11,6 +11,9 @@ from joblib import Parallel, delayed, cpu_count
 from turbopanda._deprecator import deprecated
 
 
+__all__ = ("panderfy", 'transform_copy')
+
+
 def panderfy(func: Callable):
     """A decorator to convert a list-like output into a pandas.Series or pandas.DataFrame."""
     # check it is string
@@ -32,6 +35,20 @@ def panderfy(func: Callable):
             return result
 
     return _wrapper
+
+
+def transform_copy(old, new):
+    """Given an 'old' pandas.Series, pandas.Index or pandas.DataFrame, copy over metadata to
+    a 'new' one.
+    """
+    if isinstance(old, pd.Series):
+        return pd.Series(new, index=old.index, name=old.name)
+    elif isinstance(old, pd.Index):
+        return pd.Index(new, name=old.name)
+    elif isinstance(old, pd.DataFrame):
+        return pd.DataFrame(new, columns=old.columns, index=old.index)
+    else:
+        return new
 
 
 @deprecated("0.2.8", "0.3", instead=".utils.umapp")

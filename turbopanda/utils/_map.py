@@ -16,17 +16,6 @@ from ._error_raise import is_iterable
 __all__ = ('zipe', 'umap', 'umapc', 'umapp', 'umapcc', 'umappc', 'umappcc')
 
 
-def _downcast_to_list(arg):
-    if isinstance(arg, np.ndarray):
-        return list(arg.flatten())
-    elif isinstance(arg, (pd.Series, pd.Index)):
-        return arg.values.tolist()
-    elif isinstance(arg, tuple):
-        return list(arg)
-    else:
-        return arg
-
-
 def zipe(*args):
     """An extension to the zip() function.
 
@@ -54,7 +43,7 @@ def zipe(*args):
         def _singleton(arg):
             return [arg] * _maxlen if not isinstance(arg, list) else arg
 
-        return list(it.zip_longest(map(_singleton, map(_downcast_to_list, args))))
+        return list(it.zip_longest(*map(_singleton, args)))
 
 
 def _map_comp(f, *args):

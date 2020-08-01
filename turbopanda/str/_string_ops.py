@@ -4,11 +4,14 @@
 
 import re
 import itertools as it
+from functools import reduce
 import numpy as np
 from typing import Tuple, Union, Iterable, List
 from pandas import DataFrame, Index, Series
 
-from turbopanda.utils import set_like, belongs, instance_check, umap
+from turbopanda.utils import set_like, belongs, instance_check,\
+    umap, transform_copy
+
 
 __all__ = ('patproduct', 'string_replace', 'reformat', 'shorten')
 
@@ -91,19 +94,61 @@ def shorten(s, newl: int = 15, method: str = "middle"):
         return [_shorten_string(_s, newl, method) for _s in s]
 
 
-def string_replace(strings: Union[List[str], Tuple[str, ...], Series, Index],
-                   operations: List[Tuple[str, str]]):
-    """ Performs all replace operations on the string inplace """
-    string_copy = strings
-    if isinstance(strings, (list, tuple)):
-        for op in operations:
-            string_copy = umap(lambda s: s.replace(*op), string_copy)
-    elif isinstance(strings, (Series, Index)):
-        for op in operations:
-            string_copy = string_copy.str.replace(*op)
+def string_replace(strings: Union[str, List[str], Tuple[str, ...], Series, Index],
+                   *operations: Tuple[str, str]):
+    """ Performs all replace operations on the string inplace.
+
+    By default, if operations is a list of these tuples, it will work also.
+
+    Parameters
+    ----------
+    strings : str, list, tuple, Series, Index
+        A string or set of strings to possibly rename
+    operations : arguments of tuple-2 (before, after) strings
+        The 'before' string chooses a subsection to change, and after is the replacement
+
+    Returns
+    -------
+    strings_new : list, tuple, Series, Index
+        The replaced-string array
+
+    Examples
+    --------
+    This function allows you to perform an ordered-set of changes to an array of strings:
+    >>> from turbopanda.str import string_replace as strrepl
+    >>> strrepl(['hello', 'i am', 'pleased'], ("i", "u"))
+    >>> ['hello', 'u am', 'pleased']
+    We can perform multiple changes:
+    >>> strrepl(['hello', 'i am', 'pleased'], ("i", "you"), ("am", "are"))
+    >>> ['hello', 'you are', 'pleased']
+    The changes also obey the order, so potentially the same string can be changed more than once:
+    >>> strrepl(['hello', 'i am', 'pleased'], ("hello", "goodbye"), ("good", "bad"))
+    >>> ['badbye', 'i am', 'pleased']
+    Note that to provide backwards compatibility, if there is only argument and its a list, it will
+    attempt to treat this as a stack of arguments to parse:
+    >>> strrepl(['hello', 'i am', 'pleased'], [("hello", "goodbye"), ("good", "bad")])
+    >>> ['badbye', 'i am', 'pleased']
+
+    See Also
+    --------
+    re.search
+    turbopanda.str.pattern
+    """
+    # perform check
+    instance_check(strings, (str, list, tuple, Series, Index))
+    # convert single list to op list
+    if len(operations) == 1 and isinstance(operations[0], list):
+        operations = operations[0]
+
+    if isinstance(strings, str):
+        return reduce(lambda sold, arg: sold.replace(*arg),
+                      [strings, *operations])
     else:
-        raise TypeError("'strings' of type '{}' must be of type [list, tuple, Series, Index]".format(type(strings)))
-    return string_copy
+        strings_new = reduce(
+            lambda sold, arg: umap(lambda s: s.replace(*arg), sold),
+            [strings, *operations]
+        )
+        return transform_copy(strings, strings_new)
 
 
 def reformat(s: str, df: DataFrame) -> Series:

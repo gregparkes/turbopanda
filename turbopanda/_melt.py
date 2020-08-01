@@ -109,11 +109,13 @@ def melt(df,
     if var_name is None:
         # use common_substring in the id_vars columns
         valns = common_substrings(value_vars)
-        if isinstance(valns, pd.Series):
+        if isinstance(valns, pd.Series) and valns.shape[0] > 0:
             _var_name = valns.idxmax()
             # if we have question guess, add it on
         elif isinstance(valns, str):
             _var_name = valns
+        elif df.columns.name != "":
+            _var_name = df.columns.name
         else:
             _var_name = "variable"
         if include_question_guess:

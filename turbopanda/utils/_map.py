@@ -3,11 +3,10 @@
 """Methods relating to the map function, with parallelism and caching enabled as needed."""
 
 import os
+from tqdm import tqdm
 from typing import Callable
 import itertools as it
 from joblib import load, dump, delayed, Parallel, cpu_count
-import pandas as pd
-import numpy as np
 
 from ._cache import cache
 from ._files import insert_suffix as add_suf
@@ -46,14 +45,13 @@ def zipe(*args):
         return list(it.zip_longest(*map(_singleton, args)))
 
 
-def _map_comp(f, *args):
+def _map_comp(f, arg0, *args):
     # check to make sure every argument is an iterable, and make it one if not
+    # we use tqdm to progressbar umap
     if len(args) == 0:
-        return f()
-    elif len(args) == 1 and not is_iterable(args[0]):
-        raise TypeError("single argument must be an 'iterable' not '{}'".format(type(args[0])))
+        return [f(arg) for arg in arg0]
     else:
-        return list(map(f, *args))
+        return [f(*arg) for arg in it.zip_longest(tqdm(arg0), *args)]
 
 
 def _parallel_list_comprehension(f, *args):
@@ -65,14 +63,15 @@ def _parallel_list_comprehension(f, *args):
         if len(args) == 1:
             um = Parallel(ncpu)(delayed(f)(arg) for arg in args[0])
         else:
-            um = Parallel(ncpu)(delayed(f)(*arg) for arg in zip(*args))
+            um = Parallel(ncpu)(delayed(f)(*arg) for arg in it.zip_longest(*args))
         return um
 
 
 def umap(f: Callable, *args):
     """Performs Map list comprehension.
 
-    Given function f(x) and arguments a, ..., k; map f(a_i, ..., k_i), ..., f(a_z, ..., k_z) .
+    Given function f(x) and arguments a, ..., k;
+        map f(a_i, ..., k_i), ..., f(a_z, ..., k_z) .
 
     Parameters
     ----------
@@ -192,6 +191,7 @@ def umappc(fn: str, f: Callable, *args):
     else:
         um = _parallel_list_comprehension(f, *args)
         # cache result
+        print("writing file '%s'" % fn)
         dump(um, fn)
         # return
         return um
@@ -231,8 +231,9 @@ def umapcc(fn: str, f: Callable, *args):
     else:
         n = len(args[0])
         # run and do chunked caching, using item cache
-        um = [cache(add_suf(fn, str(i)), f, *arg) for i, arg in enumerate(zip(*args))]
+        um = [cache(add_suf(fn, str(i)), f, *arg) for i, arg in enumerate(it.zip_longest(*args))]
         # save final version
+        print("writing file '%s'" % fn)
         dump(um, fn)
         # delete temp versions
         for i in range(n):
@@ -282,9 +283,10 @@ def umappcc(fn: str, f: Callable, *args):
         n = len(args[0])
         ncpu = n if n < cpu_count() else (cpu_count() - 1)
         # do list comprehension using parallelism
-        um = Parallel(ncpu)(delayed(cache)(add_suf(fn, str(i)), f, *arg) \
-                            for i, arg in enumerate(zip(*args)))
+        um = Parallel(ncpu)(delayed(cache)(add_suf(fn, str(i)), f, *arg)
+                            for i, arg in enumerate(it.zip_longest(*args)))
         # save final version
+        print("writing file '%s'" % fn)
         dump(um, fn)
         # delete temp versions
         for i in range(n):

@@ -13,19 +13,9 @@ __all__ = ('compute', 'compute_k' '_apply_pipe')
 
 def _apply_pipe(self, pipe):
     # extract stored string if it is present.
-    if isinstance(pipe, str):
-        # see if name is cached away.
-        if pipe in self.pipe_.keys():
-            pipe = self.pipe_[pipe]
-        elif pipe in ('ml_regression', 'clean', 'no_id'):
-            pipe = getattr(Pipe, pipe)()
-        else:
-            raise ValueError("pipe name '{}' not found in .pipe attribute".format(pipe))
-    if isinstance(pipe, Pipe):
-        pipe = pipe.p
     if isinstance(pipe, (list, tuple)):
         if len(pipe) == 0 and self._with_warnings:
-            warnings.warn("pipe_ element empty, nothing to compute.", UserWarning)
+            warnings.warn("pipe element empty, nothing to compute.", UserWarning)
             return
         # basic check of pipe
         if is_pipe_structure(pipe):
@@ -34,11 +24,13 @@ def _apply_pipe(self, pipe):
                 if hasattr(self, fn):
                     # execute function with args and kwargs
                     getattr(self, fn)(*args, **kwargs)
+    else:
+        raise TypeError("pipe element must be of type [list, tuple], not {}".format(type(pipe)))
 
 
 @deprecated_param("0.2.7", "pipe", reason="deprecation of Pipe object")
 def compute(self,
-            pipe: Optional[PipeMetaPandaType] = None,
+            pipe: PipeMetaPandaType,
             inplace: bool = False,
             update_meta: bool = False) -> "MetaPanda":
     """Execute a pipeline on `df_`.
@@ -50,7 +42,7 @@ def compute(self,
 
     Parameters
     -------
-    pipe : str, Pipe, list of 3-tuple, (function name, *args, **kwargs), optional
+    pipe : str, Pipe, list of 3-tuple, (function name, *args, **kwargs)
         A set of instructions expecting function names in MetaPanda and parameters.
         If None, computes the stored pipe_.current pipeline.
         If str, computes the stored pipe_.<name> pipeline.
@@ -70,10 +62,6 @@ def compute(self,
     --------
     compute_k : Executes `k` pipelines on `df_`, in order.
     """
-    if pipe is None:
-        # use self.pipe_
-        pipe = self.pipe_["current"]
-        self.pipe_["current"] = []
     if inplace:
         # computes inplace
         self._apply_pipe(pipe)

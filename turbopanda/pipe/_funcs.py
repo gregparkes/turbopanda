@@ -18,7 +18,7 @@ __all__ = ('all_float_to_int', 'downcast_all',
            'zscore', 'yeo_johnson', 'clean1', 'clean2',
            'filter_rows_by_column', 'absolute',
            'rename_index', 'rename_columns', 'replace',
-           'impute_missing')
+           'impute_missing', 'add_suffix', 'add_prefix')
 
 
 def _multi_assign(df: pd.DataFrame,
@@ -114,6 +114,7 @@ def filter_rows_by_column(df: pd.DataFrame,
     >>> import turbopanda as turb
     >>> df.pipe(turb.pipe.filter_rows_by_column, lambda z: z['column'] == 3)
     """
+
     return df[expression(df)]
 
 
@@ -137,6 +138,20 @@ def replace(df: pd.DataFrame, column: str, operations) -> pd.DataFrame:
     """Renames a given column with given operations """
     df[column] = string_replace(df[column], operations)
     return df
+
+
+def add_suffix(df: pd.DataFrame, suf: str, subtype: Optional[TypeVar] = None) -> pd.DataFrame:
+    """Adds a suffix to certain column names."""
+    _cols = list(df.select_dtypes(include=[subtype]).columns) if subtype is not None else df.columns
+    # map back to sufcols to the dataframe
+    return df.rename(columns=dict(zip(_cols, map(lambda s: s + suf, _cols))))
+
+
+def add_prefix(df: pd.DataFrame, pref: str, subtype: Optional[TypeVar] = None) -> pd.DataFrame:
+    """Adds a prefix to certain column names"""
+    _cols = list(df.select_dtypes(include=[subtype]).columns) if subtype is not None else df.columns
+    # map back to sufcols to the dataframe
+    return df.rename(columns=dict(zip(_cols, map(lambda s: pref + s, _cols))))
 
 
 """ Some global cleaning functions... """

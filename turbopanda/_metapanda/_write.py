@@ -35,13 +35,12 @@ def _write_json(self, filename: str):
     # generate checksum - using just the column names.
     checksum = hashlib.sha256(json.dumps(self.df_.columns.tolist()).encode()).hexdigest()
     # compilation string
-    compile_string = '{"data":%s,"meta":%s,"name":%s,"cache":%s,"mapper":%s,"pipe":%s,"checksum":%s}' % (
+    compile_string = '{"data":%s,"meta":%s,"name":%s,"cache":%s,"mapper":%s,"checksum":%s}' % (
         stringed_data,
         stringed_meta,
         json.dumps(self.name_),
         json.dumps(self.selectors_),
         json.dumps(self.mapper_),
-        json.dumps(self.pipe_),
         json.dumps(checksum),
     )
     # determine file name.

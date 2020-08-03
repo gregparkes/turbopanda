@@ -7,10 +7,11 @@ from __future__ import absolute_import, division, print_function
 
 import itertools as it
 from typing import Callable, List
+from functools import wraps
 
 import numpy as np
 
-from turbopanda.utils import belongs
+from turbopanda.utils import belongs, union
 
 __all__ = ['bleep', "Bleep"]
 
@@ -20,7 +21,7 @@ def _get_note_progression(n, A_4=440):
 
     Determined as A_4 * (2^1/12)^n.
     """
-    return A_4 * np.power(np.power(2, 1 / 12), n)
+    return A_4 * np.power(np.power(2, 1. / 12.), n)
 
 
 def _get_notes_flat():
@@ -34,7 +35,7 @@ def _get_notes_sharp():
 
 
 def _get_notes_all():
-    return list(set(_get_notes_flat()) | set(_get_notes_sharp()))
+    return union(_get_notes_flat(), _get_notes_sharp())
 
 
 def _major_arpeggios():
@@ -137,7 +138,7 @@ def test_play_audio():
     _play_audio(aud)
 
 
-def bleep(note='C') -> Callable:
+def bleep(_func=None, *, note='C') -> Callable:
     """Provides automatic sound release when a function has completed.
 
     .. note:: this requires the `simpleaudio` package to run.
@@ -151,18 +152,17 @@ def bleep(note='C') -> Callable:
 
     Examples
     --------
-    >>> from turbopanda import dev
-    >>> @dev.bleep()
+    >>> from turbopanda.dev import bleep
+    >>> @bleep
     >>> def f(x):
     ...     # compute some long function here
     ...     pass
     """
-    belongs(note, _get_notes_all())
+    belongs(note, list(_get_notes_all()))
 
     # define decorator
-    def decorator(func):
-        """Basic decorator."""
-
+    def _decorator_wrap(func):
+        @wraps(func)
         def _bleep_function(*args, **kwargs):
             # enter try-catch and if success, positive noise, or failure, negative noise.
             try:
@@ -175,10 +175,12 @@ def bleep(note='C') -> Callable:
                 # make negative noise
                 _play_arpeggio(note.upper(), key="minor")
                 print(e.args)
-
         return _bleep_function
 
-    return decorator
+    if _func is None:
+        return _decorator_wrap
+    else:
+        return _decorator_wrap(_func)
 
 
 """ A Bleep class to decorate a block of code with. """

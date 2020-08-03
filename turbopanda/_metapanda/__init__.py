@@ -38,6 +38,8 @@ class MetaPanda(object):
         The number of rows in `df_`
     p_ : int
         The number of columns in `df_`
+    shape: tuple (int, int)
+        The number of rows and columns in data
     memory_ : str
         String-formatted representation of memory consumption in megabytes
     options_ : tuple
@@ -46,8 +48,6 @@ class MetaPanda(object):
         Maps unique name (key) to cached selected groups of columns (value)
     mapper_ : dict
         Maps unique name (key) to key of cached selected column groups (value)
-    pipe_ : dict
-        Maps unique name (key) to cached Pipe objects
 
     Methods
     -------
@@ -81,14 +81,10 @@ class MetaPanda(object):
         Casts all variables in higher form to lower form if possible
     keep(selector)
         Keeps the selected columns from `df_` only
-    filter_rows(func, selector=None, args)
-        Filters j rows using boolean-index returned from `function`
     cache(name, selector)
         Adds a cache element to `selectors_`
     cache_k(selectors)
         Adds k cache elements to `selectors_`
-    cache_pipe(name, pipe)
-        Adds a pipe element to `pipe_`
     rename_axis(ops, selector=None, axis=1)
         Performs a chain of .str.replace operations on `df_.columns`
     add_prefix(pref, selector=None)
@@ -320,13 +316,11 @@ class MetaPanda(object):
         """
         OPTIONS are:
         - S: contains selectors
-        - P: contains pipe attributes
         - M: contains mapper(s)
         """
         opt_s = "S" if len(self.selectors_) > 0 else ''
-        opt_p = "P" if len(self.pipe_) > 1 else ''
         opt_m = "M" if len(self.mapper_) > 0 else ''
-        opts = "[" + opt_s + opt_p + opt_m + ']'
+        opts = "[" + opt_s + opt_m + ']'
         return "MetaPanda({}(n={}, p={}, mem={}, options={}))".format(
             self.name_,
             self.df_.shape[0],

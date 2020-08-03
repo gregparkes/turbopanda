@@ -61,7 +61,7 @@ def rename_axis(self,
     return self
 
 
-@deprecated("0.2.5", "0.3.0", instead="apply('add_prefix', ...)",
+@deprecated("0.2.5", "0.2.9", instead="apply_columns('add_prefix', ...)",
             reason="This pandas replacement is not necessary to warrant a function")
 def add_prefix(self, pref: str,
                selector: SelectorType = None) -> "MetaPanda":
@@ -89,7 +89,7 @@ def add_prefix(self, pref: str,
     return self
 
 
-@deprecated("0.2.5", "0.3.0", instead="apply('add_suffix', ...)",
+@deprecated("0.2.5", "0.2.9", instead="apply('pipe', turb.pipe.add_suffix, ...)",
             reason="This pandas replacement is not necessary to warrant a function")
 def add_suffix(self, suf: str,
                selector: SelectorType = None) -> "MetaPanda":

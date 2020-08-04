@@ -29,11 +29,15 @@ Changelog
 .................
 - |Feature| Added `impute_missing` to impute missing values to continous, integer columns.
 - |Feature| Added `add_prefix`, `add_suffix` to pipeable methods
+- Added `index_name` and `krange` functions
 
 `turbopanda.plot`
 .................
 - |Enhancement| `widebar` now has keyword argument allowance.
+- |Enhancement| `bar1d` has a scale parameter to do log transform plots
+- |Enhancement| `legend` now allows for ncol and title selection
 - |Fix| `cat_array_to_color` now handles numpy 'O' type object inputs correctly.
+- |API| `scatter` now has x_label and y_label arguments as optional
 - |API| Functions in _palette now accessible through the `turbopanda.plot` API
 
 `turbopanda.str`

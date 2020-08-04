@@ -65,8 +65,16 @@ def map_legend(raw_color_data,
         markers = tuple(it.islice(it.cycle(_marker_set()), 0, len(marker_names)))
 
     leg = legend_scatter(markers, cols, names)
+    # does legend data/palette data have a title?
+    if isinstance(raw_color_data, pd.Series):
+        title = raw_color_data.name
+    else:
+        title = None
+    # determine appropriate number of columns as divisible by 6
+    rough_ncols = len(names) // 6
+
     # add to an axes
     if is_legend_outside:
-        ax.legend(leg, names, bbox_to_anchor=(1, 1))
+        ax.legend(leg, names, bbox_to_anchor=(1, 1), title=title, ncol=rough_ncols)
     else:
-        ax.legend(leg, names, loc="best")
+        ax.legend(leg, names, loc="best", title=title, ncol=rough_ncols)

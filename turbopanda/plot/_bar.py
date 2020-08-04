@@ -78,6 +78,7 @@ def bar1d(X: _ArrayLike,
           vert: bool = True,
           sort: bool = True,
           ax: Optional[mpl.axes.Axes] = None,
+          scale: str = "linear",
           annotate: bool = False,
           legend: bool = False,
           width: float = 0.8,
@@ -106,6 +107,8 @@ def bar1d(X: _ArrayLike,
         Sorts the data or labels
     ax : matplotlib.ax.Axes, optional, default=None
         If None, creates one.
+    scale : str, default="linear"
+        Determines how to scale the numeric axis.
     annotate : bool, default=False
         Determines whether values should be annotated
     legend : bool, default=False
@@ -173,6 +176,11 @@ def bar1d(X: _ArrayLike,
     # plot the bar
     _plot_bar_orient(ax, _ticks, _labels, _values, c=pal, w=width, vert=vert, lrot=label_rotation,
                      annotate=annotate, lines=linesAt, vlabel=value_label)
+    # orient scale
+    if vert:
+        ax.set_yscale(scale)
+    else:
+        ax.set_xscale(scale)
 
     # map a legend to it
     if legend and not isinstance(c, str):

@@ -11,7 +11,7 @@ from joblib import Parallel, delayed, cpu_count
 from turbopanda._deprecator import deprecated
 
 
-__all__ = ("panderfy", 'transform_copy')
+__all__ = ("panderfy", 'transform_copy', 'series')
 
 
 def panderfy(func: Callable):
@@ -49,6 +49,12 @@ def transform_copy(old, new):
         return pd.DataFrame(new, columns=old.columns, index=old.index)
     else:
         return new
+    
+    
+def series(values, index, name=None):
+    """Creates a pandas.Series from some values, index and an optional name. Mappable."""
+    return pd.Series(values, index=index, name=name) if isinstance(name, str) \
+        else pd.Series(values, index=index)
 
 
 @deprecated("0.2.8", "0.3", instead=".utils.umapp")

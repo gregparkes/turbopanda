@@ -123,8 +123,8 @@ def scatter(X: _ArrayLike,
             legend: bool = True,
             colorbar: bool = True,
             with_jitter: bool = False,
-            x_label: str = "x-axis",
-            y_label: str = "y-axis",
+            x_label: Optional[str] = None,
+            y_label: Optional[str] = None,
             x_scale: str = "linear",
             y_scale: str = "linear",
             legend_outside: bool = False,
@@ -202,7 +202,7 @@ def scatter(X: _ArrayLike,
     instance_check(alpha, (type(None), float))
     instance_check(ax, (type(None), mpl.axes.Axes))
     instance_check((dense, with_jitter, fit_line, with_grid, legend, legend_outside), bool)
-    instance_check((x_label, y_label, title, x_scale, y_scale), str)
+    instance_check((x_label, y_label, title, x_scale, y_scale), (type(None), str))
     instance_check(fit_line_degree, int)
 
     arrays_equal_size(X, Y)
@@ -278,15 +278,15 @@ def scatter(X: _ArrayLike,
         _make_colorbar(c, ax, cmap)
 
     # apply x-label, y-label, title
-    if isinstance(X, Series):
-        ax.set_xlabel(X.name)
-    else:
+    if isinstance(x_label, str):
         ax.set_xlabel(x_label)
+    elif isinstance(X, Series):
+        ax.set_xlabel(X.name)
 
-    if isinstance(Y, Series):
-        ax.set_ylabel(Y.name)
-    else:
+    if isinstance(y_label, str):
         ax.set_ylabel(y_label)
+    elif isinstance(Y, Series):
+        ax.set_ylabel(Y.name)
 
     ax.set_xscale(x_scale)
     ax.set_yscale(y_scale)

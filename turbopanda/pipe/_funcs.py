@@ -5,7 +5,7 @@
 from __future__ import absolute_import, division, print_function
 import numpy as np
 import pandas as pd
-from typing import Callable, List, TypeVar, Optional, Union
+from typing import Callable, List, TypeVar, Optional, Union, Tuple
 from sklearn.preprocessing import scale, power_transform
 
 from turbopanda.str import pattern, string_replace
@@ -17,8 +17,8 @@ __all__ = ('all_float_to_int', 'downcast_all',
            'all_low_cardinality_to_categorical',
            'zscore', 'yeo_johnson', 'clean1', 'clean2',
            'filter_rows_by_column', 'absolute',
-           'rename_index', 'rename_columns', 'replace',
-           'impute_missing', 'add_suffix', 'add_prefix')
+           'rename_index', 'rename_columns', 'replace', 'index_name',
+           'impute_missing', 'add_suffix', 'add_prefix', 'krange')
 
 
 def _multi_assign(df: pd.DataFrame,
@@ -154,6 +154,16 @@ def add_prefix(df: pd.DataFrame, pref: str, subtype: Optional[TypeVar] = None) -
     return df.rename(columns=dict(zip(_cols, map(lambda s: pref + s, _cols))))
 
 
+def index_name(df: pd.DataFrame, new_name: str) -> pd.DataFrame:
+    """Renaming the 'index' column created after melt(), reset_index() is really annoying.
+
+    e.g df.rename(columns={"index": "new column name"})
+
+    WHY SO VERBOSE?????
+    """
+    return df.rename(columns={"index": new_name})
+
+
 """ Some global cleaning functions... """
 
 
@@ -221,3 +231,18 @@ def impute_missing(df: pd.DataFrame,
     transform_fn = lambda x: x.fillna(_sf(x)) if callable(_sf) else x.fillna(_sf)
     condition = lambda x: list(intersect(select_missing_values(x), select_numeric(x)))
     return _multi_assign(df_to_use, transform_fn, condition)
+
+
+""" Selection functions """
+
+
+def krange(df: pd.DataFrame, col: str, k: Union[int, Tuple[int, int]]) -> pd.DataFrame:
+    """ Fetches the subset of a dataframe with the k min and k largest values of col."""
+    if isinstance(k, tuple):
+        largest, smallest = k
+    else:
+        largest, smallest = k, k
+
+    return pd.concat([
+        df.nlargest(largest, col), df.nsmallest(smallest, col)
+    ])

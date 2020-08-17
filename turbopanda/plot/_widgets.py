@@ -71,7 +71,7 @@ def map_legend(raw_color_data,
     else:
         title = None
     # determine appropriate number of columns as divisible by 6
-    rough_ncols = len(names) // 6
+    rough_ncols = (len(names) // 6) + 1
 
     # add to an axes
     if is_legend_outside:

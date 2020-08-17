@@ -28,33 +28,30 @@ def _marker_set():
     return 'o', '^', 'x', 'd', '8', 'p', 'h', '+', 'v', '*'
 
 
-def _select_best_size(x: int, a: float = 1.4, b: float = 21.) -> float:
+def _select_best_size(n, a=1.4, b=21.):
     # given n points, determines which size of point to use based on math rule
-    """Rule is : b - a*log(x) where best options found are b=21, a=1.4"""
+    """Rule is : b - a*log(n) where best options found are b=21, a=1.4"""
     # cases=(1e1, 50, 1e2, 200, 500, 1e3, 3000, 1e4, 20000, 50000, 1e5)
-    return b - a * np.log(x)
+    return b - a * np.log(n)
 
 
-def _negsigmoid(x: float, a: float = .9) -> float:
+def _negsigmoid(x, a=.9):
     b = 1 - a
     return ((a - b) / (1. + np.exp(x))) + b
 
 
-def _glf(x: float, a: float = 1., k: float = .2, c: float = 1.,
-         b: float = 1.2, nu: float = 1., q: float = 1.) -> float:
+def _glf(x, a=1., k=.2, c=1., b=1.2, nu=1., q=1.):
     # generalized logistic function (see https://en.wikipedia.org/wiki/Generalised_logistic_function)
     return a + (k - a) / (c + q * np.exp(-b * x)) ** (1 / nu)
 
 
-def _select_best_alpha(n: int,
-                       glf_range: Tuple[float, float] = (-1., 9.),
-                       measured_range: Tuple[float, float] = (1e1, 1e5)):
+def _select_best_alpha(n, glfr=(-1., 9.), mr=(1e1, 1e5)):
     # given n points, determines the best alpha to use
     """Follows a generalized logistic function Y(t)=A + (K - A) / (C + Q * exp(-B * t))**(1/nu)"""
     # clip x to the measured range
-    _n = np.clip(n, *measured_range)
+    _n = np.clip(n, *mr)
     # linearly interpolates x value into (-2, 8) range for generalized sigmoid-like function
-    interp_n = np.interp(_n, measured_range, glf_range)
+    interp_n = np.interp(_n, mr, glfr)
     return _glf(interp_n)
 
 
@@ -90,23 +87,11 @@ def _draw_scatter(x, y, c, s, m, alpha, ax, **kwargs):
         marks = tuple(it.islice(it.cycle(_marker_set()), 0, len(names)))
         for v, mark in zip(names, marks):
             # handle cases where c, s are standalone and/or arrays
-            if isinstance(c, str) and isinstance(s, float):
-                scatters.append(
-                    ax.scatter(x[m == v], y[m == v],
-                               c=c, s=s, alpha=alpha, marker=mark, **kwargs))
-            elif (not isinstance(c, str)) and isinstance(s, float):
-                scatters.append(
-                    ax.scatter(x[m == v], y[m == v],
-                               c=c[m == v], s=s, alpha=alpha, marker=mark, **kwargs))
-            elif isinstance(c, str) and (not isinstance(s, float)):
-                scatters.append(
-                    ax.scatter(x[m == v], y[m == v],
-                               c=c, s=s[m == v],
-                               alpha=alpha, marker=mark, **kwargs))
-            elif (not isinstance(c, str)) and (not isinstance(s, float)):
-                scatters.append(ax.scatter(x[m == v], y[m == v],
-                                           c=c[m == v], s=s[m == v],
-                                           alpha=alpha, marker=mark, **kwargs))
+            _c = c[m == v] if not isinstance(c, str) else c
+            _s = s[m == v] if not isinstance(s, float) else s
+            scatters.append(
+                ax.scatter(x[m==v], y[m==v], c=_c, s=_s, alpha=alpha, marker=mark, **kwargs)
+            )
         return scatters
 
 

@@ -245,8 +245,8 @@ def merge(mdfs: Union[str, List[DataSetType]],
         # join together sources into a list
         nmdf._source = "__".join([mdf.source_ for mdf in mdfs])
         # override name if given
-        if name is not None:
-            nmdf.name_ = name
+    if isinstance(nmdf, MetaPanda) and name is not None:
+        nmdf.name_ = name
 
     # return
     return nmdf

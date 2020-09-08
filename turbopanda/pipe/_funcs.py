@@ -161,7 +161,12 @@ def index_name(df: pd.DataFrame, new_name: str) -> pd.DataFrame:
 
     WHY SO VERBOSE?????
     """
-    return df.rename(columns={"index": new_name})
+    if "index" in df:
+        return df.rename(columns={"index": new_name})
+    elif 0 in df:
+        return df.rename(columns={0: new_name})
+    else:
+        return df
 
 
 """ Some global cleaning functions... """

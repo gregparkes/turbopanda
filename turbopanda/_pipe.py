@@ -110,11 +110,6 @@ class Pipe(object):
         Creates a pipeline for you using relative shorthand. Each argument
         is a step in the `Pipe`.
 
-        Pipe can accept a bunch of arguments corresponding to pipe steps:
-        >>> import turbopanda as turb
-        >>> turb.Pipe(('apply_columns', 'lower'))
-        ('apply_columns', ('lower',), {})
-
         The leading argument for each step must be a string
         naming the function you wish to call, with following arguments as *arg.
         If a dictionary is passed, this becomes the **kwarg parameter.

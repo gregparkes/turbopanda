@@ -6,7 +6,6 @@ import warnings
 
 import pandas as pd
 
-from turbopanda._pipe import Pipe
 from turbopanda.utils import dictmap, t_numpy
 from ._types import SelectorType
 from turbopanda._deprecator import deprecated
@@ -121,9 +120,5 @@ def cache_pipe(self, name: str, pipeline) -> "MetaPanda":
     """
     if name in self.pipe_.keys() and self._with_warnings:
         warnings.warn("pipe '{}' already exists in .pipe, overriding".format(name), UserWarning)
-    if isinstance(pipeline, Pipe):
-        # attempt to create a pipe from raw.
-        self.pipe_[name] = pipeline.p
-    else:
-        self.pipe_[name] = pipeline
+    self.pipe_[name] = pipeline
     return self

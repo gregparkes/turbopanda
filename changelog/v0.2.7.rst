@@ -40,9 +40,11 @@ as well as just pandas.Series and Index.
 returns the string in question
 
 `turbopanda.merge`
+..................
 - |Enhancement| Includes proper verbose outputs to see which columns are merging together
 
 `turbopanda.utils`
+..................
 - |Feature| Added `umap` and variants to add with maps, caching and parallelism in loops
 - |Feature| Added `absdifference` to the .sets methods, to handle absolute set difference (we had
 issues with symmetric difference only in the past)

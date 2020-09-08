@@ -5,7 +5,7 @@
 import warnings
 from typing import List, Optional
 
-from turbopanda._pipe import Pipe, PipeMetaPandaType, is_pipe_structure
+from turbopanda._pipe import PipeMetaPandaType, is_pipe_structure
 from turbopanda._deprecator import deprecated_param
 
 __all__ = ('compute', 'compute_k' '_apply_pipe')

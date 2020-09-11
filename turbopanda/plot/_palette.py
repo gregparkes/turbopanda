@@ -217,7 +217,18 @@ def color_qualitative(n: Union[int, List, Tuple],
 
 
 def cat_array_to_color(array, cmap="Blues"):
-    """Given some list/array of values, find some way of mapping this to colour values"""
+    """Given some list/array of values, find some way of mapping this to colour values
+
+    Parameters
+    ----------
+    array : np.ndarray
+        An array of values.
+    cmap : str, dict, list-like
+        Either a string or an array referencing the 'unique' colours
+        If dict (k = name, v = hex color)
+    """
+    instance_check(cmap, (str, dict, list, tuple))
+
     # map to numpy
     _array = np.asarray(array).flatten() if not isinstance(array, (np.ndarray, pd.Series)) else array
     # if boolean, cast as a 'string'
@@ -226,12 +237,14 @@ def cat_array_to_color(array, cmap="Blues"):
     if (_array.dtype.kind == "U") | (_array.dtype.kind == "O"):
         # i.e we have a string array
         names = unique_ordered(_array)
-        cols = palette_cmap(len(names), cmap=cmap)
-        # create color array
-        c2 = np.zeros_like(_array, dtype='U8')
-        for n, color in zip(names, cols):
-            c2[_array == n] = color
-        return c2, "discrete"
+        if isinstance(cmap, str):
+            _d = dict(zip(names, palette_cmap(len(names), cmap=cmap)))
+        elif isinstance(cmap, dict):
+            _d = cmap
+        else:
+            _d = dict(zip(names, cmap))
+        dmap = np.vectorize(lambda x: _d[x])
+        return dmap(_array), "discrete"
     else:
         return _array, "continuous"
 

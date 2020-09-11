@@ -6,8 +6,11 @@ Version 0.2.8
 
 Changelog
 ---------
+We are now public on PyPI.
+
 - |Enhancement| `turb.read` now accepts `.pkl` files using joblib
-- |API| Added tqdm library as requirement
+- |API| Added `tqdm` library as requirement
+- |API| Removed `statsmodels` requirement
 
 `turbopanda.MetaPanda`
 ......................
@@ -52,5 +55,4 @@ Changelog
 - |Enhancement| `umap` and `umapc` now have in-built progress bar using tqdm library
 - |Efficiency| `intersect` and `union` now use `reduce` instead of for loops
 - |Fix| `arrays_dimension` now properly handles DataFrames
-- |Fix| `umap` now checks that all elements passed to f(x) are iterable
 - |API| `lparallel` is now deprecated, to be removed in 0.3

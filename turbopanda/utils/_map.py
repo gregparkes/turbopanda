@@ -27,10 +27,10 @@ def zipe(*args):
     >>> from turbopanda.utils import zipe
     >>> zipe([1, 3, 5], [2, 4, 6])
     >>> [(1, 2), (3, 4), (5, 6)]
-    Further to this, single argument lists are converts to the maximum length one by duplication:
+    Further to this, single argument lists are converts to the maximum length one by product:
     >>> zipe(1, [4, 6, 8])
     >>> [(1, 4), (1, 6), (1, 8)]
-    This extends to more than two arguments, to k:
+    This extends to more than two arguments, to k, using the longest argument:
     >>> zipe(3, 5, [1, 3], [2, 4, 6])
     >>> [(3, 5, 1, 2), (3, 5, 3, 4), (3, 5, None, 6)]
     """
@@ -47,7 +47,6 @@ def zipe(*args):
 
 def _map_comp(f, arg0, *args):
     # check to make sure every argument is an iterable, and make it one if not
-    # we use tqdm to progressbar umap
     if len(args) == 0:
         return [f(arg) for arg in arg0]
     else:
@@ -71,7 +70,9 @@ def umap(f: Callable, *args):
     """Performs Map list comprehension.
 
     Given function f(x) and arguments a, ..., k;
-        map f(a_i, ..., k_i), ..., f(a_z, ..., k_z) .
+        map f(a_i, ..., k_i), ..., f(a_z, ..., k_z).
+
+    Nearly equivalent to list(map(f, a, ..., k))
 
     Parameters
     ----------
@@ -205,7 +206,9 @@ def umapcc(fn: str, f: Callable, *args):
         cached file is read and no execution takes place.
 
     Further to this, 'by-chunks' means that each step is stored separately as a file
-    and concatenated together at the end.
+    and concatenated together at the end. The intermediate caches are removed
+    at the end of the process automatically. If the program crashes part-way through
+    this, re-running will resume from the last stored chunk.
 
     Parameters
     ----------

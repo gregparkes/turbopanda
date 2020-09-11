@@ -8,8 +8,6 @@ Turbo-charging the Pandas library in an integrative, meta-orientated style.
 ![commit activity](https://img.shields.io/github/commit-activity/m/gregparkes/turbopanda)
 ![License](https://img.shields.io/badge/LICENSE-GPLv3-blue)
 
-**Current version: 0.2.8**
-
 The aim of this library is extend the functionality of a number of Python packages,
 including the `pandas` library, to integrate cohesively together a unified approach to data
 modelling, including machine learning.
@@ -38,8 +36,7 @@ You will need to import the package as:
 import turbopanda as turb
 ```
 
-We recommend using `turb` as a shorthand to reduce the amount of writing
- out you have to do. All of the heavy lifting comes in the `turb.MetaPanda` 
+All of the heavy lifting comes in the `MetaPanda` 
  object which acts as a hood over the top of a `pandas.DataFrame`:
 
 ```python
@@ -49,14 +46,15 @@ g = turb.MetaPanda(df)
 ```
 
 Alternatively a `MetaPanda` object can be created using the in-built 
-`read` function found in `turbopanda`:
+`read` function found in `turbopanda` (which also includes glob-like calls for multiple
+files):
 
 ```python
 import turbopanda as turb
 g = turb.read("translation.csv")
 ```
 
-here you see the `__repr__` of the object presents the dataset in terms
+Here you see the representation of the object presents the dataset in terms
  of dimensions and memory usage which is incredibly useful to know at a
   cursory glance.
 
@@ -148,6 +146,10 @@ This takes every column of type `float` and applies a square-function
  to it. `lambda` in this case accepts a `pandas.Series` object
   representing a given column, and expects the return type to be
    the same size as before.
+   
+This is just a small sample of the functionality provided by turbopanda, including
+some machine learning, parallel and caching functionalities essential for
+modern statistical research coding practices.
 
 ## Installation
 
@@ -157,6 +159,17 @@ This takes every column of type `float` and applies a square-function
 
 We recommend you use [Jupyter][7] to work with `turbopanda` given the benefits of
 quick development of code, with fast visualisation.
+
+### Using pip
+
+Open your Anaconda Prompt or Terminal and type:
+
+```bash
+pip install turbopanda
+```
+
+If you are using an conda environment, make sure you're in the appropriate environment
+before calling this.
 
 ### From Cloning the GitHub Repository
 
@@ -188,7 +201,7 @@ We would like to acknowledge the following sources for inspiration for much of t
 - `pingouin` [python library][3]: For inspiration and code regarding correlation analysis
 - `pyitlib` [library](https://github.com/pafoster/pyitlib): For inspiration on mutual information and entropy
 - `matplotlib` [library][4]
-- `statsmodels` and `patsy` libraries for inspiration on how to formulate design matrices.
+- `patsy` libraries for inspiration on how to formulate design matrices.
 - [PythonCentral](https://www.pythoncentral.io/validate-python-function-parameters-and-return-types-with-decorators/) tutorials for code validation
 - Wikipedia for many topics
 

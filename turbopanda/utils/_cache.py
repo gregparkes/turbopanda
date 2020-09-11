@@ -3,10 +3,11 @@
 """Methods relating to the caching using joblib library."""
 
 import os
-from joblib import load, dump
+import joblib
+from typing import Callable
 
 
-def cache(fn, f, *args, **kwargs):
+def cache(fn: str, f: Callable, *args, **kwargs):
     """Provides automatic caching for anything using joblib.
 
     Parameters
@@ -27,9 +28,9 @@ def cache(fn, f, *args, **kwargs):
     """
     if os.path.isfile(fn):
         print("loading file '%s'" % fn)
-        return load(fn)
+        return joblib.load(fn)
     else:
         print("running chunk '%s'" % fn)
         res = f(*args, **kwargs)
-        dump(res, fn)
+        joblib.dump(res, fn)
         return res

@@ -5,7 +5,6 @@ Turbo-charging the Pandas library in an integrative, meta-orientated style.
 ![pypi](https://img.shields.io/pypi/v/turbopanda)
 ![last commit](https://img.shields.io/github/last-commit/gregparkes/turbopanda)
 ![repo size](https://img.shields.io/github/repo-size/gregparkes/turbopanda)
-![commit activity](https://img.shields.io/github/commit-activity/m/gregparkes/turbopanda)
 ![License](https://img.shields.io/badge/LICENSE-GPLv3-blue)
 
 The aim of this library is extend the functionality of a number of Python packages,
@@ -51,7 +50,7 @@ files):
 
 ```python
 import turbopanda as turb
-g = turb.read("translation.csv")
+g = turb.read("rna.csv")
 ```
 
 Here you see the representation of the object presents the dataset in terms

@@ -5,11 +5,10 @@
 import numpy as np
 import pandas as pd
 
-from turbopanda._dependency import is_statsmodels_installed
 from turbopanda.ml._clean import preprocess_continuous_X_y, select_xcols
 from turbopanda.utils import instance_check
 
-__all__ = ('vif', 'cook_distance', 'hat', 'leverage')
+__all__ = ('cook_distance', 'hat', 'leverage')
 
 
 def _hat_ols(X):
@@ -55,42 +54,6 @@ def hat(X, method="ols"):
         return _hat_ridge(X)
     else:
         raise ValueError("method '{}' not found in {'ols', 'ridge'}")
-
-
-def vif(df, x, y):
-    """Calculates the variance inflationary factor for every X feature in df.
-
-    Parameters
-    ----------
-    df : MetaPanda (n, p)
-        The dataset
-    x : selector
-        A selection of x columns
-    y : str
-        The y column
-
-    Returns
-    -------
-    vif : pd.Series (|x|,)
-        variance inflationary factors for each in x
-    """
-
-    if is_statsmodels_installed():
-        from statsmodels.stats.outliers_influence import variance_inflation_factor as _vif
-
-        instance_check(y, str)
-        _df = df.df_ if not isinstance(df, pd.DataFrame) else df
-        _xcols = select_xcols(df, x, y)
-        _x, _y = preprocess_continuous_X_y(_df, _xcols, y)
-
-        if _x.shape[1] > 1:
-            # for every column, extract vif
-            vifs = [_vif(_x, i) for i in range(_x.shape[1])]
-            return pd.Series(vifs, index=_xcol)
-        else:
-            return []
-    else:
-        return []
 
 
 def leverage(X):

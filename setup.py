@@ -30,7 +30,8 @@ setup(
         "pandas>=0.25.1",
         "matplotlib>=3.1.1",
         "scikit-learn>=0.21",
-        "joblib>=0.14.1"
+        "joblib>=0.14.1",
+        "tqdm>=4.48.2"
     ],
     classifiers=[
         "Natural Language :: English",

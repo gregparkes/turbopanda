@@ -11,7 +11,6 @@ import pandas as pd
 from scipy import stats
 
 from turbopanda._metapanda import SelectorType
-from turbopanda._dependency import is_statsmodels_installed
 
 from turbopanda.str import shorten
 from turbopanda.pipe import absolute
@@ -89,24 +88,6 @@ def _basic_correlation_matrix(plot, _cmatrix):
     for tick in plot.get_xmajorticklabels():
         tick.set_horizontalalignment('right')
 
-
-def _plot_vif(plot, _vif):
-    if isinstance(_vif, pd.Series):
-        plot.bar(range(1, len(_vif) + 1), _vif.values, width=.7, color='r')
-        plot.set_xlabel("Feature")
-        plot.set_ylabel("VIF")
-        plot.set_yscale("log")
-        if len(_vif) > 10:
-            tick_locs = np.random.choice(len(_vif), 10, replace=False)
-            plot.set_xticks(tick_locs)
-            plot.set_xticklabels(shorten(_vif.iloc[tick_locs].index.values, 15))
-        else:
-            plot.set_xticks(range(1, len(_vif) + 1))
-            plot.set_xticklabels(shorten(_vif.index.values, 15))
-
-        plot.tick_params('x', rotation=45)
-
-
 def _cooks(plot, cooks):
     plot.plot(cooks, 'ko', alpha=.6)
     plot.hlines(0, xmin=0, xmax=cooks.shape[0])
@@ -140,7 +121,7 @@ def overview(df: "MetaPanda",
     plot_names : list of str, optional
         Names of specific plot types to draw.
         Choose any combo of: {'resid_fitted', 'score', 'actual_predicted', 'coef',
-            'correlation', 'vif', 'qqplot', 'cooks'}
+            'correlation', 'qqplot', 'cooks'}
         If None: draws ALL.
     plot_size : int, optional
         Defines the size of each plot size.
@@ -150,12 +131,12 @@ def overview(df: "MetaPanda",
     a bunch of plots. No Return.
     """
     from turbopanda.corr._correlate import correlate, row_to_matrix
-    from turbopanda.stats import cook_distance, vif
+    from turbopanda.stats import cook_distance
 
     instance_check(plot_names, (type(None), tuple))
     instance_check(y, str)
     options_ = ('resid_fitted', 'score', 'actual_predicted', 'coef',
-                'correlation', 'vif', 'qqplot', 'cooks')
+                'correlation', 'qqplot', 'cooks')
 
     """ Prepare data here. """
     # set yp as series
@@ -166,7 +147,6 @@ def overview(df: "MetaPanda",
     _x, _y = preprocess_continuous_X_y(_df, _xcols, y)
 
     options_yes_ = (True, True, True, True, 1 < len(_xcols) < 50,
-                    (len(_xcols) > 1) and is_statsmodels_installed(),
                     True, True)
     # compress down options
     option_compressed = list(it.compress(options_, options_yes_))
@@ -199,10 +179,6 @@ def overview(df: "MetaPanda",
         corr = correlate(df, x)
         _cmatrix = row_to_matrix(corr)
         _basic_correlation_matrix(ax[next(I)], _cmatrix)
-    if "vif" in overlap_ and len(_xcols) > 1:
-        # plot 6. variance inflation factor for each explanatory variable
-        _v = vif(df, x, y)
-        _plot_vif(ax[next(I)], _v)
     if "qqplot" in overlap_:
         # plot 7. q-q plot
         stats.probplot(_df[y], dist="norm", plot=ax[next(I)])

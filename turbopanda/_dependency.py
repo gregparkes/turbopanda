@@ -88,19 +88,3 @@ def is_sklearn_installed(raise_error: bool = False):
         raise IOError("sklearn needs to be installed. Please use `pip "
                       "install scikit-learn`.")
     return is_installed
-
-
-def is_statsmodels_installed(raise_error: bool = False):
-    """Determines whether statsmodels api is installed."""
-    try:
-        import statsmodels.api  # noqa
-        is_installed = True
-    except IOError:  # pragma: no cover
-        is_installed = False
-    except ModuleNotFoundError:
-        is_installed = False
-    # Raise error (if needed) :
-    if raise_error and not is_installed:  # pragma: no cover
-        raise IOError("statsmodels needs to be installed. Please use `pip "
-                      "install statsmodels`.")
-    return is_installed

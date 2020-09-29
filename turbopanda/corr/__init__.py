@@ -3,5 +3,6 @@
 """Provides access to correlation-like functions and support."""
 
 # import statements here
+from ._bicorr import *
 from ._correlate import *
 from ._mutual_info import *

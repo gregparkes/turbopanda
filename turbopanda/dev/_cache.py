@@ -229,6 +229,8 @@ def cached_chunk(func: Callable,
         return mpf
 
 
+@deprecated("0.2.8", "0.3.1", instead="This function is being renamed to 'cachedec' to reflect its a decorator",
+            reason="We don't want confusion between this function and .utils.cache")
 def cache(_func=None, *,
           filename: str = "example1.pkl",
           compress=0,

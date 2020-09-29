@@ -107,14 +107,6 @@ def grid(df: Union[pd.DataFrame, "MetaPanda"],
     basic : Performs a rudimentary fit model with no parameter searching.
     sklearn.model_selection.GridSearchCV : Exhaustive search over specified parameter values for an estimator
 
-    Examples
-    --------
-    To fit a basic grid, say using Ridge Regression we would:
-    >>> import turbopanda as turb
-    >>> results = turb.ml.fit.grid(df, "y_column", "x_column", 'Ridge')
-    >>> # these results could then be plotted
-    >>> turb.ml.plot.parameter_tune(results)
-
     References
     ----------
     .. [1] Scikit-learn: Machine Learning in Python, Pedregosa et al., JMLR 12, pp. 2825-2830, 2011.

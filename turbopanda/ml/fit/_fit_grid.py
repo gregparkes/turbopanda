@@ -17,9 +17,10 @@ from sklearn.utils.estimator_checks import check_estimator
 
 from turbopanda._deprecator import unimplemented
 from turbopanda._metapanda import MetaPanda, SelectorType
-from turbopanda.dev import cached, cached_chunk
+from turbopanda.dev import cached_chunk
 from turbopanda.str import pattern
 from turbopanda.utils import dictchunk, instance_check, bounds_check, nonnegative
+from turbopanda.utils import cache as cache_f
 from turbopanda.ml._clean import select_xcols, preprocess_continuous_X_y
 from turbopanda.ml.plot import parameter_tune
 from turbopanda.ml._pgrid import make_parameter_grid, make_optimize_grid, \
@@ -170,7 +171,7 @@ def grid(df: Union[pd.DataFrame, "MetaPanda"],
             _cv_results = cached_chunk(_perform_fit, "_models", values, False, cache, verbose,
                                        _df=_df, _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
         else:
-            _cv_results = cached(_perform_fit, cache, verbose,
+            _cv_results = cache_f(cache, _perform_fit,
                                  _df=_df, _x=x, _y=y, _k=k, _repeats=repeats,
                                  _models=models)
     else:

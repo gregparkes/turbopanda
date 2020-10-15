@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr, spearmanr, kendalltau, pointbiserialr
 
+from typing import List, Tuple, Union
+
 from ._corr_metrics import percbend, shepherd, skipped
 from ._stats_extra import compute_esci, power_corr
 
@@ -230,7 +232,7 @@ def bicorr(x: pd.Series,
 def partial_bicorr(data: pd.DataFrame,
                    x: str,
                    y: str,
-                   covar: Union[str, List[str]],
+                   covar: Union[str, List[str], Tuple[str, ...], pd.Index],
                    tail: str = 'two-sided',
                    method: str = 'spearman') -> pd.DataFrame:
     """Partial and semi-partial correlation.

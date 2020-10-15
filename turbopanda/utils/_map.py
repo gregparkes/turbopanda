@@ -10,7 +10,6 @@ from joblib import load, dump, delayed, Parallel, cpu_count
 
 from ._cache import cache
 from ._files import insert_suffix as add_suf
-from ._error_raise import is_iterable
 
 __all__ = ('zipe', 'umap', 'umapc', 'umapp', 'umapcc', 'umappc', 'umappcc')
 

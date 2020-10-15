@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Raising errors, by doing basic checks."""
-from typing import Any, List, Tuple, TypeVar, Union
+from typing import Any, List, Tuple, Union, Type
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ from ._sets import join
 
 __all__ = ("belongs", "instance_check", "disallow_instance_pair",
            "check_list_type", "nonnegative", "bounds_check", "is_twotuple",
-           "arrays_equal_size", "arrays_dimension", "is_iterable")
+           "arrays_equal_size", "arrays_dimension")
 
 
 def belongs(elem: Any, home: Union[List[Any], Tuple[Any, ...]], raised=True):
@@ -27,7 +27,7 @@ def belongs(elem: Any, home: Union[List[Any], Tuple[Any, ...]], raised=True):
     return True
 
 
-def _instance_check_element(a: object, i: TypeVar, raised: bool = True):
+def _instance_check_element(a: object, i: Type, raised: bool = True):
     if isinstance(i, str):
         if not hasattr(a, i):
             if raised:
@@ -48,7 +48,9 @@ def _instance_check_element(a: object, i: TypeVar, raised: bool = True):
     return True
 
 
-def instance_check(a: Union[object, Tuple], i: TypeVar, raised: bool = True):
+def instance_check(a: Union[object, Tuple],
+                   i: Union[str, Type, List[Type], Tuple[Type, ...]],
+                   raised: bool = True):
     """Check that a is an instance of type i.
 
     Parameters
@@ -67,7 +69,7 @@ def instance_check(a: Union[object, Tuple], i: TypeVar, raised: bool = True):
 
 
 def nonnegative(a: Union[float, int, Tuple],
-                i: Union[TypeVar, Tuple[TypeVar, TypeVar]] = (float, int),
+                i: Union[Type, Tuple[Type, Type]] = (float, int),
                 raised=True):
     """Check whether value a is nonnegative number."""
     instance_check(a, i, raised=raised)
@@ -148,14 +150,14 @@ def arrays_dimension(X: Union[np.ndarray, pd.Series, pd.DataFrame],
         return True
 
 
-def disallow_instance_pair(a: object, i: TypeVar, b: object, j: TypeVar):
+def disallow_instance_pair(a: object, i: Type, b: object, j: TypeVar):
     """Defines a pair of objects whereby their types are not allowed as a pair for the function."""
     if instance_check(a, i, raised=False) and instance_check(b, j, raised=False):
         raise TypeError("instance of type '{}' with type '{}' pair disallowed".format(i, j))
     return True
 
 
-def check_list_type(elems: Tuple, t: TypeVar, raised=True):
+def check_list_type(elems: Tuple, t: Type, raised=True):
     """Checks the type of every element in the list."""
     for i, elem in enumerate(elems):
         if not isinstance(elem, t):
@@ -174,12 +176,3 @@ def is_twotuple(t: Tuple[Any, Any]):
                 raise ValueError("elem i: {} is not of length 2".format(i))
     else:
         raise TypeError("L must be of type [list, tuple]")
-
-
-def is_iterable(e):
-    """Determines whether object `e` is an iterable object"""
-    try:
-        iterator = iter(e)
-        return True
-    except TypeError:
-        return False

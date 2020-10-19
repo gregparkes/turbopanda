@@ -150,7 +150,7 @@ def arrays_dimension(X: Union[np.ndarray, pd.Series, pd.DataFrame],
         return True
 
 
-def disallow_instance_pair(a: object, i: Type, b: object, j: TypeVar):
+def disallow_instance_pair(a: object, i: Type, b: object, j: Type):
     """Defines a pair of objects whereby their types are not allowed as a pair for the function."""
     if instance_check(a, i, raised=False) and instance_check(b, j, raised=False):
         raise TypeError("instance of type '{}' with type '{}' pair disallowed".format(i, j))

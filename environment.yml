@@ -3,6 +3,7 @@ channels:
   - defaults
   - conda-forge
 dependencies:
+  # required
   - python>=3.8
   - pip>=19.0.3
   - numpy>=1.11.0
@@ -13,3 +14,9 @@ dependencies:
   - scikit-learn>=0.22
   - numba>=0.48.0
   - tqdm>=4.48.2
+
+  # code checks
+  - black=20.8b1
+  - flake8
+  - pre-commit
+  - pycodestyle

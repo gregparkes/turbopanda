@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 """Code for different defaults to use in conjunction with Matplotlib."""
 
-import matplotlib as mpl
-from typing import List, Tuple, Optional, Union
+from typing import List, Tuple, Union
 from numpy import ndarray
 from pandas import Series
 

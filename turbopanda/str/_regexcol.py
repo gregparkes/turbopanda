@@ -4,16 +4,17 @@
 We collapse down all of the different routes into a catch-all `pattern` function which will discern the pattern
 from a bunch of different options.
 """
+from typing import Union
+
 import re
 import pandas as pd
-from pandas import Index
-from typing import Tuple, Union, Iterable, List
+from pandas import Index, DataFrame, Series
+from numpy import ndarray
 
-from turbopanda.utils import set_like, union, intersect, absdifference, \
-    instance_check
+from turbopanda.utils import set_like, union, intersect, absdifference, instance_check
 
 
-def _strpattern(pat, K):
+def _strpattern(pat: str, K: Union[list, tuple, ndarray, Index, Series]) -> Index:
     """Determines if pattern `pat` exists in list of str `K`."""
     # compile pattern - improves performance
     _p = re.compile(pat)
@@ -21,17 +22,16 @@ def _strpattern(pat, K):
     return set_like([s for s in K if re.search(_p, s)])
 
 
-def _patcolumnmatch(pat, df):
+def _patcolumnmatch(pat: str, df: DataFrame) -> Index:
     """Use regex to match to column names in a pandas.DataFrame."""
     c_fetch = _strpattern(pat, df.columns)
     if len(c_fetch) > 0:
-        return Index(c_fetch, dtype=object, name=df.columns.name,
-                     tupleize_cols=False)
+        return Index(c_fetch, dtype=object, name=df.columns.name, tupleize_cols=False)
     else:
         return Index([], name=df.columns.name)
 
 
-def _choose_regex(pat, K):
+def _choose_regex(pat: str, K):
     if isinstance(K, pd.DataFrame):
         return _patcolumnmatch(pat, K)
     elif isinstance(K, pd.Series):
@@ -40,7 +40,7 @@ def _choose_regex(pat, K):
         return _strpattern(pat, K)
 
 
-def _foreach_flexterm(term, K):
+def _foreach_flexterm(term: str, K):
     if term.startswith("~"):
         s = _choose_regex(term[1:], K)
         res = absdifference(K, s)
@@ -49,10 +49,11 @@ def _foreach_flexterm(term, K):
     return res
 
 
-def pattern(pat: str,
-            K,
-            extended_regex: bool = True,
-            column_types: bool = False):
+def pattern(
+    pat: str,
+    K: Union[list, tuple, Series, Index, DataFrame],
+    extended_regex: bool = True,
+):
     """Determines if pattern `pat` exists in K.
 
     Parameters
@@ -65,9 +66,6 @@ def pattern(pat: str,
             and uses the .columns attribute
     extended_regex : bool, default=True
         If True, allows for "|, &, ~" characters to form long regex patterns.
-    column_types : bool, default=False
-        If True, when K is a pandas.DataFrame, it allows for "~object", "int"
-            and object type names defined as string
 
     Returns
     -------

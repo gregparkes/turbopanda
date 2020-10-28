@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Methods relating to the map function, with parallelism and caching enabled as needed."""
+"""Methods relating to the map function,
+    with parallelism and caching enabled as needed."""
 
 import os
 from tqdm import tqdm
@@ -11,14 +12,16 @@ from joblib import load, dump, delayed, Parallel, cpu_count
 from ._cache import cache
 from ._files import insert_suffix as add_suf
 
-__all__ = ('zipe', 'umap', 'umapc', 'umapp', 'umapcc', 'umappc', 'umappcc')
+__all__ = ("zipe", "umap", "umapc", "umapp", "umapcc", "umappc", "umappcc")
 
 
 def zipe(*args):
     """An extension to the zip() function.
 
-    This function converts single-element arguments into the longest-length argument. Note that
-    we use `it.zip_longest` and hence differing list lengths will introduce None elements.
+    This function converts single-element arguments
+        into the longest-length argument. Note that
+        we use `it.zip_longest` and hence differing list
+        lengths will introduce None elements.
 
     Examples
     --------
@@ -91,7 +94,8 @@ def umap(f: Callable, *args):
     >>> import turbopanda as turb
     >>> turb.utils.umap(lambda x: x**2, [2, 4, 6])
     >>> [4, 16, 36]
-    Like the normal mapping, multiple lists map to multiple parameters passed to the function:
+    Like the normal mapping, multiple lists map to
+    multiple parameters passed to the function:
     >>> turb.utils.umap(lambda x, y: x + y, [2, 4, 6], [1, 2, 4])
     >>> [3, 6, 10]
     """
@@ -102,8 +106,10 @@ def umap(f: Callable, *args):
 def umapc(fn: str, f: Callable, *args):
     """Performs Map comprehension with final state Cache.
 
-    That is to say that the first time this runs, function f(*args) is called, storing a cache file.
-        The second time and onwards, the resulting cached file is read and no execution takes place.
+    That is to say that the first time this runs,
+        function f(*args) is called, storing a cache file.
+        The second time and onwards, the resulting cached
+        file is read and no execution takes place.
 
     Parameters
     ----------
@@ -137,7 +143,8 @@ def umapc(fn: str, f: Callable, *args):
 def umapp(f: Callable, *args):
     """Performs Map comprehension with Parallelism.
 
-    This assumes each iteration is independent from each other in the list comprehension.
+    This assumes each iteration is independent
+        from each other in the list comprehension.
 
     Parameters
     ----------
@@ -165,7 +172,8 @@ def umappc(fn: str, f: Callable, *args):
         storing a cache file. The second time and onwards, the resulting
         cached file is read and no execution takes place.
 
-    This assumes each iteration is independent from each other in the list comprehension.
+    This assumes each iteration is independent
+        from each other in the list comprehension.
 
     Parameters
     ----------
@@ -233,7 +241,10 @@ def umapcc(fn: str, f: Callable, *args):
     else:
         n = len(args[0])
         # run and do chunked caching, using item cache
-        um = [cache(add_suf(fn, str(i)), f, *arg) for i, arg in enumerate(it.zip_longest(*args))]
+        um = [
+            cache(add_suf(fn, str(i)), f, *arg)
+            for i, arg in enumerate(it.zip_longest(*args))
+        ]
         # save final version
         print("writing file '%s'" % fn)
         dump(um, fn)
@@ -285,8 +296,10 @@ def umappcc(fn: str, f: Callable, *args):
         n = len(args[0])
         ncpu = n if n < cpu_count() else (cpu_count() - 1)
         # do list comprehension using parallelism
-        um = Parallel(ncpu)(delayed(cache)(add_suf(fn, str(i)), f, *arg)
-                            for i, arg in enumerate(it.zip_longest(*args)))
+        um = Parallel(ncpu)(
+            delayed(cache)(add_suf(fn, str(i)), f, *arg)
+            for i, arg in enumerate(it.zip_longest(*args))
+        )
         # save final version
         print("writing file '%s'" % fn)
         dump(um, fn)

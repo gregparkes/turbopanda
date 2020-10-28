@@ -10,15 +10,21 @@ from ._corr_metrics import percbend, shepherd, skipped
 from ._stats_extra import compute_esci, power_corr
 
 from turbopanda.stats._lmfast import lm
-from turbopanda.utils import belongs, instance_check, \
-    is_column_boolean, is_column_float, remove_na, union, is_dataframe_float, \
-    bounds_check
+from turbopanda.utils import (
+    belongs,
+    instance_check,
+    is_column_boolean,
+    is_column_float,
+    remove_na,
+    union,
+    is_dataframe_float,
+)
 
+__all__ = ("bicorr", "partial_bicorr")
 
-__all__ = ('bicorr', 'partial_bicorr')
-
-
-"""Methods to handle continuous-continuous, continuous-boolean and boolean-boolean cases of correlation. """
+"""Methods to handle continuous-continuous,
+    continuous-boolean and
+    boolean-boolean cases of correlation. """
 
 
 def _both_continuous(x, y):
@@ -40,7 +46,7 @@ def _boolbool(x, y):
 """ Main inner method for bi-correlation """
 
 
-def _bicorr_inner(x, y, tail='two-sided', method='spearman', verbose=0):
+def _bicorr_inner(x, y, tail="two-sided", method="spearman", verbose=0):
     """Internal method for bicorrelation here"""
     # convert to numpy
     x_arr = np.asarray(x)
@@ -54,20 +60,20 @@ def _bicorr_inner(x, y, tail='two-sided', method='spearman', verbose=0):
     # Compute correlation coefficient
     if _both_continuous(x, y):
         # use method
-        if method == 'pearson':
+        if method == "pearson":
             r, pval = pearsonr(x_arr, y_arr)
-        elif method == 'spearman':
+        elif method == "spearman":
             r, pval = spearmanr(x_arr, y_arr)
-        elif method == 'kendall':
+        elif method == "kendall":
             r, pval = kendalltau(x_arr, y_arr)
-        elif method == 'percbend':
+        elif method == "percbend":
             r, pval = percbend(x_arr, y_arr)
-        elif method == 'shepherd':
+        elif method == "shepherd":
             r, pval, outliers = shepherd(x_arr, y_arr)
-        elif method == 'skipped':
-            r, pval, outliers = skipped(x_arr, y_arr, method='spearman')
+        elif method == "skipped":
+            r, pval, outliers = skipped(x_arr, y_arr, method="spearman")
         else:
-            raise ValueError('Method not recognized.')
+            raise ValueError("Method not recognized.")
     elif _continuous_bool(x, y):
         # sort them into order, it matters
         r, pval = pointbiserialr(x_arr, y_arr.astype(np.uint8))
@@ -84,9 +90,11 @@ def _bicorr_inner(x, y, tail='two-sided', method='spearman', verbose=0):
         method = "spearman"
     else:
         raise TypeError(
-            "columns '{}':{} to '{}':{} combination not accepted for `bicorr`.".format(x.name, x.dtype, y.name,
-                                                                                       y.dtype))
-    assert not np.isnan(r), 'Correlation returned NaN. Check your data.'
+            "columns '{}':{} to '{}':{} combination not accepted for `bicorr`.".format(
+                x.name, x.dtype, y.name, y.dtype
+            )
+        )
+    assert not np.isnan(r), "Correlation returned NaN. Check your data."
 
     if verbose > 0:
         print("correlating {}:{}".format(x.name, y.name))
@@ -97,28 +105,35 @@ def _bicorr_inner(x, y, tail='two-sided', method='spearman', verbose=0):
 
     # Compute the parametric 95% confidence interval and power
     if r2 < 1:
-        ci = compute_esci(stat=r, nx=nx, ny=nx, eftype='r')
+        ci = compute_esci(stat=r, nx=nx, ny=nx, eftype="r")
         pr = round(power_corr(r=r, n=nx, power=None, alpha=0.05, tail=tail), 3)
     else:
-        ci = [1., 1.]
+        ci = [1.0, 1.0]
         pr = np.inf
 
     # Create dictionary
-    sd_d = {'x': x.name, 'y': y.name, 'n': nx,
-            'r': round(r, 3),
-            'r2': round(r2, 3),
-            'adj_r2': round(adj_r2, 3),
-            'CI95_lower': ci[0], 'CI95_upper': ci[1],
-            'p_val': pval if tail == 'two-sided' else .5 * pval,
-            'power': pr,
-            'outliers': sum(outliers) if method in ('shepherd', 'skipped') else np.nan}
+    sd_d = {
+        "x": x.name,
+        "y": y.name,
+        "n": nx,
+        "r": round(r, 3),
+        "r2": round(r2, 3),
+        "adj_r2": round(adj_r2, 3),
+        "CI95_lower": ci[0],
+        "CI95_upper": ci[1],
+        "p_val": pval if tail == "two-sided" else 0.5 * pval,
+        "power": pr,
+        "outliers": sum(outliers) if method in ("shepherd", "skipped") else np.nan,
+    }
 
     # Convert to DataFrame
     _stm = pd.DataFrame.from_records(sd_d, index=[method])
     return _stm
 
 
-def _partial_bicorr_inner(data, x, y, covar, tail='two-sided', method='spearman', verbose=0):
+def _partial_bicorr_inner(
+    data, x, y, covar, tail="two-sided", method="spearman", verbose=0
+):
     """Internal method for partial bi correlation here."""
     # all columns select
     if verbose > 0:
@@ -142,10 +157,9 @@ def _partial_bicorr_inner(data, x, y, covar, tail='two-sided', method='spearman'
 """ Public method """
 
 
-def bicorr(x: pd.Series,
-           y: pd.Series,
-           tail: str = 'two-sided',
-           method: str = 'spearman') -> pd.DataFrame:
+def bicorr(
+    x: pd.Series, y: pd.Series, tail: str = "two-sided", method: str = "spearman"
+) -> pd.DataFrame:
     """(Robust) correlation between two variables.
 
     Adapted from the `pingouin` library, made by Raphael Vallat.
@@ -221,20 +235,33 @@ def bicorr(x: pd.Series,
     # check type
     instance_check((x, y), pd.Series)
     belongs(tail, ("one-sided", "two-sided"))
-    belongs(method, ('pearson', 'spearman', 'kendall', 'biserial', 'percbend', 'shepherd', 'skipped'))
+    belongs(
+        method,
+        (
+            "pearson",
+            "spearman",
+            "kendall",
+            "biserial",
+            "percbend",
+            "shepherd",
+            "skipped",
+        ),
+    )
     # Check size
     if x.shape[0] != y.shape[0]:
-        raise ValueError('x and y must have the same length.')
+        raise ValueError("x and y must have the same length.")
 
     return _bicorr_inner(x, y, tail, method)
 
 
-def partial_bicorr(data: pd.DataFrame,
-                   x: str,
-                   y: str,
-                   covar: Union[str, List[str], Tuple[str, ...], pd.Index],
-                   tail: str = 'two-sided',
-                   method: str = 'spearman') -> pd.DataFrame:
+def partial_bicorr(
+    data: pd.DataFrame,
+    x: str,
+    y: str,
+    covar: Union[str, List[str], Tuple[str, ...], pd.Index],
+    tail: str = "two-sided",
+    method: str = "spearman",
+) -> pd.DataFrame:
     """Partial and semi-partial correlation.
 
     Adapted from the `pingouin` library, made by Raphael Vallat.
@@ -248,8 +275,10 @@ def partial_bicorr(data: pd.DataFrame,
     x, y : str, list of str
         x and y. Must be names of columns in ``data``.
     covar : list of str
-        Covariate(s). Column names of the covariates. covar must be made of continuous columns.
-        If x, y are not continuous, will perform logistic regression to generate residuals.
+        Covariate(s). Column names of the covariates.
+            covar must be made of continuous columns.
+            If x, y are not continuous, will perform logistic regression
+            to generate residuals.
     tail : string
         Specify whether to return the 'one-sided' or 'two-sided' p-value.
     method : string
@@ -262,6 +291,7 @@ def partial_bicorr(data: pd.DataFrame,
         'percbend' : percentage bend correlation (robust)
         'shepherd' : Shepherd's pi correlation (robust Spearman)
         'skipped' : skipped correlation (robust Spearman, requires sklearn)
+
     Returns
     -------
     stats : pandas DataFrame
@@ -301,11 +331,26 @@ def partial_bicorr(data: pd.DataFrame,
     instance_check(data, pd.DataFrame)
     instance_check((x, y), str)
     instance_check(covar, (str, list, tuple, pd.Index))
-    belongs(tail, ('one-sided', 'two-sided'))
-    belongs(method, ('pearson', 'spearman', 'kendall', 'biserial', 'percbend', 'shepherd', 'skipped'))
+    belongs(tail, ("one-sided", "two-sided"))
+    belongs(
+        method,
+        (
+            "pearson",
+            "spearman",
+            "kendall",
+            "biserial",
+            "percbend",
+            "shepherd",
+            "skipped",
+        ),
+    )
 
-    # perform a check to make sure every column in `covar` is continuous.
+    # perform a check to make sure every column in `covar`
+    # is continuous.
     if not is_dataframe_float(data[covar]):
-        raise TypeError("`covar` variables in `partial_bicorr` all must be of type `float`/continuous.")
+        raise TypeError(
+            "`covar` variables in `partial_bicorr` "
+            "all must be of type `float`/continuous."
+        )
 
     return _partial_bicorr_inner(data, x, y, covar, tail, method)

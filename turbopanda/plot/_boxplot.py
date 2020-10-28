@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Code for plotting pretty boxplots in primitive matplotlib using long or short form."""
 
-from typing import Union, List, Tuple, Optional, Callable
+from typing import Union, List, Optional, Callable
 
 import matplotlib as mpl
 import numpy as np
@@ -10,15 +10,19 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.stats import mannwhitneyu
 
-from turbopanda.utils import instance_check, as_flattened_numpy, intersect, \
-    difference, arrays_equal_size, listify, bounds_check
+from turbopanda.utils import (
+    instance_check,
+    as_flattened_numpy,
+    difference,
+    listify,
+    bounds_check,
+)
 from turbopanda.str import shorten
 
 from ._default import _ListLike, _ArrayLike
 from ._palette import color_qualitative, contrast, noncontrast, autoshade
 
-
-__all__ = ('box1d', 'bibox1d', 'widebox')
+__all__ = ("box1d", "bibox1d", "widebox")
 
 
 def _get_stars(p):
@@ -40,10 +44,19 @@ def _get_flier_style(style_name="white_circle"):
     Choose from {'red_square', 'green_diamond'}
     """
     # a map for names of shapes to marker abbrievations
-    markermap = {'square': 's', 'circle': 'o', 'diamond': 'D',
-                 'point': '.', 'triangle': 'v', 'octagon': '8',
-                 'pentagon': 'p', 'plus': '+', 'hexagon': 'h',
-                 'cross': 'P', 'star': '*'}
+    markermap = {
+        "square": "s",
+        "circle": "o",
+        "diamond": "D",
+        "point": ".",
+        "triangle": "v",
+        "octagon": "8",
+        "pentagon": "p",
+        "plus": "+",
+        "hexagon": "h",
+        "cross": "P",
+        "star": "*",
+    }
     # split the string on _
     col, marker = style_name.split("_")
     return dict(markerfacecolor=col, marker=markermap[marker])
@@ -53,12 +66,14 @@ def _convert_x_scale(X, scale):
     # X is numpy.ndarray, scale is str or function
     if isinstance(scale, str):
         if not hasattr(np, scale):
-            raise ValueError("scaling operation {} must be in {}".format(scale, scale_str_to_func))
+            raise ValueError("scaling operation {} must be in numpy".format(scale))
         return getattr(np, scale)(X)
     elif callable(scale):
         return scale(X)
     else:
-        raise TypeError("scale type {} not allowed, must be callable or str".format(type(scale)))
+        raise TypeError(
+            "scale type {} not allowed, must be callable or str".format(type(scale))
+        )
 
 
 def _label_axes(ax, label, vert, rot, max_len):
@@ -71,23 +86,23 @@ def _label_axes(ax, label, vert, rot, max_len):
     else:
         ax.set_yticklabels(__label)
     # do rotation if needed
-    if not np.isclose(rot, 0.):
+    if not np.isclose(rot, 0.0):
         if vert:
             ax.tick_params("x", rotation=rot)
             if rot < 0:
                 for tick in ax.get_xmajorticklabels():
-                    tick.set_horizontalalignment('left')
+                    tick.set_horizontalalignment("left")
             else:
                 for tick in ax.get_xmajorticklabels():
-                    tick.set_horizontalalignment('right')
+                    tick.set_horizontalalignment("right")
         else:
             ax.tick_params("y", rotation=rot)
             if rot < 0:
                 for tick in ax.get_ymajorticklabels():
-                    tick.set_horizontalalignment('left')
+                    tick.set_horizontalalignment("left")
             else:
                 for tick in ax.get_ymajorticklabels():
-                    tick.set_horizontalalignment('right')
+                    tick.set_horizontalalignment("right")
 
 
 def _color_arrangement(ax, patch, color):
@@ -96,16 +111,16 @@ def _color_arrangement(ax, patch, color):
     # define median colour
     sim_col = noncontrast(facecol)
     contr_col = contrast(facecol)
-    for b in patch['boxes']:
+    for b in patch["boxes"]:
         b.set_color(contr_col)
-    for m in patch['medians']:
+    for m in patch["medians"]:
         m.set_color(contr_col)
     # set whisker/cap colour to be the contrast colour
-    for w in patch['whiskers']:
+    for w in patch["whiskers"]:
         w.set_color(contr_col)
-    for c in patch['caps']:
+    for c in patch["caps"]:
         c.set_color(contr_col)
-    for b in patch['boxes']:
+    for b in patch["boxes"]:
         b.set(facecolor=facecol)
     # set background of the axes to be the same-colour
     ax.set_facecolor(sim_col)
@@ -115,16 +130,16 @@ def _color_arrangement(ax, patch, color):
 def _kcolor_arrangement(patch, color, k=2):
     # assign face color
     facecols = color_qualitative(k, False) if color is None else color
-    for b, c in zip(patch['boxes'], facecols):
+    for b, c in zip(patch["boxes"], facecols):
         b.set(facecolor=c)
-    for m in patch['medians']:
+    for m in patch["medians"]:
         m.set_color("k")
     return facecols
 
 
-def _define_boxplot_arguments(ax, patch, vert, measured,
-                              grid, spines, capsize,
-                              axis_scale):
+def _define_boxplot_arguments(
+    ax, patch, vert, measured, grid, spines, capsize, axis_scale
+):
     if measured is None:
         measured = "Observed values"
         if isinstance(axis_scale, str):
@@ -141,15 +156,15 @@ def _define_boxplot_arguments(ax, patch, vert, measured,
         else:
             ax.xaxis.grid(True)
     # spine visibility
-    all_spines = ('top', 'left', 'right', 'bottom')
+    all_spines = ("top", "left", "right", "bottom")
     removed_spines = tuple(difference(all_spines, spines))
     for s in removed_spines:
         ax.spines[s].set_visible(False)
     # change capsize
-    for cap in patch['caps']:
+    for cap in patch["caps"]:
         cap.set_linewidth(capsize)
     # whisker length
-    for w in patch['whiskers']:
+    for w in patch["whiskers"]:
         w.set_linewidth(1.2)
 
 
@@ -157,40 +172,49 @@ def _overlay_stripplot(X, ax, n, width, color, vert, outliers=True, strip_jitter
     """Overlays a stripplot on top of a boxplot"""
     x_strip_color = autoshade(color, 0.15)
     x_strip_edge_color = contrast(x_strip_color)
-    x_range = np.clip(np.full(X.shape[0], n) + np.random.normal(0, strip_jitter, size=X.shape[0]),
-                      n - width, n + width)
+    x_range = np.clip(
+        np.full(X.shape[0], n) + np.random.normal(0, strip_jitter, size=X.shape[0]),
+        n - width,
+        n + width,
+    )
     if not outliers:
         # calculate outliers
         _m = np.mean(X)
-        _std3 = np.std(X) * 3.
+        _std3 = np.std(X) * 3.0
         nonoutliers = (_m - _std3 < X) & (_m + _std3 > X)
         # select subset
         X = X[nonoutliers]
         x_range = x_range[nonoutliers]
 
     if vert:
-        ax.scatter(x_range, X, alpha=.3, color=x_strip_color, edgecolors=x_strip_edge_color)
+        ax.scatter(
+            x_range, X, alpha=0.3, color=x_strip_color, edgecolors=x_strip_edge_color
+        )
     else:
-        ax.scatter(X, x_range, alpha=.3, color=x_strip_color, edgecolors=x_strip_edge_color)
+        ax.scatter(
+            X, x_range, alpha=0.3, color=x_strip_color, edgecolors=x_strip_edge_color
+        )
 
 
-def box1d(X: _ArrayLike,
-          color: Optional[str] = None,
-          label: Optional[str] = None,
-          ax: Optional[mpl.axes.Axes] = None,
-          with_strip: bool = False,
-          vertical: bool = True,
-          notch: bool = False,
-          capsize: float = 1.0,
-          outliers: bool = True,
-          axis_scale: Optional[Union[str, Callable]] = None,
-          grid: bool = True,
-          width: float = 0.7,
-          label_rotation: float = 0.,
-          label_max_length: int = 25,
-          spines: Optional[_ListLike] = None,
-          theme: str = "white_circle",
-          **plot_kwargs):
+def box1d(
+    X: _ArrayLike,
+    color: Optional[str] = None,
+    label: Optional[str] = None,
+    ax: Optional[mpl.axes.Axes] = None,
+    with_strip: bool = False,
+    vertical: bool = True,
+    notch: bool = False,
+    capsize: float = 1.0,
+    outliers: bool = True,
+    axis_scale: Optional[Union[str, Callable]] = None,
+    grid: bool = True,
+    width: float = 0.7,
+    label_rotation: float = 0.0,
+    label_max_length: int = 25,
+    spines: Optional[_ListLike] = None,
+    theme: str = "white_circle",
+    **plot_kwargs
+):
     """Plots a 1-dimensional boxplot using a vector.
 
     Parameters
@@ -251,7 +275,7 @@ def box1d(X: _ArrayLike,
     instance_check((capsize, width), float)
     instance_check(label_rotation, (int, float))
     instance_check(label_max_length, int)
-    bounds_check(width, 0., 1.)
+    bounds_check(width, 0.0, 1.0)
 
     # convert option to numpy
     _X = as_flattened_numpy(X)
@@ -267,47 +291,64 @@ def box1d(X: _ArrayLike,
     elif ax is None and not vertical:
         fig, ax = plt.subplots(figsize=(5, 2.5))
     if spines is None:
-        spines = ('left', 'top', 'right', 'bottom')
-    box_alpha = 1. if not with_strip else .5
+        spines = ("left", "top", "right", "bottom")
+    box_alpha = 1.0 if not with_strip else 0.5
 
-    patch_obj = ax.boxplot(_X, vert=vertical, patch_artist=True,
-                           showfliers=outliers, notch=notch,
-                           widths=width, boxprops=dict(alpha=box_alpha),
-                           flierprops=_style, **plot_kwargs)
+    patch_obj = ax.boxplot(
+        _X,
+        vert=vertical,
+        patch_artist=True,
+        showfliers=outliers,
+        notch=notch,
+        widths=width,
+        boxprops=dict(alpha=box_alpha),
+        flierprops=_style,
+        **plot_kwargs
+    )
     # define basic arguments
-    _define_boxplot_arguments(ax, patch_obj, vertical, None,
-                              grid, spines, capsize, axis_scale)
+    _define_boxplot_arguments(
+        ax, patch_obj, vertical, None, grid, spines, capsize, axis_scale
+    )
     # define colour features
     color = _color_arrangement(ax, patch_obj, color)
     # label the appropriate axes
-    _label_axes(ax, X.name if isinstance(X, pd.Series) else label,
-                vertical, label_rotation, label_max_length)
+    _label_axes(
+        ax,
+        X.name if isinstance(X, pd.Series) else label,
+        vertical,
+        label_rotation,
+        label_max_length,
+    )
     # plot the strips
     if with_strip:
-        _overlay_stripplot(_X, ax, 1, width, color, vertical, outliers, strip_jitter=0.15)
+        _overlay_stripplot(
+            _X, ax, 1, width, color, vertical, outliers, strip_jitter=0.15
+        )
     return ax
 
 
-def bibox1d(X: _ArrayLike,
-            Y: _ArrayLike,
-            colors: Optional[_ListLike] = None,
-            labels: Optional[_ListLike] = None,
-            measured: Optional[str] = None,
-            ax: Optional[mpl.axes.Axes] = None,
-            mannwhitney: bool = True,
-            with_strip: bool = False,
-            vertical: bool = True,
-            notch: bool = False,
-            capsize: float = 1.0,
-            outliers: bool = True,
-            grid: bool = True,
-            width: Union[float, List[float]] = 0.7,
-            label_rotation: float = 0.0,
-            label_max_length: int = 25,
-            spines: Optional[_ListLike] = None,
-            strip_jitter: float = 0.15,
-            theme: str = "white_circle",
-            **plot_kwargs):
+def bibox1d(
+    X: _ArrayLike,
+    Y: _ArrayLike,
+    colors: Optional[_ListLike] = None,
+    labels: Optional[_ListLike] = None,
+    measured: Optional[str] = None,
+    ax: Optional[mpl.axes.Axes] = None,
+    mannwhitney: bool = True,
+    with_strip: bool = False,
+    vertical: bool = True,
+    notch: bool = False,
+    capsize: float = 1.0,
+    outliers: bool = True,
+    grid: bool = True,
+    width: Union[float, List[float]] = 0.7,
+    label_rotation: float = 0.0,
+    label_max_length: int = 25,
+    spines: Optional[_ListLike] = None,
+    strip_jitter: float = 0.15,
+    theme: str = "white_circle",
+    **plot_kwargs
+):
     """Plots two 1-dimensional boxplots using vectors `X`, `Y`.
 
     Parameters
@@ -378,7 +419,7 @@ def bibox1d(X: _ArrayLike,
     instance_check((capsize, width, strip_jitter, label_rotation), (float, int))
     instance_check(theme, str)
     instance_check(label_max_length, int)
-    bounds_check(strip_jitter, 0., 1.)
+    bounds_check(strip_jitter, 0.0, 1.0)
 
     _X = as_flattened_numpy(X)
     _Y = as_flattened_numpy(Y)
@@ -394,29 +435,34 @@ def bibox1d(X: _ArrayLike,
 
     if spines is None:
         if vertical and mannwhitney:
-            spines = ('bottom', 'left', 'right')
+            spines = ("bottom", "left", "right")
         elif not vertical and mannwhitney:
-            spines = ('bottom', 'left', 'top')
+            spines = ("bottom", "left", "top")
         else:
-            spines = ('bottom', 'left', 'top', 'right')
+            spines = ("bottom", "left", "top", "right")
     # sort out labels
     if labels is None:
         labels = [
             X.name if isinstance(X, pd.Series) else "",
-            Y.name if isinstance(Y, pd.Series) else ""
+            Y.name if isinstance(Y, pd.Series) else "",
         ]
-    box_alpha = 1. if not with_strip else .5
+    box_alpha = 1.0 if not with_strip else 0.5
 
     patch_obj = ax.boxplot(
-        [_X, _Y], vert=vertical, patch_artist=True,
-        showfliers=outliers, notch=notch,
+        [_X, _Y],
+        vert=vertical,
+        patch_artist=True,
+        showfliers=outliers,
+        notch=notch,
         widths=width,
-        flierprops=_style, boxprops=dict(alpha=box_alpha),
+        flierprops=_style,
+        boxprops=dict(alpha=box_alpha),
         **plot_kwargs
     )
     # define boxplot extras
-    _define_boxplot_arguments(ax, patch_obj, vertical, measured,
-                              grid, spines, capsize, None)
+    _define_boxplot_arguments(
+        ax, patch_obj, vertical, measured, grid, spines, capsize, None
+    )
     # define basic colours - overrides if needs be
     colors = _kcolor_arrangement(patch_obj, colors)
     # label axes
@@ -424,8 +470,12 @@ def bibox1d(X: _ArrayLike,
     # if we have stripplot, draw this
     if with_strip:
         # plot x strips
-        _overlay_stripplot(_X, ax, 1, width, colors[0], vertical, outliers, strip_jitter)
-        _overlay_stripplot(_Y, ax, 2, width, colors[1], vertical, outliers, strip_jitter)
+        _overlay_stripplot(
+            _X, ax, 1, width, colors[0], vertical, outliers, strip_jitter
+        )
+        _overlay_stripplot(
+            _Y, ax, 2, width, colors[1], vertical, outliers, strip_jitter
+        )
 
     # if we have mann-whitney append this info
     if mannwhitney:
@@ -439,44 +489,68 @@ def bibox1d(X: _ArrayLike,
         _max, _min = np.max(joined), np.min(joined)
         # annotate on mann-whitney test
         if vertical:
-            ax.annotate("", xy=(1, _max), xycoords="data",
-                        xytext=(2, _max), textcoords="data",
-                        arrowprops=dict(arrowstyle="-", ec="#666666",
-                                        connectionstyle="bar,fraction=0.2"))
+            ax.annotate(
+                "",
+                xy=(1, _max),
+                xycoords="data",
+                xytext=(2, _max),
+                textcoords="data",
+                arrowprops=dict(
+                    arrowstyle="-", ec="#666666", connectionstyle="bar,fraction=0.2"
+                ),
+            )
             # add mw text
-            ax.text(1.5, _max + np.abs(_max - _min) * .1, star,
-                    horizontalalignment="center", verticalalignment="center")
+            ax.text(
+                1.5,
+                _max + np.abs(_max - _min) * 0.1,
+                star,
+                horizontalalignment="center",
+                verticalalignment="center",
+            )
         else:
-            ax.annotate("", xy=(_max, 2), xycoords="data",
-                        xytext=(_max, 1), textcoords="data",
-                        arrowprops=dict(arrowstyle="-", ec="#666666",
-                                        connectionstyle="bar,fraction=0.2"))
+            ax.annotate(
+                "",
+                xy=(_max, 2),
+                xycoords="data",
+                xytext=(_max, 1),
+                textcoords="data",
+                arrowprops=dict(
+                    arrowstyle="-", ec="#666666", connectionstyle="bar,fraction=0.2"
+                ),
+            )
             # add mw text
-            ax.text(_max + np.abs(_max - _min) * .1, 1.5, star,
-                    horizontalalignment="center", verticalalignment="center")
+            ax.text(
+                _max + np.abs(_max - _min) * 0.1,
+                1.5,
+                star,
+                horizontalalignment="center",
+                verticalalignment="center",
+            )
 
     return ax
 
 
-def widebox(data: Union[List, np.ndarray, pd.DataFrame],
-            colors: Optional[_ListLike] = None,
-            measured: Optional[str] = None,
-            ax: Optional[mpl.axes.Axes] = None,
-            vert: bool = True,
-            sort: bool = True,
-            outliers: bool = True,
-            notch: bool = False,
-            with_strip: bool = False,
-            capsize: float = 1.0,
-            width: float = 0.7,
-            grid: bool = True,
-            title: Optional[str] = None,
-            label_rotation: float = 0.0,
-            label_max_length: int = 25,
-            spines: Optional[_ListLike] = None,
-            strip_jitter: float = 0.15,
-            theme="white_circle",
-            **plot_kwargs):
+def widebox(
+    data: Union[List, np.ndarray, pd.DataFrame],
+    colors: Optional[_ListLike] = None,
+    measured: Optional[str] = None,
+    ax: Optional[mpl.axes.Axes] = None,
+    vert: bool = True,
+    sort: bool = True,
+    outliers: bool = True,
+    notch: bool = False,
+    with_strip: bool = False,
+    capsize: float = 1.0,
+    width: float = 0.7,
+    grid: bool = True,
+    title: Optional[str] = None,
+    label_rotation: float = 0.0,
+    label_max_length: int = 25,
+    spines: Optional[_ListLike] = None,
+    strip_jitter: float = 0.15,
+    theme="white_circle",
+    **plot_kwargs
+):
     """Plots a 2D boxplot with data oriented in wide-form.
 
     Parameters
@@ -547,9 +621,9 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
     instance_check((capsize, width, strip_jitter, label_rotation), (float, int))
     instance_check(theme, str)
     instance_check(label_max_length, int)
-    bounds_check(width, 0., 1.)
-    bounds_check(strip_jitter, 0., 1.)
-    bounds_check(label_rotation, 0., 360.)
+    bounds_check(width, 0.0, 1.0)
+    bounds_check(strip_jitter, 0.0, 1.0)
+    bounds_check(label_rotation, 0.0, 360.0)
 
     if isinstance(data, pd.DataFrame):
         # select float, int subset
@@ -566,7 +640,7 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
 
     # negative-exponential increase in figure size with more features
     def _figure_spacing(x):
-        return np.exp(-.35 * x) * x
+        return np.exp(-0.35 * x) * x
 
     if with_strip:
         outliers = False
@@ -575,7 +649,7 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
     elif ax is None and not vert:
         fig, ax = plt.subplots(figsize=(7, 2.5 + _figure_spacing(_data.shape[1])))
     if spines is None:
-        spines = ('left', 'top', 'right', 'bottom')
+        spines = ("left", "top", "right", "bottom")
 
     # sort the data by the mean if selected
     if sort:
@@ -583,18 +657,24 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
         _data = _data[:, _order]
         _labels = _labels[_order]
 
-    box_alpha = 1. if not with_strip else .5
+    box_alpha = 1.0 if not with_strip else 0.5
 
     patch_obj = ax.boxplot(
-        _data, vert=vert, patch_artist=True,
-        widths=width, showfliers=outliers, notch=notch,
-        flierprops=_style, boxprops=dict(alpha=box_alpha),
+        _data,
+        vert=vert,
+        patch_artist=True,
+        widths=width,
+        showfliers=outliers,
+        notch=notch,
+        flierprops=_style,
+        boxprops=dict(alpha=box_alpha),
         **plot_kwargs
     )
 
     # define boxplot extras
-    _define_boxplot_arguments(ax, patch_obj, vert, measured,
-                              grid, spines, capsize, None)
+    _define_boxplot_arguments(
+        ax, patch_obj, vert, measured, grid, spines, capsize, None
+    )
     # define basic colours - overrides if needs be
     colors = _kcolor_arrangement(patch_obj, colors, k=_data.shape[1])
     # label axes
@@ -605,8 +685,8 @@ def widebox(data: Union[List, np.ndarray, pd.DataFrame],
     if with_strip:
         for n in range(_data.shape[1]):
             # plot x strips
-            _overlay_stripplot(_data[:, n], ax, n + 1,
-                               width, colors[n], vert,
-                               outliers, strip_jitter)
+            _overlay_stripplot(
+                _data[:, n], ax, n + 1, width, colors[n], vert, outliers, strip_jitter
+            )
 
     return ax

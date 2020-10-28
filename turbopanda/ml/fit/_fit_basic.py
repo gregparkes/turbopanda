@@ -6,15 +6,18 @@ from typing import Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import RepeatedKFold, cross_val_predict, cross_validate, KFold
+from sklearn.model_selection import (
+    RepeatedKFold,
+    cross_val_predict,
+    cross_validate,
+    KFold,
+)
 
 # internal functions, objects.
 from turbopanda._metapanda import MetaPanda, SelectorType
-from turbopanda.utils import insert_suffix, instance_check, \
-    listify, union, bounds_check
+from turbopanda.utils import insert_suffix, instance_check, listify, union, bounds_check
 from turbopanda.utils import cache as cache_function
 
-from turbopanda.str import pattern
 from turbopanda.ml._clean import preprocess_continuous_X_y, select_xcols
 from turbopanda.ml._package import find_sklearn_model, is_sklearn_model
 from turbopanda.ml.plot._plot_overview import overview
@@ -32,15 +35,15 @@ def _define_regression_kfold_object(cv):
 def _extract_coefficients_from_model(cv, x, pkg_name):
     """accepted packages: linear_model, tree, ensemble, svm."""
     if pkg_name == "sklearn.linear_model" or pkg_name == "sklearn.svm":
-        cof = np.vstack([m.coef_ for m in cv['estimator']])
+        cof = np.vstack([m.coef_ for m in cv["estimator"]])
         if cof.shape[-1] == 1:
             cof = cof.flatten()
         res = pd.DataFrame(cof, columns=listify(x))
-        res['intercept'] = np.vstack([m.intercept_ for m in cv['estimator']]).flatten()
-        res.columns = union(listify(x), ['intercept'])
+        res["intercept"] = np.vstack([m.intercept_ for m in cv["estimator"]]).flatten()
+        res.columns = union(listify(x), ["intercept"])
         return res
     elif pkg_name == "sklearn.tree" or pkg_name == "sklearn.ensemble":
-        cof = np.vstack([m.feature_importances_ for m in cv['estimator']])
+        cof = np.vstack([m.feature_importances_ for m in cv["estimator"]])
         if cof.shape[-1] == 1:
             cof = cof.flatten()
         res = pd.DataFrame(cof, columns=listify(x))
@@ -50,15 +53,17 @@ def _extract_coefficients_from_model(cv, x, pkg_name):
         return []
 
 
-def basic(df: Union[pd.DataFrame, "MetaPanda"],
-          y: str,
-          x: Optional[SelectorType] = None,
-          cv: Union[int, Tuple[int, int]] = 5,
-          model: str = "LinearRegression",
-          cache: Optional[str] = None,
-          plot: bool = False,
-          verbose: int = 0,
-          **model_kws):
+def basic(
+    df: Union[pd.DataFrame, "MetaPanda"],
+    y: str,
+    x: Optional[SelectorType] = None,
+    cv: Union[int, Tuple[int, int]] = 5,
+    model: str = "LinearRegression",
+    cache: Optional[str] = None,
+    plot: bool = False,
+    verbose: int = 0,
+    **model_kws
+):
     """Performs a rudimentary fit model with no parameter searching.
 
     This function helps to provide a broad overview of how successful a given model is on the
@@ -99,7 +104,8 @@ def basic(df: Union[pd.DataFrame, "MetaPanda"],
 
     Notes
     -----
-    Shorthand names for the models, i.e `lm` for LinearRegression or `gauss` for a GaussianProcessRegressor, are accepted.
+    Shorthand names for the models, i.e `lm` for LinearRegression
+        or `gauss` for a GaussianProcessRegressor, are accepted.
 
     By default, `fit_basic` uses the root mean squared error (RMSE). There is currently no option to change this.
 
@@ -136,25 +142,34 @@ def basic(df: Union[pd.DataFrame, "MetaPanda"],
 
     if verbose > 0:
         print(
-            "full dataset: {}/{} -> ML: {}/{}({},{})".format(_df.n_, _df.p_, __df.shape[0], __df.shape[1], _x.shape[1],
-                                                             1))
+            "full dataset: {}/{} -> ML: {}/{}({},{})".format(
+                _df.n_, _df.p_, _df.shape[0], _df.shape[1], _x.shape[1], 1
+            )
+        )
 
     # function 1: performing cross-validated fit.
-    def _perform_cv_fit(_x: np.ndarray,
-                        _columns: pd.Index,
-                        _y: np.ndarray,
-                        _rep,
-                        _lm,
-                        package_name: str) -> "MetaPanda":
+    def _perform_cv_fit(
+        _x: np.ndarray, _columns: pd.Index, _y: np.ndarray, _rep, _lm, package_name: str
+    ):
         # cv cross-validate and wrap.
-        score_mat = pd.DataFrame(cross_validate(_lm, _x, _y, cv=_rep, scoring="neg_root_mean_squared_error",
-                                                return_estimator=True, return_train_score=True, n_jobs=-2))
+        score_mat = pd.DataFrame(
+            cross_validate(
+                _lm,
+                _x,
+                _y,
+                cv=_rep,
+                scoring="neg_root_mean_squared_error",
+                return_estimator=True,
+                return_train_score=True,
+                n_jobs=-2,
+            )
+        )
         # append results to cv
         # if repeatedkfold, add n_repeats
         if isinstance(rep, RepeatedKFold):
-            score_mat['k'] = np.repeat(np.arange(rep.n_splits), rep.n_repeats)
+            score_mat["k"] = np.repeat(np.arange(rep.n_splits), rep.n_repeats)
         else:
-            score_mat['k'] = np.arange(rep.n_splits)
+            score_mat["k"] = np.arange(rep.n_splits)
         # extract coefficients
         coef = _extract_coefficients_from_model(score_mat, _xcols, package_name)
         # integrate coefficients
@@ -166,27 +181,39 @@ def basic(df: Union[pd.DataFrame, "MetaPanda"],
         return MetaPanda(score_mat)
 
     # function 2: performing cross-validated predictions.
-    def _perform_prediction_fit(_x: np.ndarray,
-                                _y: np.ndarray,
-                                _ind: pd.Index,
-                                _yn: str,
-                                _rep,
-                                _lm) -> pd.Series:
-        return pd.Series(cross_val_predict(_lm, _x, _y, cv=_rep), index=_ind).to_frame(_yn)
+    def _perform_prediction_fit(
+        _x: np.ndarray, _y: np.ndarray, _ind: pd.Index, _yn: str, _rep, _lm
+    ) -> pd.DataFrame:
+        return pd.Series(cross_val_predict(_lm, _x, _y, cv=_rep), index=_ind).to_frame(
+            _yn
+        )
 
     if cache is not None:
         cache_cv = insert_suffix(cache, "_cv")
         cache_yp = insert_suffix(cache, "_yp")
-        _cv = cache_function(cache_cv,
-                             _perform_cv_fit, _x=_x, _xcols=_xcols, _y=_y, _rep=rep,
-                             _lm=lm, package_name=pkg_name
-                             )
-        _yp = cache_function(cache_yp, _perform_prediction_fit,
-                             _x=_x, _y=_y, _ind=_df.index, _yn=y, _rep=rep, _lm=lm
-                             )
+        _cv = cache_function(
+            cache_cv,
+            _perform_cv_fit,
+            _x=_x,
+            _xcols=_xcols,
+            _y=_y,
+            _rep=rep,
+            _lm=lm,
+            package_name=pkg_name,
+        )
+        _yp = cache_function(
+            cache_yp,
+            _perform_prediction_fit,
+            _x=_x,
+            _y=_y,
+            _ind=_df.index,
+            _yn=y,
+            _rep=rep,
+            _lm=lm,
+        )
     else:
         _cv = _perform_cv_fit(_x, _xcols, _y, rep, lm, pkg_name)
-        _yp = _perform_prediction_fit(__df, _x, _y, y, rep, lm)
+        _yp = _perform_prediction_fit(_df, _x, _y, y, rep, lm)
 
     if plot:
         overview(_df, x, y, _cv, _yp)

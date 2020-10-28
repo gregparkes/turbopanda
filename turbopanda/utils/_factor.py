@@ -78,11 +78,13 @@ def _diag_factors(n: int) -> Tuple[int, int]:
     return arr[quarter_index], arr[-1] // arr[quarter_index]
 
 
-def nearest_factors(n: int,
-                    shape: str = "square",
-                    cutoff: int = 6,
-                    search_range: int = 5,
-                    w_var: float = 1.5) -> Tuple[int, int]:
+def nearest_factors(
+    n: int,
+    shape: str = "square",
+    cutoff: int = 6,
+    search_range: int = 5,
+    w_var: float = 1.5,
+) -> Tuple[int, int]:
     """Calculate the nearest best factors of a given integer.
 
     Given n size that may not be even, return the 'most square' factors
@@ -107,8 +109,8 @@ def nearest_factors(n: int,
     F_t : tuple (2,)
         Two integers representing the most 'square' factors.
     """
-    belongs(shape, ('square', 'diag'))
-    _fmap = {'square': _square_factors, 'diag': _diag_factors}
+    belongs(shape, ("square", "diag"))
+    _fmap = {"square": _square_factors, "diag": _diag_factors}
 
     a, b = _fmap[shape](n)
 
@@ -122,7 +124,7 @@ def nearest_factors(n: int,
         dist = np.abs(nscores[:, 0] - nscores[:, 1])
         # weight our distances by a normal distribution -
         # we don't want to generate too many plots!
-        w_dist = dist * (1. - norm.pdf(rng, n, w_var))
+        w_dist = dist * (1.0 - norm.pdf(rng, n, w_var))
         # calculate new N
         return tuple(nscores[w_dist.argmin()])
     else:

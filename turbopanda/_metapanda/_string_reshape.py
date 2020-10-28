@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Provides an interface to the expansion, shrinkage and splitting of string categories in MetaPanda."""
+"""Provides an interface to the expansion,
+    shrinkage and splitting of string categories in MetaPanda."""
 
 from typing import List, Optional
 
@@ -8,10 +9,10 @@ import pandas as pd
 
 from turbopanda.utils import instance_check
 
-__all__ = ('expand', 'shrink', 'split_categories')
+__all__ = ("expand", "shrink", "split_categories")
 
 
-def expand(self, column: str, sep: str = ",") -> "MetaPanda":
+def expand(self, column: str, sep: Optional[str] = ","):
     """Expand out a 'stacked' id column to a longer-form DataFrame.
 
     Expands out a 'stacked' id column to a longer-form DataFrame, and re-merging
@@ -46,13 +47,14 @@ def expand(self, column: str, sep: str = ",") -> "MetaPanda":
         # expand out id column
         self.df_[column].str.strip().str.split(sep).explode(),
         self.df_.dropna(subset=[column]).drop(column, axis=1),
-        left_index=True, right_index=True
+        left_index=True,
+        right_index=True,
     )
     self._df.columns.name = "colnames"
     return self
 
 
-def shrink(self, column: str, sep: str = ",") -> "MetaPanda":
+def shrink(self, column: str, sep: Optional[str] = ","):
     """Expand out a 'unstacked' id column to a shorter-form DataFrame.
 
     Shrinks down a 'duplicated' id column to a shorter-form dataframe, and re-merging
@@ -86,23 +88,27 @@ def shrink(self, column: str, sep: str = ",") -> "MetaPanda":
     self._df = pd.merge(
         # shrink down id column
         self.df_.groupby("counter")[column].apply(lambda x: x.str.cat(sep=sep)),
-        self.df_.reset_index().drop_duplicates("counter").set_index("counter").drop(column, axis=1),
-        left_index=True, right_index=True
+        self.df_.reset_index()
+        .drop_duplicates("counter")
+        .set_index("counter")
+        .drop(column, axis=1),
+        left_index=True,
+        right_index=True,
     )
     self._df.columns.name = "colnames"
     return self
 
 
-def split_categories(self,
-                     column: str,
-                     sep: str = ",",
-                     renames: Optional[List[str]] = None) -> "MetaPanda":
+def split_categories(
+    self, column: str, sep: Optional[str] = ",", renames: Optional[List[str]] = None
+):
     """Split a column into N categorical variables to be associated with df_.
 
     Parameters
     ----------
     column : str
-        The name of the column to split, must be of datatype [object], and contain values sep inside
+        The name of the column to split, must be of
+            datatype [object], and contain values sep inside
     sep : str, optional
         The separating string to add.
     renames : None or list of str, optional
@@ -125,10 +131,12 @@ def split_categories(self,
     if renames is None:
         cnames = ["cat%d" % (i + 1) for i in range(exp.shape[1])]
     else:
-        cnames = renames if len(renames) == exp.shape[1] else ["cat%d" % (i + 1) for i in range(exp.shape[1])]
+        cnames = (
+            renames
+            if len(renames) == exp.shape[1]
+            else ["cat%d" % (i + 1) for i in range(exp.shape[1])]
+        )
 
-    self._df = self.df_.join(
-        exp.rename(columns=dict(zip(range(exp.shape[1]), cnames)))
-    )
+    self._df = self.df_.join(exp.rename(columns=dict(zip(range(exp.shape[1]), cnames))))
     self._df.columns.name = "colnames"
     return self

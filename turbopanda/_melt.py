@@ -11,15 +11,17 @@ from turbopanda.str import common_substrings, pattern
 from turbopanda.utils import instance_check
 
 
-def melt(df,
-         id_vars=None,
-         value_vars=None,
-         var_name=None,
-         value_name=None,
-         index_name="index",
-         include_index=True,
-         include_regex=True,
-         include_question_guess=True):
+def melt(
+    df,
+    id_vars=None,
+    value_vars=None,
+    var_name=None,
+    value_name=None,
+    index_name="index",
+    include_index=True,
+    include_regex=True,
+    include_question_guess=True,
+):
     """Unpivot a DataFrame from wide format to long format, optionally
     leaving identifier variables set.
 
@@ -64,7 +66,10 @@ def melt(df,
     """
     # check inputs
     instance_check(df, pd.DataFrame)
-    instance_check((id_vars, value_vars), (type(None), str, list, tuple, np.ndarray, pd.Series, pd.Index))
+    instance_check(
+        (id_vars, value_vars),
+        (type(None), str, list, tuple, np.ndarray, pd.Series, pd.Index),
+    )
     instance_check((var_name, value_name, index_name), (type(None), str))
     instance_check((include_regex, include_question_guess, include_index), bool)
 

@@ -6,6 +6,7 @@
 from __future__ import absolute_import, division, print_function
 
 import itertools as it
+
 # imports
 from typing import List, Optional, Union
 
@@ -14,10 +15,18 @@ from pandas import DataFrame, Series, concat, merge as pmerge
 from functools import reduce
 
 from ._fileio import read
+
 # locals
 from ._metapanda import MetaPanda
-from .utils import belongs, check_list_type, \
-    get_file_expanded, instance_check, intersect, union, bounds_check
+from .utils import (
+    belongs,
+    check_list_type,
+    get_file_expanded,
+    instance_check,
+    intersect,
+    union,
+    bounds_check,
+)
 
 # custom types
 DataSetType = Union[Series, DataFrame, MetaPanda]
@@ -65,10 +74,9 @@ def _maximum_likelihood_pairs(pairings: DataFrame, ret_largest: bool = True):
         return pm[pm.gt(0)]
 
 
-def _single_merge(sdf1: DataSetType,
-                  sdf2: DataSetType,
-                  how: str = 'inner',
-                  verbose: int = 0) -> Union[DataFrame, MetaPanda]:
+def _single_merge(
+    sdf1: DataSetType, sdf2: DataSetType, how: str = "inner", verbose: int = 0
+) -> Union[DataFrame, MetaPanda]:
     """
     Check different use cases and merge d1 and d2 together.
 
@@ -92,8 +100,9 @@ def _single_merge(sdf1: DataSetType,
         if verbose:
             print("{}:{} Joining on series".format(sdf1.name, sdf2.name))
         return concat((sdf1, sdf2), join=how, axis=1, sort=False, copy=True)
-    elif (isinstance(sdf1, DataFrame) and isinstance(sdf2, Series)) \
-            or (not (not isinstance(sdf1, Series) or not isinstance(sdf2, DataFrame))):
+    elif (isinstance(sdf1, DataFrame) and isinstance(sdf2, Series)) or (
+        not (not isinstance(sdf1, Series) or not isinstance(sdf2, DataFrame))
+    ):
         # join on index. TODO: This if case may produce weird behavior.
         if verbose:
             print("Joining DataFrame/Series")
@@ -123,9 +132,12 @@ def _single_merge(sdf1: DataSetType,
             shared_param = pair[0] if pair[0] == pair[1] else None
 
             # handling whether we have a shared param or not.
-            merge_extra = dict(how=how, suffixes=('__%s' % n1, '__%s' % n2))
-            merge_shared = dict(on=shared_param) if shared_param is not None else \
-                dict(left_on=pair[0], right_on=pair[1])
+            merge_extra = dict(how=how, suffixes=("__%s" % n1, "__%s" % n2))
+            merge_shared = (
+                dict(on=shared_param)
+                if shared_param is not None
+                else dict(left_on=pair[0], right_on=pair[1])
+            )
 
             # merge pandas.DataFrames together
             df_m = pmerge(d1, d2, **merge_extra, **merge_shared)
@@ -133,8 +145,8 @@ def _single_merge(sdf1: DataSetType,
             if shared_param is None:
                 df_m.drop(pair[1], axis=1, inplace=True)
             # drop any columns with 'counter' in
-            if 'counter' in df_m.columns:
-                df_m.drop('counter', axis=1, inplace=True)
+            if "counter" in df_m.columns:
+                df_m.drop("counter", axis=1, inplace=True)
             elif "counter__%s" % n1 in df_m.columns:
                 df_m.drop("counter__%s" % n1, axis=1, inplace=True)
             elif "counter__%s" % n2 in df_m.columns:
@@ -143,10 +155,20 @@ def _single_merge(sdf1: DataSetType,
             if verbose == 1:
                 print("[{}:'{}' | {}:'{}']".format(n1, pair[0], n2, pair[1]))
             elif verbose > 1:
-                print("[{}({},{}):'{}' | {}({},{}):'{}' -> {}/{:0.2f}]".format(
-                    n1, d1.shape[0], d1.shape[1], pair[0], n2, d2.shape[0], d2.shape[1],
-                    pair[1], int(value), value / min(d1.shape[0], d2.shape[0])
-                ))
+                print(
+                    "[{}({},{}):'{}' | {}({},{}):'{}' -> {}/{:0.2f}]".format(
+                        n1,
+                        d1.shape[0],
+                        d1.shape[1],
+                        pair[0],
+                        n2,
+                        d2.shape[0],
+                        d2.shape[1],
+                        pair[1],
+                        int(value),
+                        value / min(d1.shape[0], d2.shape[0]),
+                    )
+                )
 
         # create a copy metapanda, and set new attributes.
         mpf = MetaPanda(df_m, name=new_name, with_clean=False, with_warnings=False)
@@ -159,10 +181,12 @@ def _single_merge(sdf1: DataSetType,
         return mpf
 
 
-def merge(mdfs: Union[str, List[DataSetType]],
-          name: Optional[str] = None,
-          how: str = 'inner',
-          verbose: int = 0):
+def merge(
+    mdfs: Union[str, List[DataSetType]],
+    name: Optional[str] = None,
+    how: str = "inner",
+    verbose: int = 0,
+):
     """Merge together K datasets.
 
     Merges together a series of MetaPanda objects. This is primarily different
@@ -206,7 +230,7 @@ def merge(mdfs: Union[str, List[DataSetType]],
     # check the element type of every mdf
     instance_check(mdfs, (str, list, tuple))
     instance_check(name, (type(None), str))
-    belongs(how, ['left', 'inner', 'outer'])
+    belongs(how, ["left", "inner", "outer"])
     bounds_check(verbose, 0, 4)
 
     if isinstance(mdfs, str):
@@ -217,7 +241,6 @@ def merge(mdfs: Union[str, List[DataSetType]],
         # filter out non-dataset type elements
         mdfs = list(filter(lambda x: not isinstance(x, str), mdfs))
         if len(ff_ext) > 0:
-            # if we found some glob-like files, read in every ff_ext as a metapanda and append to mdfs
             mdfs += [read(f) for f in ff_ext]
 
     if len(mdfs) < 2:
@@ -235,10 +258,14 @@ def merge(mdfs: Union[str, List[DataSetType]],
         nmdf._df = nmdf.df_.loc[:, ~nmdf.columns.duplicated()]
 
         # add on a meta_ column indicating the source of every feature.
-        col_sources = concat([Series(ds.name_,
-                                     index=intersect(ds.columns, non_dup_columns))
-                              for ds in mdfs],
-                             axis=0, sort=False)
+        col_sources = concat(
+            [
+                Series(ds.name_, index=intersect(ds.columns, non_dup_columns))
+                for ds in mdfs
+            ],
+            axis=0,
+            sort=False,
+        )
         col_sources.name = "datasets"
         # JOIN on the column to the dataframe - otherwise it throws a bloody error
         nmdf._meta = nmdf.meta_.join(col_sources.astype("category"))

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Contains decorators to `pandas-ify` the results of functions."""
 
-from typing import Callable, Union
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -10,15 +10,14 @@ from joblib import Parallel, delayed, cpu_count
 
 from turbopanda._deprecator import deprecated
 
-
-__all__ = ("panderfy", 'transform_copy', 'series')
+__all__ = ("panderfy", "transform_copy", "series")
 
 
 def panderfy(func: Callable):
-    """A decorator to convert a list-like output into a pandas.Series or pandas.DataFrame."""
+    """A decorator to convert a list-like output into pandas object."""
     # check it is string
     if not callable(func):
-        raise ValueError('function is not callable')
+        raise ValueError("function is not callable")
 
     def _wrapper(*args, **kwargs):
         # call function
@@ -49,12 +48,15 @@ def transform_copy(old, new):
         return pd.DataFrame(new, columns=old.columns, index=old.index)
     else:
         return new
-    
-    
+
+
 def series(values, index, name=None):
     """Creates a pandas.Series from some values, index and an optional name. Mappable."""
-    return pd.Series(values, index=index, name=name) if isinstance(name, str) \
+    return (
+        pd.Series(values, index=index, name=name)
+        if isinstance(name, str)
         else pd.Series(values, index=index)
+    )
 
 
 @deprecated("0.2.8", "0.3", instead=".utils.umapp")
@@ -63,7 +65,7 @@ def lparallel(func: Callable, *args):
     if len(args) == 0:
         return func()
     elif len(args) == 1:
-        n_cpus = cpu_count()-1 if len(args[0]) > cpu_count() else len(args[0])
+        n_cpus = cpu_count() - 1 if len(args[0]) > cpu_count() else len(args[0])
         # if we have a numpy array, list etc, expand it out
         return Parallel(n_cpus)(delayed(func)(a) for a in args[0])
     else:

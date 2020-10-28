@@ -3,12 +3,13 @@
 """Provides an interface to the computing pipelines in MetaPanda."""
 
 import warnings
-from typing import List, Optional
+from typing import List
 
 from turbopanda._pipe import PipeMetaPandaType, is_pipe_structure
 from turbopanda._deprecator import deprecated_param
+from turbopanda.utils import join
 
-__all__ = ('compute', 'compute_k' '_apply_pipe')
+__all__ = ("compute", "compute_k", "_apply_pipe")
 
 
 def _apply_pipe(self, pipe):
@@ -25,20 +26,23 @@ def _apply_pipe(self, pipe):
                     # execute function with args and kwargs
                     getattr(self, fn)(*args, **kwargs)
     else:
-        raise TypeError("pipe element must be of type [list, tuple], not {}".format(type(pipe)))
+        raise TypeError(
+            "pipe element must be of type [list, tuple], not {}".format(type(pipe))
+        )
 
 
 @deprecated_param("0.2.7", "pipe", reason="deprecation of Pipe object")
-def compute(self,
-            pipe: PipeMetaPandaType,
-            inplace: bool = False,
-            update_meta: bool = False) -> "MetaPanda":
+def compute(
+    self, pipe: PipeMetaPandaType, inplace: bool = False, update_meta: bool = False
+):
     """Execute a pipeline on `df_`.
 
-    Computes a pipeline to the MetaPanda object. If there are no parameters, it computes
-    what is stored in the pipe_ attribute, if any.
+    Computes a pipeline to the MetaPanda object.
+        If there are no parameters, it computes
+        what is stored in the pipe_ attribute, if any.
 
-    .. note:: the `meta_` attribute is **refreshed** after a call to `compute`, if `update_meta`
+    .. note:: the `meta_` attribute is **refreshed**
+        after a call to `compute`, if `update_meta`
 
     Parameters
     -------
@@ -78,12 +82,11 @@ def compute(self,
 
 
 @deprecated_param("0.2.7", "pipes", reason="deprecation of Pipe object")
-def compute_k(self,
-              pipes: List[PipeMetaPandaType],
-              inplace: bool = False) -> "MetaPanda":
+def compute_k(self, pipes: List[PipeMetaPandaType], inplace: bool = False):
     """Execute `k` pipelines on `df_`, in order.
 
-    Computes multiple pipelines to the MetaPanda object, including cached types such as `.current`
+    Computes multiple pipelines to the MetaPanda object,
+        including cached types such as `.current`
 
     .. note:: the `meta_` attribute is **refreshed** after a call to `compute_k`.
 

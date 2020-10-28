@@ -13,28 +13,27 @@ from __future__ import absolute_import, division, print_function
 
 # imports
 import os
-import warnings
 import functools
 import joblib
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, List, Tuple, Union
 from pandas import DataFrame, concat
-from joblib import Parallel, delayed, cpu_count
 
 # locals
 from turbopanda._deprecator import deprecated
 from turbopanda._fileio import read
 from turbopanda._metapanda import MetaPanda
-from turbopanda.utils import belongs, dictcopy, insert_suffix, \
-    instance_check, intersect
+from turbopanda.utils import belongs, dictcopy, insert_suffix, instance_check, intersect
 
-__all__ = ("cached", "cache", 'cached_chunk')
+__all__ = ("cached", "cache", "cached_chunk")
 
 
 def _stack_rows(rows: List[DataFrame]) -> "MetaPanda":
     return MetaPanda(concat(rows, axis=0, sort=False, ignore_index=True))
 
 
-def _set_index_def(df, values=('Unnamed:_0', 'Unnamed: 0', 'colnames', 'index', 'counter')):
+def _set_index_def(
+    df, values=("Unnamed:_0", "Unnamed: 0", "colnames", "index", "counter")
+):
     # determine intersection between desired values and columns in df.
     _shared = intersect(df.columns.tolist(), values)
     # set these guys as the new index.
@@ -43,11 +42,9 @@ def _set_index_def(df, values=('Unnamed:_0', 'Unnamed: 0', 'colnames', 'index', 
 
 
 @deprecated("0.2.8", "0.3", instead=".utils.cache")
-def cached(func: Callable,
-           filename: str = 'example1.json',
-           verbose: int = 0,
-           *args,
-           **kwargs) -> "MetaPanda":
+def cached(
+    func: Callable, filename: str = "example1.json", verbose: int = 0, *args, **kwargs
+) -> "MetaPanda":
     """Provides automatic {.json, .csv} caching for `turb.MetaPanda` or `pd.DataFrame`.
 
     .. note:: this is a direct-call cache function. Not cached.
@@ -101,7 +98,6 @@ def cached(func: Callable,
     instance_check(func, "__call__")
 
     # check that file ends with json or csv
-    file_ext = filename.rsplit(".")[-1]
     belongs(filename.rsplit(".", 1)[-1], ("json", "csv"))
 
     if os.path.isfile(filename):
@@ -126,19 +122,28 @@ def cached(func: Callable,
             return MetaPanda(mpf)
         else:
             if verbose > 0:
-                print("returned object from cache not of type [DataFrame, MetaPanda], not cached")
+                print(
+                    "returned object from cache not of type [DataFrame, MetaPanda], not cached"
+                )
             return mpf
 
 
-@deprecated("0.2.8", "0.3", instead=".utils.umappc or vectorize",
-            reason="The 'umap' suite performs this in a cleaner, more succinct way")
-def cached_chunk(func: Callable,
-                 param_name: str,
-                 param_values: Union[List, Tuple],
-                 parallel: bool = True,
-                 filename: str = 'example1.json',
-                 verbose: int = 0,
-                 *args, **kwargs) -> "MetaPanda":
+@deprecated(
+    "0.2.8",
+    "0.3",
+    instead=".utils.umappc or vectorize",
+    reason="The 'umap' suite performs this in a cleaner, more succinct way",
+)
+def cached_chunk(
+    func: Callable,
+    param_name: str,
+    param_values: Union[List, Tuple],
+    parallel: bool = True,
+    filename: str = "example1.json",
+    verbose: int = 0,
+    *args,
+    **kwargs
+) -> "MetaPanda":
     """Provides chunked automatic {.json, .csv} caching for `turb.MetaPanda` or `pd.DataFrame`.
 
     .. note:: custom function must return a `pd.DataFrame` or `turb.MetaPanda` object.
@@ -190,7 +195,7 @@ def cached_chunk(func: Callable,
     instance_check(param_values, (list, tuple, dict))
 
     if not callable(func):
-        raise ValueError('function is not callable')
+        raise ValueError("function is not callable")
     # check that file ends with json or csv
     belongs(filename.rsplit(".", 1)[-1], ("json", "csv"))
 
@@ -206,16 +211,24 @@ def cached_chunk(func: Callable,
         # create a bunch of chunks by repeatedly calling cache.
         if parallel:
             _mdf_chunks = joblib.Parallel(joblib.cpu_count())(
-                joblib.delayed(cached)(func, insert_suffix(filename, "_chunk%d" % i),
-                                       verbose=verbose, *args, **dictcopy(kwargs, {param_name: chunk})).df_
+                joblib.delayed(cached)(
+                    func,
+                    insert_suffix(filename, "_chunk%d" % i),
+                    verbose=verbose,
+                    *args,
+                    **dictcopy(kwargs, {param_name: chunk})
+                ).df_
                 for i, chunk in enumerate(param_values)
             )
         else:
             _mdf_chunks = [
-                cached(func,
-                       insert_suffix(filename, "_chunk%d" % i),
-                       verbose=verbose,
-                       *args, **dictcopy(kwargs, {param_name: chunk})).df_
+                cached(
+                    func,
+                    insert_suffix(filename, "_chunk%d" % i),
+                    verbose=verbose,
+                    *args,
+                    **dictcopy(kwargs, {param_name: chunk})
+                ).df_
                 for i, chunk in enumerate(param_values)
             ]
         # join together the chunks
@@ -229,12 +242,19 @@ def cached_chunk(func: Callable,
         return mpf
 
 
-@deprecated("0.2.8", "0.3.1", instead="This function is being renamed to 'cachedec' to reflect its a decorator",
-            reason="We don't want confusion between this function and .utils.cache")
-def cache(_func=None, *,
-          filename: str = "example1.pkl",
-          compress=0,
-          return_as="MetaPanda") -> Callable:
+@deprecated(
+    "0.2.8",
+    "0.3.1",
+    instead="This function is being renamed to 'cachedec' to reflect its a decorator",
+    reason="We don't want confusion between this function and .utils.cache",
+)
+def cache(
+    _func=None,
+    *,
+    filename: str = "example1.pkl",
+    compress: int = 0,
+    return_as: str = "MetaPanda"
+) -> Callable:
     """Provides automatic decorator caching for objects.
 
     Especially compatible with `turb.MetaPanda` or `pd.DataFrame`.
@@ -243,6 +263,7 @@ def cache(_func=None, *,
 
     Parameters
     ----------
+    _func
     filename : str, optional
         The name of the file to cache to, or read from. This is fixed.
          Accepts {'json', 'csv', 'pkl'} extensions only.
@@ -307,7 +328,7 @@ def cache(_func=None, *,
             # if we find the file
             if os.path.isfile(filename):
                 # if its .csv or .json, use `read`
-                if file_ext in ('json', 'csv'):
+                if file_ext in ("json", "csv"):
                     # read it in
                     mdf = read(filename)
                     _set_index_def(mdf.df_)

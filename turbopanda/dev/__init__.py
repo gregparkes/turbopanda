@@ -4,5 +4,6 @@
 
 # caching decorator
 from ._cache import *
+
 # sound decorator
 from ._sounds import bleep, Bleep

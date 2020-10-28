@@ -9,14 +9,14 @@ import numpy as np
 from typing import Optional
 
 from turbopanda.stats import density
-from turbopanda.utils import instance_check, remove_na, as_flattened_numpy
+from turbopanda.utils import instance_check, as_flattened_numpy
 
-__all__ = ('entropy', 'conditional_entropy', 'continuous_mutual_info')
+__all__ = ("entropy", "conditional_entropy", "continuous_mutual_info")
 
 
-def _estimate_entropy(X: np.ndarray,
-                      Y: Optional[np.ndarray] = None,
-                      Z: Optional[np.ndarray] = None) -> float:
+def _estimate_entropy(
+    X: np.ndarray, Y: Optional[np.ndarray] = None, Z: Optional[np.ndarray] = None
+) -> float:
     if Z is not None:
         # prevent memory implosion.
         D = density(X, Y, Z, r=1000)
@@ -25,19 +25,15 @@ def _estimate_entropy(X: np.ndarray,
     return -np.sum(D * np.log2(D))
 
 
-def entropy(X: np.ndarray,
-            Y: Optional[np.ndarray] = None,
-            Z: Optional[np.ndarray] = None) -> float:
+def entropy(
+    X: np.ndarray, Y: Optional[np.ndarray] = None, Z: Optional[np.ndarray] = None
+) -> float:
     """Calculates shannon entropy given X.
 
-    Uses log2 for density normalization. `X`, `Y` and `Z` must all be continuous.
+    Uses log2 for density normalization.`X`,`Y` and `Z` must all be continuous.
 
-    .. math:: H(X)=-\sum_x p(x)\log_2 p(x)
-
-    where :math:`H(X)` if just `X`, the joint entropy :math:`H(X, Y)` is calculated if Y is also given,
-    and likewise :math:`H(X, Y, Z)` if `Y` and `Z` are given.
-
-    By default, assumes density of `X` must be estimated, which we use np.histogram, given appropriate resolution to problem.
+    By default, assumes density of `X` must be estimated,
+        which we use np.histogram, given appropriate resolution to problem.
 
     Parameters
     ----------
@@ -64,9 +60,8 @@ def entropy(X: np.ndarray,
     return _estimate_entropy(X, Y, Z)
 
 
-def conditional_entropy(X: np.ndarray,
-                        Y: np.ndarray) -> float:
-    """Calculates conditional entropy H(X|Y) using :math:`\log_2` Shannon entropy.
+def conditional_entropy(X: np.ndarray, Y: np.ndarray) -> float:
+    """Calculates conditional entropy H(X|Y) using Shannon entropy.
 
     .. math:: H(X|Y) = H(X, Y) - H(Y)
 
@@ -94,19 +89,14 @@ def conditional_entropy(X: np.ndarray,
     return H_XY - H_Y
 
 
-def continuous_mutual_info(X: np.ndarray,
-                           Y: np.ndarray,
-                           Z: Optional[np.ndarray] = None) -> float:
-    """Given random continuous variables `X`, `Y`, determines the mutual information within.
+def continuous_mutual_info(
+    X: np.ndarray, Y: np.ndarray, Z: Optional[np.ndarray] = None
+) -> float:
+    """Determines mutual information given random variables.
 
-    Entropy is estimated using Shannon entropy method. Provides for conditional calculations.
+    Entropy is estimated using Shannon entropy method.
+        Provides for conditional calculations.
 
-    .. math::
-        I(X; Y) = H(X) + H(Y) - H(X, Y) \\
-        I(X; Y|Z) = H(X, Z) + H(Y, Z) - H(X, Y, Z) - H(Z)
-    
-    where `Z` may or may not be present, respectively.
-    
     Parameters
     ----------
     X : array_like, vector
@@ -132,7 +122,7 @@ def continuous_mutual_info(X: np.ndarray,
         return H_X + H_Y - H_XY
     else:
         _Z = as_flattened_numpy(Z)
-        # calculate entropies.
+        # calculate entropy.
         H_XZ = _estimate_entropy(_X, _Z)
         H_YZ = _estimate_entropy(_Y, _Z)
         H_XYZ = _estimate_entropy(_X, _Y, _Z)

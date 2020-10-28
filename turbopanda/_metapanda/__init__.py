@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 # from turbopanda._pipe import Pipe
-from turbopanda._deprecator import deprecated, deprecated_param
+from turbopanda._deprecator import deprecated_param
 from turbopanda.utils._files import split_file_directory
 from turbopanda.utils._sets import join
 from ._drop_values import drop_columns
@@ -23,8 +23,8 @@ from ._types import SelectorType
 class MetaPanda(object):
     """A meta-object for a pandas.DataFrame with extra information.
 
-    The aim of this object is to extend the functionality of the `pandas` library package,
-    which is extensively used for data munging, manipulation and visualization of large datasets.
+    Extends the pandas.DataFrame object for data munging,
+    manipulation and visualization of large datasets.
 
     Attributes
     ----------
@@ -121,11 +121,13 @@ class MetaPanda(object):
         Saves a MetaPanda to disk
     """
 
-    def __init__(self,
-                 dataset: pd.DataFrame,
-                 name: Optional[str] = None,
-                 with_clean: bool = True,
-                 with_warnings: bool = False):
+    def __init__(
+        self,
+        dataset: pd.DataFrame,
+        name: Optional[str] = None,
+        with_clean: bool = True,
+        with_warnings: bool = False,
+    ):
         """Define a MetaPanda frame.
 
         Creates a Meta DataFrame with the raw data and parametrization of
@@ -134,13 +136,16 @@ class MetaPanda(object):
         Parameters
         ----------
         dataset : pd.DataFrame, optional
-            The raw data set to create as a MetaDataFrame. If None, assumes the dataset will be set later.
+            The raw data set to create as a MetaDataFrame.
+                If None, assumes the dataset will be set later.
         name : str, optional
-            Gives the MetaDataFrame a name, which comes into play with merging, for instance
+            Gives the MetaDataFrame a name, which comes into play
+                with merging, for instance
         with_clean : bool, optional
-            If True, uses Pipe.clean() to perform minor preprocessing on `dataset`
+            If True, uses `Pipe.clean` to perform minor preprocessing on `dataset`
         with_warnings : bool, optional
-            If True, prints warnings when strange things happen, for instance during selection
+            If True, prints warnings when strange things happen,
+                for instance during selection
         """
         self._with_warnings = with_warnings
         self._with_clean = with_clean
@@ -156,37 +161,54 @@ class MetaPanda(object):
         self._source = ""
         # set using property
         self.df_ = dataset
-        self.name_ = name if name is not None else 'DataSet'
+        self.name_ = name if name is not None else "DataSet"
 
-    """ ########################### IMPORTED FUNCTIONS ####################################### """
+    """ ####### IMPORTED FUNCTIONS ############# """
 
     # inspecting columns
     from ._inspect import view_not, view, select
+
     # dropping rows
     from ._drop_values import drop, keep
+
     # shadowed columns
     from ._shadow import head, dtypes, copy, info
+
     # saving files
     from ._write import write, _write_csv, _write_json, _write_pickle, printf
+
     # application to pandas.api functions
-    from ._apply import apply, apply_index, apply_columns, _apply_function, \
-        _apply_index_function, _apply_column_function
+    from ._apply import (
+        apply,
+        apply_index,
+        apply_columns,
+        _apply_function,
+        _apply_index_function,
+        _apply_column_function,
+    )
+
     # caching selectors and pipes
     from ._caching import cache, cache_pipe, cache_k
+
     # computing pipelines
     from ._compute import compute_k, compute, _apply_pipe
+
     # reshaping operations with strings
     from ._string_reshape import expand, shrink, split_categories
+
     # patsy-like functionality
     from ._patsy import patsy
+
     # renaming columns
     from ._name_axis import rename_axis, add_suffix, add_prefix
+
     # metadata operations
     from ._metadata import sort_columns, meta_split_category, meta_map, update_meta
+
     # transformation operations
     from ._transform import transform, transform_k, aggregate, aggregate_k, downcast
 
-    """ ############################ STATIC FUNCTIONS ######################################## """
+    """ ######### STATIC FUNCTIONS ########## """
 
     @classmethod
     def from_pandas(cls, filename: str, name: str = None, *args, **kwargs):
@@ -212,8 +234,10 @@ class MetaPanda(object):
         """
 
         file_ext_map = {
-            "csv": pd.read_csv, "xls": pd.read_excel,
-            "xlsx": pd.read_excel, "sql": pd.read_sql
+            "csv": pd.read_csv,
+            "xls": pd.read_excel,
+            "xlsx": pd.read_excel,
+            "sql": pd.read_sql,
         }
 
         # split filename into parts and check
@@ -277,8 +301,10 @@ class MetaPanda(object):
 
         # checksum check.
         chk = hashlib.sha256(json.dumps(mpf.df_.columns.tolist()).encode()).hexdigest()
-        if obj['checksum'] != chk:
-            raise IOError("checksum stored: %s doesn't match %s" % (obj['checksum'], chk))
+        if obj["checksum"] != chk:
+            raise IOError(
+                "checksum stored: %s doesn't match %s" % (obj["checksum"], chk)
+            )
         # apply additional metadata columns
         mpf.update_meta()
         # set the source
@@ -286,15 +312,19 @@ class MetaPanda(object):
         # return
         return mpf
 
-    """ ############################## OVERRIDDEN OPERATIONS ###################################### """
+    """ ######## OVERRIDDEN OPERATIONS ########### """
 
     def __copy__(self):
-        warnings.warn("the copy constructor in 'MetaPanda' has no functionality.", RuntimeWarning)
+        warnings.warn(
+            "the copy constructor in 'MetaPanda' has no functionality.", RuntimeWarning
+        )
 
     def __getitem__(self, *selector: SelectorType):
         """Fetch a subset determined by the selector."""
         # we take the columns that are NOT this selection, then drop to keep order.
-        sel = inspect(self.df_, self.meta_, self.selectors_, selector, join_t="union", mode='view')
+        sel = inspect(
+            self.df_, self.meta_, self.selectors_, selector, join_t="union", mode="view"
+        )
         if sel.size > 0:
             # drop anti-selection to maintain order/sorting
             return self.df_[sel].squeeze()
@@ -318,18 +348,14 @@ class MetaPanda(object):
         - S: contains selectors
         - M: contains mapper(s)
         """
-        opt_s = "S" if len(self.selectors_) > 0 else ''
-        opt_m = "M" if len(self.mapper_) > 0 else ''
-        opts = "[" + opt_s + opt_m + ']'
+        opt_s = "S" if len(self.selectors_) > 0 else ""
+        opt_m = "M" if len(self.mapper_) > 0 else ""
+        opts = "[" + opt_s + opt_m + "]"
         return "MetaPanda({}(n={}, p={}, mem={}, options={}))".format(
-            self.name_,
-            self.df_.shape[0],
-            p,
-            self.memory_,
-            opts
+            self.name_, self.df_.shape[0], p, self.memory_, opts
         )
 
-    """ ############################### PROPERTIES ############################################## """
+    """ ######## PROPERTIES ################# """
 
     """ DataFrame attributes """
 
@@ -399,13 +425,16 @@ class MetaPanda(object):
 
     @property
     def selectors_(self) -> Dict[str, Any]:
-        """Fetch the cached selectors available. This also includes boolean columns found in `meta_`."""
+        """Fetch the cached selectors available.
+        This also includes boolean columns found in `meta_`."""
         return self._select
 
     @property
     def options_(self) -> Tuple:
         """Fetch the available selector options cached in this object."""
-        return tuple(join(self._select, self.meta_.columns[self.meta_.dtypes == np.bool]))
+        return tuple(
+            join(self._select, self.meta_.columns[self.meta_.dtypes == np.bool])
+        )
 
     @property
     def memory_(self) -> str:
@@ -424,7 +453,11 @@ class MetaPanda(object):
         if isinstance(n, str):
             # if name is found as a column name, block it.
             if n in self.df_.columns:
-                raise ValueError("name: {} for df_ found as a column attribute; not allowed!".format(n))
+                raise ValueError(
+                    "name: {} for df_ found as a column attribute; not allowed!".format(
+                        n
+                    )
+                )
             self._name = n
         else:
             raise TypeError("'name_' must be of type str")

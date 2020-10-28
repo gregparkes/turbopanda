@@ -7,14 +7,20 @@ import numpy as np
 import pandas as pd
 from functools import reduce
 import operator
-# use scipy.utils.check_array for array_like
-from sklearn.utils import check_array
 
 from ._sets import join
 
-__all__ = ("belongs", "instance_check", "disallow_instance_pair",
-           "check_list_type", "nonnegative", "bounds_check", "is_twotuple",
-           "arrays_equal_size", "arrays_dimension")
+__all__ = (
+    "belongs",
+    "instance_check",
+    "disallow_instance_pair",
+    "check_list_type",
+    "nonnegative",
+    "bounds_check",
+    "is_twotuple",
+    "arrays_equal_size",
+    "arrays_dimension",
+)
 
 
 def belongs(elem: Any, home: Union[List[Any], Tuple[Any, ...]], raised=True):
@@ -31,7 +37,9 @@ def _instance_check_element(a: object, i: Type, raised: bool = True):
     if isinstance(i, str):
         if not hasattr(a, i):
             if raised:
-                raise AttributeError("object '{}' does not have attribute '{}'".format(a, i))
+                raise AttributeError(
+                    "object '{}' does not have attribute '{}'".format(a, i)
+                )
             else:
                 return False
     elif not isinstance(a, i):
@@ -48,9 +56,11 @@ def _instance_check_element(a: object, i: Type, raised: bool = True):
     return True
 
 
-def instance_check(a: Union[object, Tuple],
-                   i: Union[str, Type, List[Type], Tuple[Type, ...]],
-                   raised: bool = True):
+def instance_check(
+    a: Union[object, Tuple],
+    i: Union[str, Type, List[Type], Tuple[Type, ...]],
+    raised: bool = True,
+):
     """Check that a is an instance of type i.
 
     Parameters
@@ -68,34 +78,38 @@ def instance_check(a: Union[object, Tuple],
         return _instance_check_element(a, i, raised)
 
 
-def nonnegative(a: Union[float, int, Tuple],
-                i: Union[Type, Tuple[Type, Type]] = (float, int),
-                raised=True):
+def nonnegative(
+    a: Union[float, int, Tuple],
+    i: Union[Type, Tuple[Type, Type]] = (float, int),
+    raised=True,
+):
     """Check whether value a is nonnegative number."""
     instance_check(a, i, raised=raised)
     if isinstance(a, tuple):
         # do nonnegative on all values
         result = any(map(lambda x: x < 0, a))
         if result and raised:
-            raise Attribute("Not all values in {} are nonnegative".format(a))
+            raise AttributeError("Not all values in {} are nonnegative".format(a))
         elif result and not raised:
             return False
         else:
             return True
     else:
         if a < 0 and raised:
-            raise Attribute("Not all values in {} are nonnegative".format(a))
+            raise AttributeError("Not all values in {} are nonnegative".format(a))
         elif a < 0 and not raised:
             return False
         else:
             return True
 
 
-def bounds_check(x: Union[float, int],
-                 lower: Union[float, int],
-                 upper: Union[float, int],
-                 with_equality: bool = True,
-                 raised: bool = True):
+def bounds_check(
+    x: Union[float, int],
+    lower: Union[float, int],
+    upper: Union[float, int],
+    with_equality: bool = True,
+    raised: bool = True,
+):
     """Checks that x is in a upper/lower bound."""
     instance_check((x, upper, lower), (float, int), raised=raised)
     if with_equality:
@@ -107,7 +121,9 @@ def bounds_check(x: Union[float, int],
         return True
     else:
         if raised:
-            raise AttributeError("object bound {} < {} < {} doesn't hold".format(lower, x, upper))
+            raise AttributeError(
+                "object bound {} < {} < {} doesn't hold".format(lower, x, upper)
+            )
         else:
             return False
 
@@ -115,12 +131,15 @@ def bounds_check(x: Union[float, int],
 def arrays_equal_size(a, b, *arrays):
     """Check that arrays a, b, ...n, are equal dimensions."""
     arrs = tuple(map(np.asarray, join((a, b), arrays)))
-    return reduce(operator.add, map(lambda x: x.shape[0], arrs)) // len(arrs) == arrs[0].shape[0]
+    return (
+        reduce(operator.add, map(lambda x: x.shape[0], arrs)) // len(arrs)
+        == arrs[0].shape[0]
+    )
 
 
-def arrays_dimension(X: Union[np.ndarray, pd.Series, pd.DataFrame],
-                     d: str,
-                     raised: bool = True):
+def arrays_dimension(
+    X: Union[np.ndarray, pd.Series, pd.DataFrame], d: str, raised: bool = True
+):
     """Check that np.ndarray X is of dimension '1d', '2d', '3d'..."""
     instance_check(X, (np.ndarray, pd.Series, pd.DataFrame))
     belongs(d, ("1d", "2d", "3d"))
@@ -128,7 +147,7 @@ def arrays_dimension(X: Union[np.ndarray, pd.Series, pd.DataFrame],
     if isinstance(X, pd.Series):
         if d_int != 1:
             if raised:
-                raise ValueError("series is %dD, not %dD".format(d_int, X.shape[1]))
+                raise ValueError("series is %dD, not %dD" % (d_int, X.shape[1]))
             else:
                 return False
         else:
@@ -136,14 +155,14 @@ def arrays_dimension(X: Union[np.ndarray, pd.Series, pd.DataFrame],
     elif isinstance(X, pd.DataFrame):
         if d_int != 2:
             if raised:
-                raise ValueError("dataframe is %dD, not %dD".format(d_int, X.shape[1]))
+                raise ValueError("dataframe is %dD, not %dD" % (d_int, X.shape[1]))
             else:
                 return False
         else:
             return True
     elif X.shape[1] != d_int:
         if raised:
-            raise ValueError("array is %dD, not %dD".format(d_int, X.shape[1]))
+            raise ValueError("array is %dD, not %dD" % (d_int, X.shape[1]))
         else:
             return False
     else:
@@ -153,7 +172,9 @@ def arrays_dimension(X: Union[np.ndarray, pd.Series, pd.DataFrame],
 def disallow_instance_pair(a: object, i: Type, b: object, j: Type):
     """Defines a pair of objects whereby their types are not allowed as a pair for the function."""
     if instance_check(a, i, raised=False) and instance_check(b, j, raised=False):
-        raise TypeError("instance of type '{}' with type '{}' pair disallowed".format(i, j))
+        raise TypeError(
+            "instance of type '{}' with type '{}' pair disallowed".format(i, j)
+        )
     return True
 
 
@@ -162,7 +183,9 @@ def check_list_type(elems: Tuple, t: Type, raised=True):
     for i, elem in enumerate(elems):
         if not isinstance(elem, t):
             if raised:
-                raise TypeError("type '{}' not found in list at index [{}]".format(t, i))
+                raise TypeError(
+                    "type '{}' not found in list at index [{}]".format(t, i)
+                )
             else:
                 return False
     return True

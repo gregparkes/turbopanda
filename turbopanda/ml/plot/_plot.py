@@ -3,7 +3,6 @@
 """Provides basic plots for machine-learning results."""
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 
 from turbopanda.plot import color_qualitative, legend_line
@@ -13,11 +12,13 @@ from turbopanda.str import pattern
 from turbopanda.pipe import absolute
 
 
-def best_model(cv_results: "MetaPanda",
-               y_var: str = "test",
-               minimize: bool = True,
-               score: str = "RMSE",
-               **box_kws):
+def best_model(
+    cv_results,
+    y_var: str = "test",
+    minimize: bool = True,
+    score: str = "RMSE",
+    **box_kws
+):
     """Determines the best model (min or max) and plots the boxplot of all resulting best models.
 
     Parameters
@@ -42,7 +43,7 @@ def best_model(cv_results: "MetaPanda",
     """
     instance_check(minimize, bool)
     instance_check(score, str)
-    belongs(y_var, ('train', 'test'))
+    belongs(y_var, ("train", "test"))
 
     sely = pattern("mean_%s_score" % y_var, cv_results.columns, False)
     # create figures
@@ -51,7 +52,7 @@ def best_model(cv_results: "MetaPanda",
     # create a copy
     res = cv_results.df_ if not isinstance(cv_results, pd.DataFrame) else cv_results
     # transform.
-    if res[sely].mean() < 0.:
+    if res[sely].mean() < 0.0:
         res = res.pipe(absolute, "(?:split[0-9]+|mean)_(?:train|test)_score")
     # for each 'model', arrange data into boxplot
     if minimize:
@@ -70,15 +71,12 @@ def best_model(cv_results: "MetaPanda",
     # fetch package names and map them to colors - returned as pd.Series
     packages = find_model_family(indices.values)
     # map colors to each of the packages.
-    mapping = dictzip(
-        set_like(packages),
-        color_qualitative(len(set_like(packages)))
-    )
+    mapping = dictzip(set_like(packages), color_qualitative(len(set_like(packages))))
     mapped_cols = packages.map(mapping)
     # iterate over boxes and colour
-    for box, col in zip(bp['boxes'], mapped_cols):
+    for box, col in zip(bp["boxes"], mapped_cols):
         box.set(facecolor=col, linewidth=1.2)
-    plt.setp(bp['medians'], linewidth=1.5)
+    plt.setp(bp["medians"], linewidth=1.5)
     # additional box requirements
     ax.set_xlabel("Model")
     ax.set_ylabel("%s %s" % (y_var, score))
@@ -86,7 +84,7 @@ def best_model(cv_results: "MetaPanda",
     ax.tick_params("x", rotation=45)
     ax.grid()
     for tick in ax.get_xmajorticklabels():
-        tick.set_horizontalalignment('right')
+        tick.set_horizontalalignment("right")
     # generate legend
     ax.legend(legend_line(mapping), list(mapping.keys()), bbox_to_anchor=(1.03, 1.03))
     plt.show()

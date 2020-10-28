@@ -13,18 +13,19 @@ from sklearn.base import clone
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import GridSearchCV, RepeatedKFold, cross_val_score
 from sklearn.pipeline import Pipeline
-from sklearn.utils.estimator_checks import check_estimator
 
 from turbopanda._deprecator import unimplemented
 from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.dev import cached_chunk
-from turbopanda.str import pattern
 from turbopanda.utils import dictchunk, instance_check, bounds_check, nonnegative
 from turbopanda.utils import cache as cache_f
 from turbopanda.ml._clean import select_xcols, preprocess_continuous_X_y
 from turbopanda.ml.plot import parameter_tune
-from turbopanda.ml._pgrid import make_parameter_grid, make_optimize_grid, \
-    optimize_grid_for_model
+from turbopanda.ml._pgrid import (
+    make_parameter_grid,
+    make_optimize_grid,
+    optimize_grid_for_model,
+)
 from turbopanda.ml._package import find_sklearn_model, is_sklearn_model
 
 
@@ -33,21 +34,28 @@ def _min_cross_val_scores(theta, X, y, model, pnames, cv):
     new_model = clone(model)
     # get the mean scores and use this as the minimization objective
     return -np.mean(
-        cross_val_score(new_model.set_params(**dict(zip(pnames, theta))),
-                        X, y, scoring="neg_root_mean_squared_error", cv=cv)
+        cross_val_score(
+            new_model.set_params(**dict(zip(pnames, theta))),
+            X,
+            y,
+            scoring="neg_root_mean_squared_error",
+            cv=cv,
+        )
     )
 
 
-def grid(df: Union[pd.DataFrame, "MetaPanda"],
-         y: str,
-         x: Optional[SelectorType] = None,
-         models=("Ridge", "Lasso"),
-         cv: Union[int, Tuple[int, int]] = 5,
-         cache: Optional[str] = None,
-         plot: bool = False,
-         chunks: bool = False,
-         verbose: int = 0,
-         **grid_kws) -> "MetaPanda":
+def grid(
+    df: Union[pd.DataFrame, "MetaPanda"],
+    y: str,
+    x: Optional[SelectorType] = None,
+    models=("Ridge", "Lasso"),
+    cv: Union[int, Tuple[int, int]] = 5,
+    cache: Optional[str] = None,
+    plot: bool = False,
+    chunks: bool = False,
+    verbose: int = 0,
+    **grid_kws
+) -> "MetaPanda":
     """Performs exhaustive grid search analysis on the models selected.
 
     This function aims to encapsulate much of the functionality associated around `GridSearchCV` class
@@ -131,7 +139,6 @@ def grid(df: Union[pd.DataFrame, "MetaPanda"],
     # set dataset if a pandas object
     _df = df.df_ if not isinstance(df, pd.DataFrame) else df
     # retrieve x columns if none
-    _xcols = select_xcols(_df, x, y)
     # set up cv, repeats
     k, repeats = cv if isinstance(cv, tuple) else cv, 1
 
@@ -145,8 +152,12 @@ def grid(df: Union[pd.DataFrame, "MetaPanda"],
         # get paramgrid - the magic happens here!
         pgrid = make_parameter_grid(_models, header=header)
         # join default grid parameters to given grid_kws
-        def_grid_params = {'scoring': 'neg_root_mean_squared_error',
-                           'n_jobs': -2, 'verbose': verbose, 'return_train_score': True}
+        def_grid_params = {
+            "scoring": "neg_root_mean_squared_error",
+            "n_jobs": -2,
+            "verbose": verbose,
+            "return_train_score": True,
+        }
         def_grid_params.update(grid_kws)
         # create gridsearch
         gs = GridSearchCV(pipe, param_grid=pgrid, cv=rep, **def_grid_params)
@@ -157,7 +168,7 @@ def grid(df: Union[pd.DataFrame, "MetaPanda"],
         # generate result
         _result = pd.DataFrame(gs.cv_results_)
         # associate model column to respective results
-        _result['model'] = _result['param_model'].apply(lambda f: str(f).split("(")[0])
+        _result["model"] = _result["param_model"].apply(lambda f: str(f).split("(")[0])
         # set as MetaPanda
         _met_result = MetaPanda(_result)
         # cast down parameter columns to appropriate type
@@ -168,14 +179,35 @@ def grid(df: Union[pd.DataFrame, "MetaPanda"],
         if chunks:
             # if dictionary, we need to split this into 1-sized list/dict blocks.
             values = dictchunk(models, 1) if isinstance(models, dict) else models
-            _cv_results = cached_chunk(_perform_fit, "_models", values, False, cache, verbose,
-                                       _df=_df, _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
+            _cv_results = cached_chunk(
+                _perform_fit,
+                "_models",
+                values,
+                False,
+                cache,
+                verbose,
+                _df=_df,
+                _x=x,
+                _y=y,
+                _k=k,
+                _repeats=repeats,
+                _models=models,
+            )
         else:
-            _cv_results = cache_f(cache, _perform_fit,
-                                 _df=_df, _x=x, _y=y, _k=k, _repeats=repeats,
-                                 _models=models)
+            _cv_results = cache_f(
+                cache,
+                _perform_fit,
+                _df=_df,
+                _x=x,
+                _y=y,
+                _k=k,
+                _repeats=repeats,
+                _models=models,
+            )
     else:
-        _cv_results = _perform_fit(_df=_df, _x=x, _y=y, _k=k, _repeats=repeats, _models=models)
+        _cv_results = _perform_fit(
+            _df=_df, _x=x, _y=y, _k=k, _repeats=repeats, _models=models
+        )
 
     if plot:
         parameter_tune(_cv_results)
@@ -184,12 +216,9 @@ def grid(df: Union[pd.DataFrame, "MetaPanda"],
 
 
 @unimplemented
-def optimize(df: "MetaPanda",
-             x: SelectorType,
-             y: str,
-             models,
-             cv: int = 5,
-             verbose: int = 0):
+def optimize(
+    df: "MetaPanda", x: SelectorType, y: str, models, cv: int = 5, verbose: int = 0
+):
     """Performs optimization grid analysis on the models selected.
 
     This uses `scipy.optimize` function to minimize continuous parameters, for example `alpha` in a Lasso model.
@@ -262,9 +291,13 @@ def optimize(df: "MetaPanda",
         inits, bounds = optimize_grid_for_model(params)
         # minimize for every i element
         mins = [
-            so.minimize(_min_cross_val_scores, x0=i,
-                        args=(_xnp, _y, model, params, cv),
-                        bounds=bounds) for i in inits
+            so.minimize(
+                _min_cross_val_scores,
+                x0=i,
+                args=(_xnp, _y, model, params, cv),
+                bounds=bounds,
+            )
+            for i in inits
         ]
 
     pass

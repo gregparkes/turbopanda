@@ -43,7 +43,12 @@ class LinearModel(object):
         self.y_hat, self.R2, self.R2_a = None, None, None
         self.SS_tot, self.SS_res, self.SS_exp = None, None, None
         self.S2_n_p_1, self.S2_b, self.S_b = None, None, None
-        self.b_t_values, self.b_t_p_values, self.F_value, self.F_p_value = None, None, None, None
+        self.b_t_values, self.b_t_p_values, self.F_value, self.F_p_value = (
+            None,
+            None,
+            None,
+            None,
+        )
         self.aic, self.bic, self.aicc = None, None, None
         self.cook = None
 
@@ -61,9 +66,9 @@ class LinearModel(object):
         self.e = self.y - self.y_hat
 
         # sum of square values
-        self.SS_tot = np.sum((self.y - self.y_bar)**2)
+        self.SS_tot = np.sum((self.y - self.y_bar) ** 2)
         self.SS_res = np.sum(np.square(self.e))
-        self.SS_exp = np.sum((self.y_hat - self.y_bar)**2)
+        self.SS_exp = np.sum((self.y_hat - self.y_bar) ** 2)
 
         # R2 and the adjusted R2
         self.R2 = self.SS_exp / self.SS_tot
@@ -75,16 +80,20 @@ class LinearModel(object):
         self.S_b = np.sqrt(self.S2_b)
 
         # determine aic, bic
-        self.aic = 2*self.p - (2*np.log(self.SS_res))
-        self.aicc = self.aic + ((2*self.p)**2 + 2*self.p) / self.df
-        self.bic = (np.log(self.n)*self.p) - (2*np.log(self.SS_res))
+        self.aic = 2 * self.p - (2 * np.log(self.SS_res))
+        self.aicc = self.aic + ((2 * self.p) ** 2 + 2 * self.p) / self.df
+        self.bic = (np.log(self.n) * self.p) - (2 * np.log(self.SS_res))
         # cooks distance
-        self.cook = np.square(self.e) / (self.p * (self.SS_res / self.n)) * (self.leverage / np.square(1 - self.leverage))
+        self.cook = (
+            np.square(self.e)
+            / (self.p * (self.SS_res / self.n))
+            * (self.leverage / np.square(1 - self.leverage))
+        )
 
         # determine probabilities
         self.b_t_values = self.b / self.S_b
         self.b_t_p_values = (1 - stats.t.cdf(np.abs(self.b_t_values), self.df)) * 2
         self.F_value = (self.SS_exp / self.p) / (self.SS_res / self.df)
-        self.F_p_value = (1 - stats.f.cdf(self.F_value, self.p, self.df))
+        self.F_p_value = 1 - stats.f.cdf(self.F_value, self.p, self.df)
         # is fit
         self.is_fit = True

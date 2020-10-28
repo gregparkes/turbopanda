@@ -29,20 +29,22 @@ def _fill_matrix(d, s, t):
                 # to align the results with those of the Python Levenshtein package, if we choose to calculate the ratio
                 # the cost of a substitution is 2. If we calculate just distance, then the cost of a substitution is 1.
                 cost = 2
-            d[row][col] = min(d[row - 1][col] + 1,  # Cost of deletions
-                              d[row][col - 1] + 1,  # Cost of insertions
-                              d[row - 1][col - 1] + cost)  # Cost of substitutions
+            d[row][col] = min(
+                d[row - 1][col] + 1,  # Cost of deletions
+                d[row][col - 1] + 1,  # Cost of insertions
+                d[row - 1][col - 1] + cost,
+            )  # Cost of substitutions
     return d
 
 
 def _ratio_and_distance(s: str, t: str, ratio_calc: bool = True) -> float:
-    """ levenshtein_ratio_and_distance:
-        Calculates levenshtein distance between two strings.
-        If ratio_calc = True, the function computes the
-        levenshtein distance ratio of similarity between two strings
-        For all i and j, distance[i,j] will contain the Levenshtein
-        distance between the first i characters of s and the
-        first j characters of t
+    """levenshtein_ratio_and_distance:
+    Calculates levenshtein distance between two strings.
+    If ratio_calc = True, the function computes the
+    levenshtein distance ratio of similarity between two strings
+    For all i and j, distance[i,j] will contain the Levenshtein
+    distance between the first i characters of s and the
+    first j characters of t
     """
     # Initialize matrix of zeros
     rows = len(s) + 1
@@ -69,30 +71,32 @@ def _levenshtein_comb(X: List[str], with_replacement=True) -> pd.DataFrame:
         comb = tuple(it.combinations(X, 2))
 
     L = [_ratio_and_distance(a, b, True) for a, b in comb]
-    res = pd.DataFrame(comb, columns=['x', 'y'])
-    res['L'] = L
+    res = pd.DataFrame(comb, columns=["x", "y"])
+    res["L"] = L
     return res
 
 
 def _levenshtein_product(X: List[str], Y: List[str]) -> pd.DataFrame:
     prod = tuple(it.product(X, Y))
     L = [_ratio_and_distance(a, b, True) for a, b in prod]
-    res = pd.DataFrame(prod, columns=['x', 'y'])
-    res['L'] = L
+    res = pd.DataFrame(prod, columns=["x", "y"])
+    res["L"] = L
     return res
 
 
 def _mirror_matrix_lev(D):
-    X = D.pivot("x", "y", "L").fillna(0.)
+    X = D.pivot("x", "y", "L").fillna(0.0)
     # add to transpose, remove + 1 from diagonal
     X += X.T - np.eye(X.shape[0])
     return X
 
 
-def levenshtein(X: List[str],
-                Y: Optional[List[str]] = None,
-                as_matrix: bool = False,
-                with_replacement: bool = True) -> pd.DataFrame:
+def levenshtein(
+    X: List[str],
+    Y: Optional[List[str]] = None,
+    as_matrix: bool = False,
+    with_replacement: bool = True,
+) -> pd.DataFrame:
     """Determines the levenshtein matrix distance between every pair of column names.
 
     If Y is present, performs cartesian_product of X & Y terms, else performs cartesian_product of X & X

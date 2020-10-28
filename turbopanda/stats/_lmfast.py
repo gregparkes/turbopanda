@@ -20,7 +20,7 @@ def _ordinary_least_squares(X, y):
         _X = np.atleast_2d(_X).T
     _beta = np.linalg.lstsq(_X, _y, rcond=None)[0]
     yp = np.dot(_X, _beta)
-    return yp, _y-yp
+    return yp, _y - yp
 
 
 def _ordinary_logistic_reg(X, y):
@@ -56,7 +56,9 @@ def lm(X: Union[np.ndarray, pd.Series, pd.DataFrame], y: Union[np.ndarray, pd.Se
     # check that every column in X is continuous
     _X = np.asarray(X)
     if not is_dataframe_float(_X):
-        raise TypeError("`X` variables in `stats.lm` all must be of type `float`/continuous.")
+        raise TypeError(
+            "`X` variables in `stats.lm` all must be of type `float`/continuous."
+        )
     _y = np.asarray(y)
 
     # check if y is discrete

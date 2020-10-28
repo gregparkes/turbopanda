@@ -7,45 +7,47 @@ import matplotlib as mpl
 import itertools as it
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from pandas import CategoricalDtype
 
-from typing import Union, List, Tuple, Optional
+from typing import Union, Optional
 from pandas import Series, Index
 from warnings import warn
 
-from turbopanda.utils import remove_na, instance_check,\
-    arrays_equal_size, belongs, as_flattened_numpy, unique_ordered
+from turbopanda.utils import (
+    instance_check,
+    arrays_equal_size,
+    belongs,
+    as_flattened_numpy,
+    unique_ordered,
+)
 from turbopanda.stats._kde import freedman_diaconis_bins
 
-from ._default import _ArrayLike, _ListLike, _Numeric
-from ._annotate import annotate
-from ._palette import darken, lighten, \
-    color_qualitative, cat_array_to_color
+from ._default import _ArrayLike, _Numeric
+from ._palette import darken, lighten, cat_array_to_color
 from ._widgets import map_legend
 
 
 def _marker_set():
-    return 'o', '^', 'x', 'd', '8', 'p', 'h', '+', 'v', '*'
+    return "o", "^", "x", "d", "8", "p", "h", "+", "v", "*"
 
 
-def _select_best_size(n, a=1.4, b=21.):
+def _select_best_size(n, a=1.4, b=21.0):
     # given n points, determines which size of point to use based on math rule
     """Rule is : b - a*log(n) where best options found are b=21, a=1.4"""
     # cases=(1e1, 50, 1e2, 200, 500, 1e3, 3000, 1e4, 20000, 50000, 1e5)
     return b - a * np.log(n)
 
 
-def _negsigmoid(x, a=.9):
+def _negsigmoid(x, a=0.9):
     b = 1 - a
-    return ((a - b) / (1. + np.exp(x))) + b
+    return ((a - b) / (1.0 + np.exp(x))) + b
 
 
-def _glf(x, a=1., k=.2, c=1., b=1.2, nu=1., q=1.):
+def _glf(x, a=1.0, k=0.2, c=1.0, b=1.2, nu=1.0, q=1.0):
     # generalized logistic function (see https://en.wikipedia.org/wiki/Generalised_logistic_function)
     return a + (k - a) / (c + q * np.exp(-b * x)) ** (1 / nu)
 
 
-def _select_best_alpha(n, glfr=(-1., 9.), mr=(1e1, 1e5)):
+def _select_best_alpha(n, glfr=(-1.0, 9.0), mr=(1e1, 1e5)):
     # given n points, determines the best alpha to use
     """Follows a generalized logistic function Y(t)=A + (K - A) / (C + Q * exp(-B * t))**(1/nu)"""
     # clip x to the measured range
@@ -90,33 +92,37 @@ def _draw_scatter(x, y, c, s, m, alpha, ax, **kwargs):
             _c = c[m == v] if not isinstance(c, str) else c
             _s = s[m == v] if not isinstance(s, float) else s
             scatters.append(
-                ax.scatter(x[m==v], y[m==v], c=_c, s=_s, alpha=alpha, marker=mark, **kwargs)
+                ax.scatter(
+                    x[m == v], y[m == v], c=_c, s=_s, alpha=alpha, marker=mark, **kwargs
+                )
             )
         return scatters
 
 
-def scatter(X: _ArrayLike,
-            Y: _ArrayLike,
-            c: Union[str, _ArrayLike] = 'k',
-            marker: Union[str, _ArrayLike] = 'o',
-            s: Optional[Union[_Numeric, _ArrayLike]] = None,
-            dense: bool = False,
-            fit_line: bool = False,
-            ax: Optional[mpl.axes.Axes] = None,
-            alpha: Optional[float] = None,
-            cmap: str = "viridis",
-            legend: bool = True,
-            colorbar: bool = True,
-            with_jitter: bool = False,
-            x_label: Optional[str] = None,
-            y_label: Optional[str] = None,
-            x_scale: str = "linear",
-            y_scale: str = "linear",
-            legend_outside: bool = False,
-            title: str = "",
-            with_grid: bool = False,
-            fit_line_degree: int = 1,
-            **scatter_kws):
+def scatter(
+    X: _ArrayLike,
+    Y: _ArrayLike,
+    c: Union[str, _ArrayLike] = "k",
+    marker: Union[str, _ArrayLike] = "o",
+    s: Optional[Union[_Numeric, _ArrayLike]] = None,
+    dense: bool = False,
+    fit_line: bool = False,
+    ax: Optional[mpl.axes.Axes] = None,
+    alpha: Optional[float] = None,
+    cmap: str = "viridis",
+    legend: bool = True,
+    colorbar: bool = True,
+    with_jitter: bool = False,
+    x_label: Optional[str] = None,
+    y_label: Optional[str] = None,
+    x_scale: str = "linear",
+    y_scale: str = "linear",
+    legend_outside: bool = False,
+    title: str = "",
+    with_grid: bool = False,
+    fit_line_degree: int = 1,
+    **scatter_kws
+):
     """Generates a scatterplot, with some useful features added to it.
 
     Parameters
@@ -186,7 +192,9 @@ def scatter(X: _ArrayLike,
     instance_check(s, (type(None), int, float, list, tuple, np.ndarray, Series, Index))
     instance_check(alpha, (type(None), float))
     instance_check(ax, (type(None), mpl.axes.Axes))
-    instance_check((dense, with_jitter, fit_line, with_grid, legend, legend_outside), bool)
+    instance_check(
+        (dense, with_jitter, fit_line, with_grid, legend, legend_outside), bool
+    )
     instance_check((x_label, y_label, title, x_scale, y_scale), (type(None), str))
     instance_check(fit_line_degree, int)
 
@@ -200,7 +208,12 @@ def scatter(X: _ArrayLike,
 
     # warn the user if n is large to maybe consider dense option?
     if _X.shape[0] > 15000 and not dense:
-        warn("Data input size: {} is large, consider setting dense=True".format(X.shape[0]), UserWarning)
+        warn(
+            "Data input size: {} is large, consider setting dense=True".format(
+                X.shape[0]
+            ),
+            UserWarning,
+        )
 
     # reconfigure colors if qualitative
     if isinstance(s, (list, tuple)) and not dense:
@@ -245,8 +258,7 @@ def scatter(X: _ArrayLike,
         yp = _Y
 
     # draw
-    scat = _draw_scatter(xp, yp, palette, s, marker,
-                         alpha, ax, cmap=cmap, **scatter_kws)
+    _ = _draw_scatter(xp, yp, palette, s, marker, alpha, ax, cmap=cmap, **scatter_kws)
 
     # optionally fit a line of best fit
     if fit_line:

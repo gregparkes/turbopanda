@@ -12,13 +12,12 @@ from scipy import stats
 
 from turbopanda._metapanda import SelectorType
 
-from turbopanda.str import shorten
 from turbopanda.pipe import absolute
 from turbopanda.plot import gridplot, bibox1d, widebox
 from turbopanda.utils import instance_check, intersect
 from turbopanda.ml._clean import select_xcols, preprocess_continuous_X_y
 
-__all__ = ('coefficient', 'overview')
+__all__ = ("coefficient", "overview")
 
 
 def _is_coefficients(cv):
@@ -26,24 +25,29 @@ def _is_coefficients(cv):
 
 
 def _fitted_vs_residual(plot, y, yp):
-    plot.scatter(yp, y - yp, color='g', alpha=.5)
-    plot.hlines(0, xmin=yp.min(), xmax=yp.max(), color='r')
+    plot.scatter(yp, y - yp, color="g", alpha=0.5)
+    plot.hlines(0, xmin=yp.min(), xmax=yp.max(), color="r")
     plot.set_xlabel("Fitted Values")
     plot.set_ylabel("Residuals")
 
 
 def _boxplot_scores(plot, cv, score="RMSE"):
     # use bibox1d
-    _data = cv.df_.pipe(absolute, 'train_score|test_score')
-    bibox1d(_data['test_score'], _data['train_score'],
-            measured=score, vertical=False,
-            ax=plot, mannwhitney=False)
+    _data = cv.df_.pipe(absolute, "train_score|test_score")
+    bibox1d(
+        _data["test_score"],
+        _data["train_score"],
+        measured=score,
+        vertical=False,
+        ax=plot,
+        mannwhitney=False,
+    )
 
 
 def _actual_vs_predicted(plot, y, yp):
     # KDE plot estimation between y and yhat
-    plot.scatter(y, yp, color='b', alpha=.5)
-    plot.plot([np.min(y), np.max(y)], [np.min(y), np.max(y)], 'k-')
+    plot.scatter(y, yp, color="b", alpha=0.5)
+    plot.plot([np.min(y), np.max(y)], [np.min(y), np.max(y)], "k-")
     plot.set_xlabel("Actual Values")
     plot.set_ylabel("Fitted Values")
 
@@ -51,23 +55,22 @@ def _actual_vs_predicted(plot, y, yp):
 def coefficient(cv, plot=None):
     """Plots the coefficients from a cv results."""
     if _is_coefficients(cv):
-        coef = cv['w__']
+        coef = cv["w__"]
         # sort the coefficients by size
-        coef = coef.reindex(cv['w__'].mean(axis=0).sort_values().index, axis=1)
+        coef = coef.reindex(cv["w__"].mean(axis=0).sort_values().index, axis=1)
         # rename the columns
 
         # plot
         if plot is None:
             fig, plot = plt.subplots(figsize=(8, 5))
 
-        widebox(coef, vert=False, outliers=False,
-                measured=r"$\beta$", ax=plot)
+        widebox(coef, vert=False, outliers=False, measured=r"$\beta$", ax=plot)
         plot.set_title("Coefficients")
 
 
 def _basic_correlation_matrix(plot, _cmatrix):
     # plot heatmap
-    plot.imshow(_cmatrix, vmin=-1., vmax=1., cmap="seismic")
+    plot.imshow(_cmatrix, vmin=-1.0, vmax=1.0, cmap="seismic")
     # if we have too many labels, randomly choose some
     if _cmatrix.shape[0] > 10:
         tick_locs = np.random.choice(_cmatrix.shape[0], 10, replace=False)
@@ -81,15 +84,15 @@ def _basic_correlation_matrix(plot, _cmatrix):
         plot.set_yticks(range(_cmatrix.shape[0]))
         plot.set_yticklabels(_cmatrix.columns)
 
-    plt.setp(plot.get_xticklabels(), rotation=45, ha="right",
-             rotation_mode="anchor")
+    plt.setp(plot.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
 
-    plot.tick_params('x', rotation=45)
+    plot.tick_params("x", rotation=45)
     for tick in plot.get_xmajorticklabels():
-        tick.set_horizontalalignment('right')
+        tick.set_horizontalalignment("right")
+
 
 def _cooks(plot, cooks):
-    plot.plot(cooks, 'ko', alpha=.6)
+    plot.plot(cooks, "ko", alpha=0.6)
     plot.hlines(0, xmin=0, xmax=cooks.shape[0])
     plot.set_ylabel("Cook's distance")
 
@@ -97,13 +100,15 @@ def _cooks(plot, cooks):
 """ ######################### PUBLIC FUNCTIONS ######################### """
 
 
-def overview(df: "MetaPanda",
-             x: SelectorType,
-             y: str,
-             cv: "MetaPanda",
-             yp: "MetaPanda",
-             plot_names: Optional[List[str]] = None,
-             plot_size: int = 3):
+def overview(
+    df,
+    x: SelectorType,
+    y: str,
+    cv,
+    yp,
+    plot_names: Optional[List[str]] = None,
+    plot_size: int = 3,
+):
     """Presents an overview of the results of a machine learning basic run.
 
     Parameters
@@ -135,8 +140,15 @@ def overview(df: "MetaPanda",
 
     instance_check(plot_names, (type(None), tuple))
     instance_check(y, str)
-    options_ = ('resid_fitted', 'score', 'actual_predicted', 'coef',
-                'correlation', 'qqplot', 'cooks')
+    options_ = (
+        "resid_fitted",
+        "score",
+        "actual_predicted",
+        "coef",
+        "correlation",
+        "qqplot",
+        "cooks",
+    )
 
     """ Prepare data here. """
     # set yp as series
@@ -146,8 +158,7 @@ def overview(df: "MetaPanda",
     _xcols = select_xcols(_df, x, y)
     _x, _y = preprocess_continuous_X_y(_df, _xcols, y)
 
-    options_yes_ = (True, True, True, True, 1 < len(_xcols) < 50,
-                    True, True)
+    options_yes_ = (True, True, True, True, 1 < len(_xcols) < 50, True, True)
     # compress down options
     option_compressed = list(it.compress(options_, options_yes_))
 
@@ -155,8 +166,7 @@ def overview(df: "MetaPanda",
     if plot_names is None:
         plot_names = options_
     # overlap plots
-    overlap_ = sorted(intersect(option_compressed, plot_names),
-                      key=options_.index)
+    overlap_ = sorted(intersect(option_compressed, plot_names), key=options_.index)
 
     # make plots
     fig, ax = gridplot(len(overlap_), ax_size=plot_size)

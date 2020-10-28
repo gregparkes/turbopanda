@@ -8,13 +8,20 @@ from typing import Callable, Dict, List, TypeVar, Union
 import numpy as np
 import pandas as pd
 
-from turbopanda.utils import instance_check, intersect, is_possible_category, is_unique_id, object_to_categorical, \
-    pairwise, t_numpy, union
+from turbopanda.utils import (
+    instance_check,
+    intersect,
+    is_possible_category,
+    is_unique_id,
+    object_to_categorical,
+    pairwise,
+    t_numpy,
+    union,
+)
 from ._inspect import inspect
 from ._types import SelectorType
 
-__all__ = ('meta_map', 'update_meta', 'meta_split_category', 'sort_columns')
-
+__all__ = ("meta_map", "update_meta", "meta_split_category", "sort_columns")
 
 """ Basic column checking functions. """
 
@@ -23,10 +30,14 @@ def true_type(ser: pd.Series) -> TypeVar:
     """
     Given a pandas.Series, determine it's true datatype if it has missing values.
     """
-    # return 'reduced' Series if we're missing data and dtype is not an object, else just return the default dtype
+    # return 'reduced' Series if we're missing data and
+    # dtype is not an object, else just return the default dtype
 
-    return pd.to_numeric(ser.dropna(), errors="ignore", downcast="unsigned").dtype \
-        if ((ser.dtype in t_numpy()) and (ser.count() > 0)) else ser.dtype
+    return (
+        pd.to_numeric(ser.dropna(), errors="ignore", downcast="unsigned").dtype
+        if ((ser.dtype in t_numpy()) and (ser.count() > 0))
+        else ser.dtype
+    )
 
 
 def is_mixed_type(ser: pd.Series) -> bool:
@@ -39,10 +50,11 @@ def is_mixed_type(ser: pd.Series) -> bool:
 
 def default_columns() -> Dict[str, Callable]:
     """The default metadata columns provided."""
-    return {"true_type": true_type,
-            "is_mixed_type": is_mixed_type,
-            "is_unique_id": is_unique_id
-            }
+    return {
+        "true_type": true_type,
+        "is_mixed_type": is_mixed_type,
+        "is_unique_id": is_unique_id,
+    }
 
 
 """ Constructs a basic meta dataset. """
@@ -72,7 +84,7 @@ def categorize_meta(meta: pd.DataFrame):
 def dummy_categorical(cat: pd.Series) -> pd.DataFrame:
     """Given pd.Series of type 'category', return boolean dummies as matrix."""
     instance_check(cat, pd.Series)
-    if cat.dtype == 'category':
+    if cat.dtype == "category":
         return pd.get_dummies(cat).add_prefix("is_").astype(np.bool)
     else:
         raise TypeError("'cat' Series is {}, not of type 'category'".format(cat.dtype))
@@ -84,8 +96,8 @@ def _add_metadata(df: pd.DataFrame) -> pd.DataFrame:
     _func_mapping = default_columns()
     _agg = df.aggregate(list(_func_mapping.values())).T
     # cast bool-like columns to bool
-    _agg['is_mixed_type'] = _agg['is_mixed_type'].astype(bool)
-    _agg['is_unique_id'] = _agg['is_unique_id'].astype(bool)
+    _agg["is_mixed_type"] = _agg["is_mixed_type"].astype(bool)
+    _agg["is_unique_id"] = _agg["is_unique_id"].astype(bool)
     # return
     return _agg
 
@@ -96,7 +108,7 @@ def _add_metadata(df: pd.DataFrame) -> pd.DataFrame:
 def _create_new_metamap(df, meta, selectors, mapper, name, meta_set):
     # for each selector, get the group view.
     if isinstance(meta_set, (list, tuple)):
-        cnames = [inspect(df, meta, selectors, sel, mode='view') for sel in meta_set]
+        cnames = [inspect(df, meta, selectors, sel, mode="view") for sel in meta_set]
     else:
         raise TypeError("'selectors' must be of type {list, tuple}")
 
@@ -104,7 +116,11 @@ def _create_new_metamap(df, meta, selectors, mapper, name, meta_set):
     igrid = union(*pairwise(intersect, cnames))
 
     if len(igrid) == 0:
-        new_grid = pd.concat([pd.Series(n, index=val) for n, val in zip(meta_set, cnames)], sort=False, axis=0)
+        new_grid = pd.concat(
+            [pd.Series(n, index=val) for n, val in zip(meta_set, cnames)],
+            sort=False,
+            axis=0,
+        )
         new_grid.name = name
     else:
         raise ValueError("shared terms: {} discovered for meta_map.".format(igrid))
@@ -132,8 +148,7 @@ def _reset_meta(df, mapper, selectors) -> pd.DataFrame:
     return _meta
 
 
-def meta_map(self, name: str,
-             selectors: List[SelectorType]) -> "MetaPanda":
+def meta_map(self, name: str, selectors: List[SelectorType]):
     """Map a group of selectors with an identifier, in `mapper_`.
 
     Maps a group of selectors into a column in the meta-information
@@ -146,7 +161,8 @@ def meta_map(self, name: str,
     name : str
         The name of this overall grouping
     selectors : list/tuple of (str, or tuple args)
-        Each contains either types, meta column names, column names or regex-compliant strings
+        Each contains either types, meta column names,
+            column names or regex-compliant strings
 
     Raises
     ------
@@ -164,12 +180,13 @@ def meta_map(self, name: str,
     cache : Adds a cache element to `selectors_`.
     cache_k : Adds k cache elements to `selectors_`.
     """
-    _create_new_metamap(self.df_, self.meta_,
-                        self.selectors_, self.mapper_, name, selectors)
+    _create_new_metamap(
+        self.df_, self.meta_, self.selectors_, self.mapper_, name, selectors
+    )
     return self
 
 
-def update_meta(self) -> "MetaPanda":
+def update_meta(self):
     """Forces an update to the metadata.
 
     This involves a full `meta_` reset, so columns present may be lost.
@@ -185,7 +202,7 @@ def update_meta(self) -> "MetaPanda":
     return self
 
 
-def meta_split_category(self, cat: str) -> "MetaPanda":
+def meta_split_category(self, cat: str):
     """Splits category into k boolean columns in `meta_` to use for selection.
 
     This enables a categorical column to contain multiple boolean selectors for
@@ -211,21 +228,35 @@ def meta_split_category(self, cat: str) -> "MetaPanda":
     if cat in self.meta_:
         # expand and add to meta.
         try:
-            self._meta = pd.concat([
-                self.meta_, dummy_categorical(self.meta_[cat])
-                # integrity must be verified to make sure these columns do not already exist.
-            ], sort=False, axis=1, join="inner", copy=True, verify_integrity=True)
+            self._meta = pd.concat(
+                [
+                    self.meta_,
+                    dummy_categorical(self.meta_[cat])
+                    # integrity must be verified to make
+                    # sure these columns do not already exist.
+                ],
+                sort=False,
+                axis=1,
+                join="inner",
+                copy=True,
+                verify_integrity=True,
+            )
         except ValueError:
-            warnings.warn("in `meta_split_category`: integrity of meta_ column challenged, no split has occurred.",
-                          UserWarning)
+            warnings.warn(
+                "in `meta_split_category`: integrity of meta_"
+                " column challenged, no split has occurred.",
+                UserWarning,
+            )
         return self
     else:
         raise ValueError("cat column '{}' not found in `meta_`.".format(cat))
 
 
-def sort_columns(self,
-                 by: Union[str, List[str]] = "colnames",
-                 ascending: Union[bool, List[bool]] = True) -> "MetaPanda":
+def sort_columns(
+    self,
+    by: Union[str, List[str]] = "colnames",
+    ascending: Union[bool, List[bool]] = True,
+):
     """Sorts `df_` using vast selection criteria.
 
     Parameters
@@ -255,7 +286,10 @@ def sort_columns(self,
             ascending = [ascending] * len(by)
         elif len(by) != len(ascending):
             raise ValueError(
-                "the length of 'by' {} must equal the length of 'ascending' {}".format(len(by), len(ascending)))
+                "the length of 'by' {} must equal the length of 'ascending' {}".format(
+                    len(by), len(ascending)
+                )
+            )
         if all([(col in self.meta_) or (col == "colnames") for col in by]):
             self._meta = self.meta_.sort_values(by=by, axis=0, ascending=ascending)
             self._df = self._df.reindex(self.meta_.index, axis=1)

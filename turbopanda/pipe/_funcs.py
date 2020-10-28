@@ -10,20 +10,34 @@ from sklearn.preprocessing import scale, power_transform
 
 from turbopanda.str import pattern, string_replace
 from turbopanda.utils import float_to_integer, bounds_check, intersect
-from ._conditions import *
+from ._conditions import select_float, select_numeric, select_missing_values
+
+__all__ = (
+    "all_float_to_int",
+    "downcast_all",
+    "all_low_cardinality_to_categorical",
+    "zscore",
+    "yeo_johnson",
+    "clean1",
+    "clean2",
+    "filter_rows_by_column",
+    "absolute",
+    "rename_index",
+    "rename_columns",
+    "replace",
+    "index_name",
+    "impute_missing",
+    "add_suffix",
+    "add_prefix",
+    "krange",
+)
 
 
-__all__ = ('all_float_to_int', 'downcast_all',
-           'all_low_cardinality_to_categorical',
-           'zscore', 'yeo_johnson', 'clean1', 'clean2',
-           'filter_rows_by_column', 'absolute',
-           'rename_index', 'rename_columns', 'replace', 'index_name',
-           'impute_missing', 'add_suffix', 'add_prefix', 'krange')
-
-
-def _multi_assign(df: pd.DataFrame,
-                  transform_fn: Callable[[pd.Series], pd.Series],
-                  condition: Callable[[pd.DataFrame], List[str]]) -> pd.DataFrame:
+def _multi_assign(
+    df: pd.DataFrame,
+    transform_fn: Callable,
+    condition: Callable[[pd.DataFrame], List[str]],
+) -> pd.DataFrame:
     """Performs a multi-assignment transformation."""
     # creates a copy of the dataframe
     df_to_use = df.copy()
@@ -31,16 +45,16 @@ def _multi_assign(df: pd.DataFrame,
     if len(cond) == 0:
         return df
     else:
-        return (df_to_use.assign(
-            **{
-                col: transform_fn(df_to_use[col]) for col in cond
-            }
-        ))
+        return df_to_use.assign(**{col: transform_fn(df_to_use[col]) for col in cond})
 
 
 def absolute(df: pd.DataFrame, pat: str = None) -> pd.DataFrame:
     """Performs subselected absolute operation on certain columns."""
-    condition = lambda x: list(pattern(pat, x, extended_regex=False)) if pat is not None else df.columns.tolist()
+    condition = (
+        lambda x: list(pattern(pat, x, extended_regex=False))
+        if pat is not None
+        else df.columns.tolist()
+    )
     return _multi_assign(df, np.abs, condition)
 
 
@@ -49,9 +63,9 @@ def all_float_to_int(df: pd.DataFrame) -> pd.DataFrame:
     return _multi_assign(df.copy(), float_to_integer, select_float)
 
 
-def downcast_all(df: pd.DataFrame,
-                 target_type: TypeVar,
-                 initial_type: Optional[TypeVar] = None) -> pd.DataFrame:
+def downcast_all(
+    df: pd.DataFrame, target_type: TypeVar, initial_type: Optional[TypeVar] = None
+) -> pd.DataFrame:
     """Attempts to downcast all columns in a pandas.DataFrame to reduce memory."""
     if initial_type is None:
         initial_type = target_type
@@ -63,16 +77,17 @@ def downcast_all(df: pd.DataFrame,
     return _multi_assign(df_to_use, transform_fn, condition)
 
 
-def all_low_cardinality_to_categorical(df: pd.DataFrame,
-                                       threshold: float = 0.5) -> pd.DataFrame:
+def all_low_cardinality_to_categorical(
+    df: pd.DataFrame, threshold: float = 0.5
+) -> pd.DataFrame:
     """Casts all low cardinality columns to type 'category' """
-    bounds_check(threshold, 0., 1.)
+    bounds_check(threshold, 0.0, 1.0)
 
     df_to_use = df.copy()
     transform_fn = lambda x: x.astype("category")
     n_entre = df_to_use.shape[0]
     # check to see that the condition actually has object types to convert.
-    if df.select_dtypes(include=['object']).shape[1] == 0:
+    if df.select_dtypes(include=["object"]).shape[1] == 0:
         return df
     else:
         # objects = df_to_use.select_dtypes(include=["object"]).nunique()
@@ -102,8 +117,7 @@ def yeo_johnson(df: pd.DataFrame) -> pd.DataFrame:
 """ Filtering rows by a selected column value """
 
 
-def filter_rows_by_column(df: pd.DataFrame,
-                          expression: Callable) -> pd.DataFrame:
+def filter_rows_by_column(df: pd.DataFrame, expression: Callable) -> pd.DataFrame:
     """Performs a filter operation using the expression function.
 
     Expression function must return a boolean-series like object to filter
@@ -140,16 +154,28 @@ def replace(df: pd.DataFrame, column: str, operations) -> pd.DataFrame:
     return df
 
 
-def add_suffix(df: pd.DataFrame, suf: str, subtype: Optional[TypeVar] = None) -> pd.DataFrame:
+def add_suffix(
+    df: pd.DataFrame, suf: str, subtype: Optional[TypeVar] = None
+) -> pd.DataFrame:
     """Adds a suffix to certain column names."""
-    _cols = list(df.select_dtypes(include=[subtype]).columns) if subtype is not None else df.columns
+    _cols = (
+        list(df.select_dtypes(include=[subtype]).columns)
+        if subtype is not None
+        else df.columns
+    )
     # map back to sufcols to the dataframe
     return df.rename(columns=dict(zip(_cols, map(lambda s: s + suf, _cols))))
 
 
-def add_prefix(df: pd.DataFrame, pref: str, subtype: Optional[TypeVar] = None) -> pd.DataFrame:
+def add_prefix(
+    df: pd.DataFrame, pref: str, subtype: Optional[TypeVar] = None
+) -> pd.DataFrame:
     """Adds a prefix to certain column names"""
-    _cols = list(df.select_dtypes(include=[subtype]).columns) if subtype is not None else df.columns
+    _cols = (
+        list(df.select_dtypes(include=[subtype]).columns)
+        if subtype is not None
+        else df.columns
+    )
     # map back to sufcols to the dataframe
     return df.rename(columns=dict(zip(_cols, map(lambda s: pref + s, _cols))))
 
@@ -186,10 +212,10 @@ def clean1(df: pd.DataFrame) -> pd.DataFrame:
 
     cleaned = (
         df_to_use.pipe(all_low_cardinality_to_categorical)
-            .pipe(all_float_to_int)
-            .pipe(downcast_all, "float")
-            .pipe(downcast_all, "integer")
-            .pipe(downcast_all, target_type="unsigned", initial_type="integer")
+        .pipe(all_float_to_int)
+        .pipe(downcast_all, "float")
+        .pipe(downcast_all, "integer")
+        .pipe(downcast_all, target_type="unsigned", initial_type="integer")
     )
 
     return cleaned
@@ -208,10 +234,10 @@ def clean2(df: pd.DataFrame) -> pd.DataFrame:
 
     cleaned = (
         df_to_use.pipe(zscore)
-            .pipe(all_low_cardinality_to_categorical)
-            .pipe(downcast_all, "float")
-            .pipe(downcast_all, "integer")
-            .pipe(downcast_all, target_type="unsigned", initial_type="integer")
+        .pipe(all_low_cardinality_to_categorical)
+        .pipe(downcast_all, "float")
+        .pipe(downcast_all, "integer")
+        .pipe(downcast_all, target_type="unsigned", initial_type="integer")
     )
 
     return cleaned
@@ -220,8 +246,7 @@ def clean2(df: pd.DataFrame) -> pd.DataFrame:
 """ Imputation functions """
 
 
-def impute_missing(df: pd.DataFrame,
-                   strategy: Union[int, str] = "mean"):
+def impute_missing(df: pd.DataFrame, strategy: Union[int, str] = "mean"):
     """Performs simple imputation on every numeric column within a DataFrame.
 
     Following the strategy, attempts to impute missing values from any
@@ -229,7 +254,8 @@ def impute_missing(df: pd.DataFrame,
     """
     df_to_use = df.copy()
     strat = {
-        "mean": np.mean, "median": np.median,
+        "mean": np.mean,
+        "median": np.median,
     }
     _sf = strat[strategy] if isinstance(strategy, str) else strategy
 
@@ -248,6 +274,4 @@ def krange(df: pd.DataFrame, col: str, k: Union[int, Tuple[int, int]]) -> pd.Dat
     else:
         largest, smallest = k, k
 
-    return pd.concat([
-        df.nlargest(largest, col), df.nsmallest(smallest, col)
-    ])
+    return pd.concat([df.nlargest(largest, col), df.nsmallest(smallest, col)])

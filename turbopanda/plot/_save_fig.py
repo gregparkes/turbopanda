@@ -10,13 +10,15 @@ import matplotlib.pyplot as plt
 from turbopanda.utils import belongs, instance_check
 
 
-def save(fig_obj: plt.Figure,
-         plot_type: str,
-         name: str = "example1",
-         save_types: Tuple[str, ...] = ("png", "pdf"),
-         fp: str = "./",
-         dpi: int = 360,
-         savemode: str = "first") -> bool:
+def save(
+    fig_obj: plt.Figure,
+    plot_type: str,
+    name: str = "example1",
+    save_types: Tuple[str, ...] = ("png", "pdf"),
+    fp: str = "./",
+    dpi: int = 360,
+    savemode: str = "first",
+) -> bool:
     """Saves a matplotlib figure in many formats.
 
     Given a matplotlib.Figure object, save appropriate numbers of Figures to the respective
@@ -63,11 +65,22 @@ def save(fig_obj: plt.Figure,
         Whether it was successful or not
     """
     accepted_types = (
-        "scatter", "kde", "heatmap", "cluster", "bar", "hist", "kde", "quiver",
-        "box", "line", "venn", "multi", "pie"
+        "scatter",
+        "kde",
+        "heatmap",
+        "cluster",
+        "bar",
+        "hist",
+        "kde",
+        "quiver",
+        "box",
+        "line",
+        "venn",
+        "multi",
+        "pie",
     )
     file_types_supported = ("png", "pdf", "svg", "eps", "ps")
-    accepted_savemodes = ('first', 'update')
+    accepted_savemodes = ("first", "update")
 
     instance_check(fig_obj, plt.Figure)
     instance_check(name, str)
@@ -92,9 +105,14 @@ def save(fig_obj: plt.Figure,
             # check if the figures themselves already exist.
             filename = "{}_{}/{}_{}.{}".format(fp, t, plot_type, name, t)
             if os.path.isfile(filename):
-                warnings.warn("Figure: '{}' already exists: Using savemode: {}".format(filename, savemode), UserWarning)
-                if savemode == 'update':
-                    fig_obj.savefig(filename, format=t, bbox_inches='tight', dpi=dpi)
+                warnings.warn(
+                    "Figure: '{}' already exists: Using savemode: {}".format(
+                        filename, savemode
+                    ),
+                    UserWarning,
+                )
+                if savemode == "update":
+                    fig_obj.savefig(filename, format=t, bbox_inches="tight", dpi=dpi)
             else:
                 # make the file
                 fig_obj.savefig(filename, format=t, bbox_inches="tight", dpi=dpi)

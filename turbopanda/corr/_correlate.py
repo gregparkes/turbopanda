@@ -9,8 +9,9 @@ Created on Thu Aug 15 16:08:52 2019
 from __future__ import absolute_import, division, print_function
 
 import itertools as it
+
 # imports
-from typing import List, Optional, Union
+from typing import Optional, Union
 import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed, cpu_count
@@ -19,16 +20,14 @@ from joblib import Parallel, delayed, cpu_count
 from turbopanda._metapanda import MetaPanda, SelectorType
 
 from turbopanda.str import pattern
-from turbopanda.utils import belongs, instance_check, \
-    is_dataframe_float, disallow_instance_pair, bounds_check
+from turbopanda.utils import belongs, instance_check, is_dataframe_float, bounds_check
 
 from ._bicorr import _partial_bicorr_inner, _bicorr_inner
 
+__all__ = ("correlate", "row_to_matrix")
 
-__all__ = ('correlate', 'row_to_matrix')
 
-
-def _row_to_matrix(rows: pd.DataFrame, x='x', y='y', piv="r") -> pd.DataFrame:
+def _row_to_matrix(rows: pd.DataFrame, x="x", y="y", piv="r") -> pd.DataFrame:
     """Takes the verbose row output and converts to lighter matrix format."""
     square = rows.pivot_table(index=x, columns=y, values=piv)
     # fillna
@@ -36,7 +35,7 @@ def _row_to_matrix(rows: pd.DataFrame, x='x', y='y', piv="r") -> pd.DataFrame:
     # ready for transpose
     square += square.T
     # eliminate 1 from diag
-    square.values[np.diag_indices_from(square.values)] -= 1.
+    square.values[np.diag_indices_from(square.values)] -= 1.0
     return square
 
 
@@ -47,51 +46,78 @@ def _parallel_bicorr(data, comb, is_parallel, *args, **kwargs):
     # performs optional parallelism on bicorrelations.
     # where comb is ((col_name_x1, col_name_y1), (col_name_x2, col_name_y2), ...)
     if is_parallel:
-        return Parallel(cpu_count() - 1)(delayed(_bicorr_inner)(data[x], data[y], *args, **kwargs) for x, y in comb)
+        return Parallel(cpu_count() - 1)(
+            delayed(_bicorr_inner)(data[x], data[y], *args, **kwargs) for x, y in comb
+        )
     else:
         return [_bicorr_inner(data[x], data[y], *args, **kwargs) for x, y in comb]
 
 
-def _parallel_partial_bicorr(data, covar, comb, is_parallel, is_cart_z, *args, **kwargs):
+def _parallel_partial_bicorr(
+    data, covar, comb, is_parallel, is_cart_z, *args, **kwargs
+):
     # performs optional parallelism on partial bicorrelations
     # where comb can be ((col_name_x1, col_name_y1), (col_name_x2, col_name_y2), ...)
     # or (((col_name_x1, col_name_y1), z1), ((col_name_x2, col_name_y2), z2), ...)
     if is_cart_z:
         comb_cart = it.product(comb, covar)
         if is_parallel:
-            return Parallel(cpu_count()-1)(delayed(_partial_bicorr_inner)(data, x, y, z, *args, **kwargs) for (x, y), z in comb_cart)
+            return Parallel(cpu_count() - 1)(
+                delayed(_partial_bicorr_inner)(data, x, y, z, *args, **kwargs)
+                for (x, y), z in comb_cart
+            )
         else:
-            return [_partial_bicorr_inner(data, x, y, z, *args, **kwargs) for (x, y), z in comb_cart]
+            return [
+                _partial_bicorr_inner(data, x, y, z, *args, **kwargs)
+                for (x, y), z in comb_cart
+            ]
     else:
         if is_parallel:
-            return Parallel(cpu_count()-1)(delayed(_partial_bicorr_inner)(data, x, y, covar, *args, **kwargs) for x, y in comb)
+            return Parallel(cpu_count() - 1)(
+                delayed(_partial_bicorr_inner)(data, x, y, covar, *args, **kwargs)
+                for x, y in comb
+            )
         else:
-            return [_partial_bicorr_inner(data, x, y, covar, *args, **kwargs) for x, y in comb]
+            return [
+                _partial_bicorr_inner(data, x, y, covar, *args, **kwargs)
+                for x, y in comb
+            ]
 
 
-""" Helper methods to convert from complex `correlate` function to bivariate examples (with partials). """
+""" Helper methods to convert from complex `correlate`
+    function to bivariate examples (with partials). """
 
 
 def _corr_combination(data, comb, covar, parallel, cart_z, method, verbose):
     # iterate and perform two_variable as before
     if covar is None:
-        result_k = _parallel_bicorr(data, comb, parallel, method=method, verbose=verbose)
+        result_k = _parallel_bicorr(
+            data, comb, parallel, method=method, verbose=verbose
+        )
     else:
-        result_k = _parallel_partial_bicorr(data, covar, comb, parallel, cart_z, method=method, verbose=verbose)
-    return pd.concat(result_k, axis=0, sort=False).reset_index().rename(columns={"index": "method"})
+        result_k = _parallel_partial_bicorr(
+            data, covar, comb, parallel, cart_z, method=method, verbose=verbose
+        )
+    return (
+        pd.concat(result_k, axis=0, sort=False)
+        .reset_index()
+        .rename(columns={"index": "method"})
+    )
 
 
-"""##################### PUBLIC FUNCTIONS ####################################################### """
+"""####### PUBLIC FUNCTIONS ############# """
 
 
-def correlate(data: Union[pd.DataFrame, MetaPanda],
-              x: Optional[SelectorType] = None,
-              y: Optional[SelectorType] = None,
-              covar: Optional[SelectorType] = None,
-              cartesian_covar: bool = False,
-              parallel: bool = False,
-              method: str = "spearman",
-              verbose: int = 0) -> pd.DataFrame:
+def correlate(
+    data: Union[pd.DataFrame, MetaPanda],
+    x: Optional[SelectorType] = None,
+    y: Optional[SelectorType] = None,
+    covar: Optional[SelectorType] = None,
+    cartesian_covar: bool = False,
+    parallel: bool = False,
+    method: str = "spearman",
+    verbose: int = 0,
+) -> pd.DataFrame:
     """Correlates X and Y together to generate a list of correlations.
 
     If X/Y are MetaPandas, returns a MetaPanda object, else returns pandas.DataFrame
@@ -110,10 +136,12 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
         set of covariate(s). Covariates are needed to compute partial correlations.
             If None, uses standard correlation.
     cartesian_covar : bool, default=False
-        If True, and if covar is not None, separates every element in covar to individually control for
+        If True, and if covar is not None, separates every
+            element in covar to individually control for
         using the cartesian product
     parallel : bool, default=False
-        If True, computes multiple correlation pairs in parallel using `joblib`. Uses `n_jobs=-2` for default.
+        If True, computes multiple correlation pairs in parallel
+            using `joblib`. Uses `n_jobs=-2` for default.
     method : str, default="spearman"
         Method to correlate with. Choose from:
             'pearson' : Pearson product-moment correlation
@@ -147,13 +175,19 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
     X     1.000000  0.392251  0.059771
     M     0.392251  1.000000  0.545618
     Y     0.059771  0.545618  1.000000
-    >>> R = turb.correlate(data, x=('X', 'M', 'Y'), y='Ybin') # correlates X columns against Ybin
+
+    # correlates X columns against Ybin
+    >>> R = turb.correlate(data, x=('X', 'M', 'Y'), y='Ybin')
                     X         M         Y
     Ybin     1.000000  0.392251  0.059771
-    >>> R = turb.correlate(data, x='X', y='Ybin', covar='Y') # correlates X against Ybin controlling for Y
+
+    # correlates X against Ybin controlling for
+    >>> R = turb.correlate(data, x='X', y='Ybin', covar='Y') Y
                      X
     Ybin     -0.149210
-    >>>  R = turb.correlate(data, method="shepherd") # using a different technique
+
+    # using a different technique
+    >>>  R = turb.correlate(data, method="shepherd")
                  X         M         Y      Mbin      Ybin
     X     1.000000  0.392251  0.059771 -0.014405 -0.149210
     M     0.392251  1.000000  0.545618 -0.015622 -0.094309
@@ -166,7 +200,18 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
     instance_check(data, (pd.DataFrame, MetaPanda))
     instance_check((x, y, covar), (type(None), str, list, tuple, pd.Index))
     instance_check(cartesian_covar, bool)
-    belongs(method, ('pearson', 'spearman', 'kendall', 'biserial', 'percbend', 'shepherd', 'skipped'))
+    belongs(
+        method,
+        (
+            "pearson",
+            "spearman",
+            "kendall",
+            "biserial",
+            "percbend",
+            "shepherd",
+            "skipped",
+        ),
+    )
     bounds_check(verbose, 0, 4)
 
     # downcast to dataframe option
@@ -186,7 +231,9 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
     # perform a check to make sure every column in `covar` is continuous.
     if covar is not None:
         if not is_dataframe_float(data[covar]):
-            raise TypeError("`covar` variables in `correlate` all must be of type `float`/continuous.")
+            raise TypeError(
+                "`covar` variables in `correlate` all must be of type `float`/continuous."
+            )
 
     # execute various use cases based on the presense of x, y, and covar, respectively.
     if x is None and y is None:
@@ -201,16 +248,20 @@ def correlate(data: Union[pd.DataFrame, MetaPanda],
     elif isinstance(y, (list, tuple, pd.Index)) and isinstance(x, str):
         # list of y, x str -> matrix-vector cartesian product
         comb = it.product(y, [x])
-    elif isinstance(x, (list, tuple, pd.Index)) and isinstance(y, (list, tuple, pd.Index)):
+    elif isinstance(x, (list, tuple, pd.Index)) and isinstance(
+        y, (list, tuple, pd.Index)
+    ):
         # list of x, y -> cartesian product of x: y terms
         comb = it.product(x, y)
     else:
         raise ValueError("X: {}; Y: {}; Z: {} combination unknown.".format(x, y, covar))
     # return the combination of these effects.
-    return _corr_combination(df, comb, covar, parallel, cartesian_covar, method, verbose)
+    return _corr_combination(
+        df, comb, covar, parallel, cartesian_covar, method, verbose
+    )
 
 
-def row_to_matrix(rows: pd.DataFrame, x="x", y="y", piv_value='r'):
+def row_to_matrix(rows: pd.DataFrame, x="x", y="y", piv_value="r"):
     """Converts a row-output from `correlate` into matrix form.
 
     Parameters

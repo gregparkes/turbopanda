@@ -5,8 +5,7 @@ from __future__ import absolute_import, division, print_function
 from typing import List
 import pandas as pd
 
-
-__all__ = ('select_float', 'select_missing_values', 'select_numeric')
+__all__ = ("select_float", "select_missing_values", "select_numeric")
 
 
 def select_float(x: pd.DataFrame) -> List[str]:

@@ -6,9 +6,8 @@ import numpy as np
 import pandas as pd
 
 from turbopanda.ml._clean import preprocess_continuous_X_y, select_xcols
-from turbopanda.utils import instance_check
 
-__all__ = ('cook_distance', 'hat', 'leverage')
+__all__ = ("cook_distance", "hat", "leverage")
 
 
 def _hat_ols(X):
@@ -21,7 +20,7 @@ def _hat_ols(X):
     return H
 
 
-def _hat_ridge(X, alpha=1.):
+def _hat_ridge(X, alpha=1.0):
     """Uses the ridge direct version of hat matrix."""
     X = np.atleast_2d(X)
     # attempt to invert X.T @ X
@@ -50,7 +49,7 @@ def hat(X, method="ols"):
     """
     if method == "ols":
         return _hat_ols(X)
-    elif method == 'ridge':
+    elif method == "ridge":
         return _hat_ridge(X)
     else:
         raise ValueError("method '{}' not found in {'ols', 'ridge'}")
@@ -85,7 +84,7 @@ def cook_distance(df, x, y, yp):
     _xcols = select_xcols(df, x, y)
     _x, _y = preprocess_continuous_X_y(_df, _xcols, y)
 
-    _p = len(_xcol)
+    _p = len(_xcols)
     # determine squared-residuals
     resid_sq = np.square(_y - yp)
     # calculate hat matrix as OLS : @ is dot product between matrices

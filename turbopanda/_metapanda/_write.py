@@ -12,8 +12,13 @@ import pandas as pd
 from turbopanda.utils import split_file_directory, union
 from ._metadata import default_columns
 
-
-__all__ = ('write', '_write_csv', '_write_json', "_write_pickle", '_write_hdf', 'printf')
+__all__ = (
+    "write",
+    "_write_csv",
+    "_write_json",
+    "_write_pickle",
+    "printf",
+)
 
 
 def _write_csv(self, filename: str, with_meta: bool = False, *args, **kwargs):
@@ -28,23 +33,30 @@ def _write_json(self, filename: str):
     self.update_meta()
     # columns founded by meta_map are dropped
     redundant_meta = union(list(default_columns().keys()), list(self.mapper_.keys()))
-    reduced_meta = self.meta_.drop(redundant_meta, axis=1, errors='ignore')
+    reduced_meta = self.meta_.drop(redundant_meta, axis=1, errors="ignore")
     # encode data
     stringed_data = self.df_.to_json(double_precision=12)
-    stringed_meta = reduced_meta.to_json(double_precision=12) if reduced_meta.shape[1] > 0 else "{}"
+    stringed_meta = (
+        reduced_meta.to_json(double_precision=12) if reduced_meta.shape[1] > 0 else "{}"
+    )
     # generate checksum - using just the column names.
-    checksum = hashlib.sha256(json.dumps(self.df_.columns.tolist()).encode()).hexdigest()
+    checksum = hashlib.sha256(
+        json.dumps(self.df_.columns.tolist()).encode()
+    ).hexdigest()
     # compilation string
-    compile_string = '{"data":%s,"meta":%s,"name":%s,"cache":%s,"mapper":%s,"checksum":%s}' % (
-        stringed_data,
-        stringed_meta,
-        json.dumps(self.name_),
-        json.dumps(self.selectors_),
-        json.dumps(self.mapper_),
-        json.dumps(checksum),
+    compile_string = (
+        '{"data":%s,"meta":%s,"name":%s,"cache":%s,"mapper":%s,"checksum":%s}'
+        % (
+            stringed_data,
+            stringed_meta,
+            json.dumps(self.name_),
+            json.dumps(self.selectors_),
+            json.dumps(self.mapper_),
+            json.dumps(checksum),
+        )
     )
     # determine file name.
-    fn = filename if filename is not None else self.name_ + '.json'
+    fn = filename if filename is not None else self.name_ + ".json"
     with open(fn, "wb") as f:
         f.write(compile_string.encode())
 
@@ -56,11 +68,9 @@ def _write_pickle(self, filename: str):
     dump(self, filename)
 
 
-def write(self,
-          filename: Optional[str] = None,
-          with_meta: bool = False,
-          *args,
-          **kwargs) -> "MetaPanda":
+def write(
+    self, filename: Optional[str] = None, with_meta: bool = False, *args, **kwargs
+):
     """Save a MetaPanda to disk.
 
     Parameters
@@ -94,11 +104,14 @@ def write(self,
     elif filename.endswith(".pkl"):
         self._write_pickle(filename)
     else:
-        raise IOError("Doesn't recognize filename or type: '{}', must end in [csv, json, pkl]".format(filename))
+        endings = ("csv", "json", "pkl")
+        raise IOError(
+            "Filetype '{}' unrecognized, choose from {}".format(filename, endings)
+        )
     return self
 
 
 def printf(self):
     """Prints the MetaPanda in full pandas-like output."""
-    with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+    with pd.option_context("display.max_rows", None, "display.max_columns", None):
         print(self.df_)

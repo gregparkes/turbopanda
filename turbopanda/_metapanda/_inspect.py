@@ -4,7 +4,6 @@
 
 import re
 import pandas as pd
-from functools import reduce
 
 from ._selection import get_selector
 from ._types import SelectorType
@@ -13,19 +12,23 @@ from turbopanda.utils import instance_check, intersect, union, join
 
 """ INSPECTING COLUMNS """
 
-__all__ = ('view', 'view_not', 'inspect', 'select')
+__all__ = ("view", "view_not", "inspect", "select")
 
 
-def _handle_mode(df, v, mode='view'):
-    if mode == 'view' or mode == 'search':
+def _handle_mode(df, v, mode="view"):
+    if mode == "view" or mode == "search":
         return df.columns[df.columns.isin(v)]
-    elif mode == 'view_not':
+    elif mode == "view_not":
         return df.columns[df.columns.isin(df.columns.difference(v))]
     else:
-        raise ValueError("mode '{}' not recognized, choose from ['view', 'search', 'view_not']".format(mode))
+        raise ValueError(
+            "mode '{}' not recognized, choose from ['view', 'search', 'view_not']".format(
+                mode
+            )
+        )
 
 
-def inspect(df, meta, selectors, s=None, join_t='union', axis=1, mode='view'):
+def inspect(df, meta, selectors, s=None, join_t="union", axis=1, mode="view"):
     """Handles basic selection using the `get_selector`."""
     if s is None:
         return df.columns if axis == 1 else df.index
@@ -34,11 +37,17 @@ def inspect(df, meta, selectors, s=None, join_t='union', axis=1, mode='view'):
     elif axis == 1:
         if isinstance(s, (tuple, list)):
             if len(s) <= 1:
-                v = get_selector(df, meta, selectors, s[0], raise_error=False, select_join=join_t)
+                v = get_selector(
+                    df, meta, selectors, s[0], raise_error=False, select_join=join_t
+                )
             else:
-                v = get_selector(df, meta, selectors, s, raise_error=False, select_join=join_t)
+                v = get_selector(
+                    df, meta, selectors, s, raise_error=False, select_join=join_t
+                )
         else:
-            v = get_selector(df, meta, selectors, s, raise_error=False, select_join=join_t)
+            v = get_selector(
+                df, meta, selectors, s, raise_error=False, select_join=join_t
+            )
         return _handle_mode(df, v, mode=mode)
     else:
         raise ValueError("cannot use argument [selector] with axis=0, for rows")
@@ -56,7 +65,8 @@ def view(self, *selector: SelectorType, **selector_kwargs) -> pd.Index:
         type [object, int, float, numpy.dtype*, pandas.CategoricalDtype]
         callable (function) that returns [bool list] of length p
         pd.Index
-        str [regex, df.column name, cached name, meta.column name (that references a boolean column)]
+        str [regex, df.column name, cached name,
+            meta.column name (that references a boolean column)]
         list/tuple of the above
 
     .. note:: `view` *preserves* the order in which columns appear within the DataFrame.
@@ -66,7 +76,8 @@ def view(self, *selector: SelectorType, **selector_kwargs) -> pd.Index:
     *selector : selector or tuple args
         See above for what constitutes an *appropriate selector*.
     **selector_kwargs : dict keyword args
-        Passing cache name (k), selector (v). See above for what constitutes an *appropriate selector*.
+        Passing cache name (k), selector (v). See above for
+            what constitutes an *appropriate selector*.
         Key arguments passed here ARE CACHED, so it is the same as calling `mdf.cache`.
 
     Warnings
@@ -91,14 +102,19 @@ def view(self, *selector: SelectorType, **selector_kwargs) -> pd.Index:
         self.cache_k(**selector_kwargs)
         # add 'values' to the selector list
         _ms = join(_ms, selector_kwargs.values())
-    # special case if it's only one element and of type str, and contains & or | - use select
+    # special case if it's only one element and of type
+    # str, and contains & or | - use select
     if len(_ms) == 1 and isinstance(_ms[0], str) and re.search("[&|]", _ms[0]):
         # try select statement
         return self.select(_ms[0])
     else:
-        # we do this 'double-drop' to maintain the order of the DataFrame, because of set operations.
-        sel = inspect(self.df_, self.meta_, self.selectors_, _ms, join_t='union', mode='view')
-        # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
+        # we do this 'double-drop' to maintain the order
+        # of the DataFrame, because of set operations.
+        sel = inspect(
+            self.df_, self.meta_, self.selectors_, _ms, join_t="union", mode="view"
+        )
+        # re-order selection so as to not disturb the selection
+        # of columns, etc. (due to hashing/set operations)
         return sel
 
 
@@ -110,10 +126,12 @@ def view_not(self, *selector: SelectorType) -> pd.Index:
         type [object, int, float, numpy.dtype*, pandas.CategoricalDtype]
         callable (function) that returns [bool list] of length p
         pd.Index
-        str [regex, df.column name, cached name, meta.column name (that references a boolean column)]
+        str [regex, df.column name, cached name,
+            meta.column name (that references a boolean column)]
         list/tuple of the above
 
-    .. note:: `view_not` *preserves* the order in which columns appear within the DataFrame.
+    .. note:: `view_not` *preserves* the order in
+        which columns appear within the DataFrame.
 
     Parameters
     ----------
@@ -135,8 +153,16 @@ def view_not(self, *selector: SelectorType) -> pd.Index:
     view : View a selection of columns in `df_`.
     search : View the intersection of search terms, for columns in `df_`.
     """
-    sel = inspect(self.df_, self.meta_, self.selectors_, list(selector), join_t='union', mode='view_not')
-    # re-order selection so as to not disturb the selection of columns, etc. (due to hashing/set operations)
+    sel = inspect(
+        self.df_,
+        self.meta_,
+        self.selectors_,
+        list(selector),
+        join_t="union",
+        mode="view_not",
+    )
+    # re-order selection so as to not disturb the selection
+    # of columns, etc. (due to hashing/set operations)
     return sel
 
 
@@ -148,7 +174,8 @@ def select(self, sc: str) -> pd.Index:
         type [object, int, float, numpy.dtype*, pandas.CategoricalDtype]
         callable (function) that returns [bool list] of length p
         pd.Index
-        str [regex, df.column name, cached name, meta.column name (that references a boolean column)]
+        str [regex, df.column name, cached name,
+            meta.column name (that references a boolean column)]
         list/tuple of the above
 
     .. note:: We do not currently incorporate the use of brackets.
@@ -186,8 +213,10 @@ def select(self, sc: str) -> pd.Index:
     >>> mdf.select("~float")
     Index(['b'], dtype='object', name='colnames')
 
-    Multiple terms can be joined together, include regex-expressions NOT including `&` or `|`, for
-    instance if we wanted to select all float columns containing names x1, x2 or x3:
+    Multiple terms can be joined together, include
+        regex-expressions NOT including `&` or `|`, for
+        instance if we wanted to select all float columns
+         containing names x1, x2 or x3:
     >>> mdf.select("float & x[1-3]")
     """
     instance_check(sc, str)
@@ -197,7 +226,9 @@ def select(self, sc: str) -> pd.Index:
     if len(terms) < 1:
         return pd.Index([])
     else:
-        grp = [self.view_not(t[1:]) if t.startswith("~") else self.view(t) for t in terms]
+        grp = [
+            self.view_not(t[1:]) if t.startswith("~") else self.view(t) for t in terms
+        ]
         full = grp[0]
         for mg, op in zip(grp[1:], operator):
             if op == "&":

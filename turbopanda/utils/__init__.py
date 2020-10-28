@@ -14,7 +14,6 @@ from ._remove_na import remove_na
 from ._sets import *
 from ._sorting import broadsort, unique_ordered, retuple
 from ._duplicates import remove_dup_cols
+
 # import statements here
 from ._typegroups import *
-
-

@@ -13,7 +13,7 @@ import numpy as np
 
 from turbopanda.utils import belongs, union
 
-__all__ = ['bleep', "Bleep"]
+__all__ = ["bleep", "Bleep"]
 
 
 def _get_note_progression(n, A_4=440):
@@ -21,17 +21,17 @@ def _get_note_progression(n, A_4=440):
 
     Determined as A_4 * (2^1/12)^n.
     """
-    return A_4 * np.power(np.power(2, 1. / 12.), n)
+    return A_4 * np.power(np.power(2, 1.0 / 12.0), n)
 
 
 def _get_notes_flat():
     """Returns the musical notes as strings, from C, using only flats."""
-    return 'C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'
+    return "C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"
 
 
 def _get_notes_sharp():
     """Returns the musical notes as strings, from C, using only sharps."""
-    return 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
+    return "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
 
 
 def _get_notes_all():
@@ -46,13 +46,24 @@ def _major_arpeggios():
     (including upper note).
     """
     return {
-        'C': ['E', 'G'], 'D': ['F#', 'A'], 'E': ['G#', 'B'],
-        'F': ['A', 'C'], 'G': ['B', 'D'], 'A': ['C#', 'E'],
-        'B': ['D#', 'F#'], 'Db': ['F', 'Ab'], 'Eb': ['G', 'Bb'],
-        'F#': ['A#', 'Db'], 'Ab': ['C', 'Eb'], 'Bb': ['D', 'F'],
+        "C": ["E", "G"],
+        "D": ["F#", "A"],
+        "E": ["G#", "B"],
+        "F": ["A", "C"],
+        "G": ["B", "D"],
+        "A": ["C#", "E"],
+        "B": ["D#", "F#"],
+        "Db": ["F", "Ab"],
+        "Eb": ["G", "Bb"],
+        "F#": ["A#", "Db"],
+        "Ab": ["C", "Eb"],
+        "Bb": ["D", "F"],
         # also map equivalents e.g F#=Gb
-        'C#': ['F', 'Ab'], 'D#': ['G', 'Bb'], 'Gb': ['A#', 'Db'],
-        'G#': ['C', 'Eb'], 'A#': ['D', 'F']
+        "C#": ["F", "Ab"],
+        "D#": ["G", "Bb"],
+        "Gb": ["A#", "Db"],
+        "G#": ["C", "Eb"],
+        "A#": ["D", "F"],
     }
 
 
@@ -64,21 +75,32 @@ def _minor_arpeggios():
     (including upper note).
     """
     return {
-        'C': ['Eb', 'G'], 'D': ['F', 'A'], 'E': ['G', 'B'],
-        'F': ['Ab', 'C'], 'G': ['Bb', 'D'], 'A': ['C', 'E'],
-        'B': ['D', 'F#'], 'C#': ['E', 'G#'], 'Eb': ['Gb', 'Bb'],
-        'F#': ['A', 'C#'], 'G#': ['B', 'D#'], 'Bb': ['Db', 'F'],
+        "C": ["Eb", "G"],
+        "D": ["F", "A"],
+        "E": ["G", "B"],
+        "F": ["Ab", "C"],
+        "G": ["Bb", "D"],
+        "A": ["C", "E"],
+        "B": ["D", "F#"],
+        "C#": ["E", "G#"],
+        "Eb": ["Gb", "Bb"],
+        "F#": ["A", "C#"],
+        "G#": ["B", "D#"],
+        "Bb": ["Db", "F"],
         # also map equivalents e.g F#=Gb
-        'Db': ['E', 'G#'], 'D#': ['Gb', 'Bb'], 'Gb': ['A', 'C#'],
-        'Ab': ['B', 'D#'], 'A#': ['Db', 'F'],
+        "Db": ["E", "G#"],
+        "D#": ["Gb", "Bb"],
+        "Gb": ["A", "C#"],
+        "Ab": ["B", "D#"],
+        "A#": ["Db", "F"],
     }
 
 
-def _get_arpeggio(note='C', key='major', level=4):
+def _get_arpeggio(note="C", key="major", level=4):
     """Given a note and key, return the 4 notes that form an arpeggio."""
     if key == "major":
         arp = _major_arpeggios()
-    elif key == 'minor':
+    elif key == "minor":
         arp = _minor_arpeggios()
     else:
         raise ValueError("key '{}' not recognised".format(key))
@@ -92,9 +114,21 @@ def _get_arpeggio(note='C', key='major', level=4):
 def _get_notepack():
     hz = _get_note_progression(n=np.arange(-57, 51, 1))
     note_range_flat = list(
-        it.chain.from_iterable([list(map(lambda x: x + '_%s' % str(i), _get_notes_flat())) for i in range(9)]))
+        it.chain.from_iterable(
+            [
+                list(map(lambda x: x + "_%s" % str(i), _get_notes_flat()))
+                for i in range(9)
+            ]
+        )
+    )
     note_range_sharp = list(
-        it.chain.from_iterable([list(map(lambda x: x + '_%s' % str(i), _get_notes_sharp())) for i in range(9)]))
+        it.chain.from_iterable(
+            [
+                list(map(lambda x: x + "_%s" % str(i), _get_notes_sharp()))
+                for i in range(9)
+            ]
+        )
+    )
     return {**dict(zip(note_range_flat, hz)), **dict(zip(note_range_sharp, hz))}
 
 
@@ -119,12 +153,13 @@ def _produce_audio(notes: List[str], seconds=2, fs=44100):
 
 def _play_audio(audio, fs=44100):
     import simpleaudio as sa
+
     play_obj = sa.play_buffer(audio, 1, 2, fs)
     # wait for playback to finish
     play_obj.wait_done()
 
 
-def _play_arpeggio(note='C', key="major"):
+def _play_arpeggio(note="C", key="major"):
     # plays the arpeggio given a note and key
     arp = _get_arpeggio(note=note, key=key)
     # get audio
@@ -134,11 +169,11 @@ def _play_arpeggio(note='C', key="major"):
 
 
 def test_play_audio():
-    aud = _produce_audio(['C_4', 'E_4', 'G_4', 'C_5'])
+    aud = _produce_audio(["C_4", "E_4", "G_4", "C_5"])
     _play_audio(aud)
 
 
-def bleep(_func=None, *, note='C') -> Callable:
+def bleep(_func=None, *, note="C") -> Callable:
     """Provides automatic sound release when a function has completed.
 
     .. note:: this requires the `simpleaudio` package to run.
@@ -175,6 +210,7 @@ def bleep(_func=None, *, note='C') -> Callable:
                 # make negative noise
                 _play_arpeggio(note.upper(), key="minor")
                 print(e.args)
+
         return _bleep_function
 
     if _func is None:

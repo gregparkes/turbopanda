@@ -14,7 +14,7 @@ from sklearn import preprocessing
 
 # locals
 from ._deprecator import deprecated
-from .utils import instance_check, is_n_value_column, join, object_to_categorical
+from .utils import is_n_value_column, join, object_to_categorical
 
 PipeTypeRawElem = Tuple[str, Tuple, Dict]
 PipeTypeCleanElem = Tuple[Union[str, Callable, Dict, TypeVar], ...]
@@ -37,9 +37,9 @@ def _type_cast_argument(s: str):
         return int(s)
     elif _is_float_cast(s):
         return float(s)
-    elif s in ('true', 'True'):
+    elif s in ("true", "True"):
         return True
-    elif s in ('false', 'False'):
+    elif s in ("false", "False"):
         return False
     else:
         return s
@@ -66,7 +66,7 @@ def _single_pipe(argument: PipeTypeCleanElem) -> Tuple:
             if arg.find("=") != -1:
                 key, value = arg.split("=", 1)
                 value = _type_cast_argument(value)
-                # attempt to convert sp[1] from str to int, float, bool or other basic type.
+                # attempt to convert sp[1] from str to int, float, bool etc.
                 pipe_d[key] = value
             else:
                 # otherwise tupleize it as an *arg
@@ -88,7 +88,7 @@ class Pipe(object):
     """An object for handling pipelines of data.
 
     A basic list-like object that allows users to create, manipulate
-    and execute functions to a given object/class.
+        and execute functions to a given object/class.
 
     Attributes
     ----------
@@ -102,8 +102,12 @@ class Pipe(object):
     None
     """
 
-    @deprecated("0.2.6", "0.3", instead=".pipe extension",
-                reason="This object is too ugly, use pandas.pipe methods instead")
+    @deprecated(
+        "0.2.6",
+        "0.3",
+        instead=".pipe extension",
+        reason="This object is too ugly, use pandas.pipe methods instead",
+    )
     def __init__(self, *args: PipeTypeCleanElem):
         """Define a Pipeline for your object.
 
@@ -170,17 +174,20 @@ class Pipe(object):
     def copy(self):
         """Provides a deep copy of this object."""
         from copy import deepcopy
+
         """Copy this object into a new object."""
         return deepcopy(self)
 
     """ ############ PUBLIC ACCESSIBLE PIPELINES TO PLUG-AND-PLAY .... ############### """
 
     @classmethod
-    def ml_regression(cls,
-                      mp,
-                      x_s: Union[Tuple[str, ...], Index],
-                      y_s: Union[str, Tuple[str, ...], Index],
-                      preprocessor: str = "scale") -> "Pipe":
+    def ml_regression(
+        cls,
+        mp,
+        x_s: Union[Tuple[str, ...], Index],
+        y_s: Union[str, Tuple[str, ...], Index],
+        preprocessor: str = "scale",
+    ) -> "Pipe":
         """The default pipeline for Machine Learning Regression problems.
 
         Parameters
@@ -205,33 +212,50 @@ class Pipe(object):
             # try to get function
             preproc_f = getattr(preprocessing, preprocessor.lower())
         else:
-            raise ValueError("preprocessor function '{}' not found in sklearn.preprocessing".format(preprocessor))
+            raise ValueError(
+                "preprocessor function '{}' not found in sklearn.preprocessing".format(
+                    preprocessor
+                )
+            )
 
         # out of the x-features, we only preprocess.scale continuous features.
-        return cls.raw((
-            # drop objects, ids columns
-            ("drop", (object, ".*id$", ".*ID$", "^ID.*", "^id.*"), {}),
-            # drop any columns with single-value-type in
-            ("apply", ("drop", mp.view(is_n_value_column),), {"axis": 1}),
-            # drop missing values in y
-            ("apply", ("dropna",), {"axis": 0, "subset": mp.view(y_s)}),
-            # fill missing values with the mean
-            ("transform", (lambda x: x.fillna(x.mean()), x_s), {}),
-            # apply standard scaling to X
-            ("transform", (preproc_f,), {"selector": x_s, "whole": True}),
-        ))
+        return cls.raw(
+            (
+                # drop objects, ids columns
+                ("drop", (object, ".*id$", ".*ID$", "^ID.*", "^id.*"), {}),
+                # drop any columns with single-value-type in
+                (
+                    "apply",
+                    (
+                        "drop",
+                        mp.view(is_n_value_column),
+                    ),
+                    {"axis": 1},
+                ),
+                # drop missing values in y
+                ("apply", ("dropna",), {"axis": 0, "subset": mp.view(y_s)}),
+                # fill missing values with the mean
+                ("transform", (lambda x: x.fillna(x.mean()), x_s), {}),
+                # apply standard scaling to X
+                ("transform", (preproc_f,), {"selector": x_s, "whole": True}),
+            )
+        )
 
     @classmethod
-    def clean(cls,
-              with_drop: bool = True,
-              with_boolint: bool = True,
-              with_categories: bool = False,
-              with_downcast: bool = True) -> "Pipe":
+    def clean(
+        cls,
+        with_drop: bool = True,
+        with_boolint: bool = True,
+        with_categories: bool = False,
+        with_downcast: bool = True,
+    ) -> "Pipe":
         """Pipeline to clean a pandas.DataFrame.
 
-        Pipe that cleans the pandas.DataFrame. Applies a number of transformations which (attempt to) reduce the
-        datatype, cleaning column names. Transformations include:
+        Pipe that cleans the pandas.DataFrame. Applies a number of transformations
+            which (attempt to) reduce the
+            datatype, cleaning column names.
 
+        Transformations include:
         * Dropping columns with only one unique value type.
         * Converting columns to numeric where possible
         * Stripping column names of spaces
@@ -244,7 +268,8 @@ class Pipe(object):
         with_boolint : bool, optional
             If True, converts all boolean columns into np.uint8 integers.
         with_categories : bool, optional
-            If True, converts object columns with only n-unique variables into type 'category'
+            If True, converts object columns with only
+                n-unique variables into type 'category'
         with_downcast : bool, optional
             If True, attempts to downcast all columns in df_ to a lower value.
 
@@ -255,22 +280,53 @@ class Pipe(object):
         """
         # optional steps.
         drop_step = [("drop", (lambda x: x.nunique() == 1,), {})] if with_drop else None
-        boolint_step = [
-            ('transform', (Series.astype,), {'selector': 'bool', 'dtype': np.uint8})
-        ] if with_boolint else None
-        numeric_step = [
-            ("transform", (to_numeric,),
-             {"selector": ("float64", "int64"), "errors": "ignore", "downcast": "unsigned"})
-        ] if with_downcast else None
-        category_step = [
-            ('transform', (object_to_categorical, "object",), {'method': 'transform'})
-        ] if with_categories else None
+        boolint_step = (
+            [("transform", (Series.astype,), {"selector": "bool", "dtype": np.uint8})]
+            if with_boolint
+            else None
+        )
+        numeric_step = (
+            [
+                (
+                    "transform",
+                    (to_numeric,),
+                    {
+                        "selector": ("float64", "int64"),
+                        "errors": "ignore",
+                        "downcast": "unsigned",
+                    },
+                )
+            ]
+            if with_downcast
+            else None
+        )
+        category_step = (
+            [
+                (
+                    "transform",
+                    (
+                        object_to_categorical,
+                        "object",
+                    ),
+                    {"method": "transform"},
+                )
+            ]
+            if with_categories
+            else None
+        )
         # compulsory steps.
-        strip_step = [('apply_columns', ('strip',), {})]
-        rename_step = [('rename_axis', ([(' ', '_'), ('\t', '_'), ('-', '')],), {})]
+        strip_step = [("apply_columns", ("strip",), {})]
+        rename_step = [("rename_axis", ([(" ", "_"), ("\t", "_"), ("-", "")],), {})]
 
         # join them together, dropping None where applicable.
-        order = join(drop_step, numeric_step, boolint_step, category_step, strip_step, rename_step)
+        order = join(
+            drop_step,
+            numeric_step,
+            boolint_step,
+            category_step,
+            strip_step,
+            rename_step,
+        )
         return cls.raw(order)
 
     @classmethod
@@ -284,12 +340,14 @@ class Pipe(object):
         pipe : list
             The pipeline object
         """
-        return cls(('drop', "object", ".*id$", ".*ID$", "^ID.*", "^id.*"))
+        return cls(("drop", "object", ".*id$", ".*ID$", "^ID.*", "^id.*"))
 
 
-PipeMetaPandaType = Union[Tuple[PipeTypeCleanElem, ...],
-                          Tuple[PipeTypeRawElem, ...],
-                          List[PipeTypeCleanElem],
-                          List[PipeTypeRawElem],
-                          str,
-                          Pipe]
+PipeMetaPandaType = Union[
+    Tuple[PipeTypeCleanElem, ...],
+    Tuple[PipeTypeRawElem, ...],
+    List[PipeTypeCleanElem],
+    List[PipeTypeRawElem],
+    str,
+    Pipe,
+]

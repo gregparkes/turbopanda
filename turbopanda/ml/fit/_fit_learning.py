@@ -8,27 +8,32 @@ from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import RepeatedKFold, permutation_test_score, learning_curve
+from sklearn.model_selection import (
+    RepeatedKFold,
+    permutation_test_score,
+    learning_curve,
+)
 
 from turbopanda._metapanda import MetaPanda, SelectorType
-from turbopanda.utils import instance_check, difference, bounds_check
-from turbopanda.str import pattern
+from turbopanda.utils import instance_check, bounds_check
 from turbopanda.ml._clean import preprocess_continuous_X_y, select_xcols
 from turbopanda.ml._package import find_sklearn_model
 from turbopanda.ml.plot._plot_learning import learning_curve as lcurve
 
 
-def learning(df: "MetaPanda",
-             y: str,
-             x: Optional[SelectorType] = None,
-             train_n: Optional[np.ndarray] = None,
-             permute_n: int = 0,
-             cv: Tuple[int, int] = (5, 15),
-             model: str = "LinearRegression",
-             cache: Optional[str] = None,
-             plot: bool = False,
-             verbose: int = 0,
-             **model_kws):
+def learning(
+    df: "MetaPanda",
+    y: str,
+    x: Optional[SelectorType] = None,
+    train_n: Optional[np.ndarray] = None,
+    permute_n: int = 0,
+    cv: Tuple[int, int] = (5, 15),
+    model: str = "LinearRegression",
+    cache: Optional[str] = None,
+    plot: bool = False,
+    verbose: int = 0,
+    **model_kws
+):
     """Fits a basic model to generate cross-validated training/test scores for different training set sizes.
 
     A cross-validation generator splits the whole dataset `k` times in training and test data. Subsets of the training set with
@@ -115,35 +120,57 @@ def learning(df: "MetaPanda",
     lm.set_params(**model_kws)
 
     if train_n is None:
-        train_n = np.linspace(.1, .9, 8)
+        train_n = np.linspace(0.1, 0.9, 8)
     elif isinstance(train_n, int):
-        train_n = np.linspace(.1, .9, train_n)
+        train_n = np.linspace(0.1, 0.9, train_n)
     # ml ready
     _x, _y = preprocess_continuous_X_y(_df, _xcols, y)
 
     rep = RepeatedKFold(n_splits=k, n_repeats=repeats)
-    vars_ = learning_curve(lm, _x, _y, train_sizes=train_n,
-                   cv=rep, scoring="neg_root_mean_squared_error",
-                   n_jobs=-2, verbose=verbose, return_times=True)
+    vars_ = learning_curve(
+        lm,
+        _x,
+        _y,
+        train_sizes=train_n,
+        cv=rep,
+        scoring="neg_root_mean_squared_error",
+        n_jobs=-2,
+        verbose=verbose,
+        return_times=True,
+    )
     # permutation analysis if permute_n > 0
     if permute_n > 0:
-        perm_score_, perm_scorez_, pval = permutation_test_score(lm, _x, _y, cv=rep, n_permutations=permute_n,
-                                                                 scoring="neg_root_mean_squared_error",
-                                                                 n_jobs=-2, verbose=verbose)
+        perm_score_, perm_scorez_, pval = permutation_test_score(
+            lm,
+            _x,
+            _y,
+            cv=rep,
+            n_permutations=permute_n,
+            scoring="neg_root_mean_squared_error",
+            n_jobs=-2,
+            verbose=verbose,
+        )
 
     # outputs
-    output_labels_ = ['train_score', 'test_score', 'fit_time', 'score_time']
+    output_labels_ = ["train_score", "test_score", "fit_time", "score_time"]
     # format as df
     results = pd.DataFrame(
         # stack them together
-        np.hstack((
-            np.stack([np.mean(vars_[i], axis=1) for i in range(1, 5)], axis=1),
-            np.stack([np.std(vars_[i], axis=1) for i in range(1, 5)], axis=1)
-        )),
-        columns=list(it.chain(map(lambda s: "mean_" + s, output_labels_), map(lambda s: "std_" + s, output_labels_)))
+        np.hstack(
+            (
+                np.stack([np.mean(vars_[i], axis=1) for i in range(1, 5)], axis=1),
+                np.stack([np.std(vars_[i], axis=1) for i in range(1, 5)], axis=1),
+            )
+        ),
+        columns=list(
+            it.chain(
+                map(lambda s: "mean_" + s, output_labels_),
+                map(lambda s: "std_" + s, output_labels_),
+            )
+        ),
     )
     # add N column
-    results['N'] = vars_[0]
+    results["N"] = vars_[0]
     R = MetaPanda(results)
     if plot and permute_n > 0:
         lcurve(R, perm_scorez_)

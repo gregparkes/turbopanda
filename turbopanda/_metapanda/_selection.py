@@ -5,16 +5,12 @@
 # future imports
 from __future__ import absolute_import, division, print_function
 
-import itertools as it
 # imports
-import re
 from typing import Dict, Iterable
-
 from pandas import CategoricalDtype, DataFrame, Index, Series, concat
 
 # locals
-from turbopanda.utils import dictzip, \
-    difference, intersect, join, t_numpy, union
+from turbopanda.utils import dictzip, difference, intersect, join, t_numpy, union
 from turbopanda.str import pattern
 from ._types import SelectorType
 
@@ -26,23 +22,25 @@ def selector_types() -> Iterable:
     return join(
         t_numpy(),
         tuple(map(lambda n: n.__name__, t_numpy())),
-        (float, int, bool, object, CategoricalDtype, "object", "category")
+        (float, int, bool, object, CategoricalDtype, "object", "category"),
     )
 
 
 def _varstrtypes():
-    return list(map(lambda t: t.__name__, t_numpy())) + ['object', 'category']
+    return list(map(lambda t: t.__name__, t_numpy())) + ["object", "category"]
 
 
 def _vartypes():
     return [float, int, bool, object, CategoricalDtype] + list(t_numpy())
 
 
-def _get_selector_item(df: DataFrame,
-                       meta: DataFrame,
-                       cached: Dict[str, SelectorType],
-                       selector: SelectorType,
-                       raise_error: bool = False) -> Index:
+def _get_selector_item(
+    df: DataFrame,
+    meta: DataFrame,
+    cached: Dict[str, SelectorType],
+    selector: SelectorType,
+    raise_error: bool = False,
+) -> Index:
     """
     Accepts:
         type [object, int, float, np.float]
@@ -57,9 +55,10 @@ def _get_selector_item(df: DataFrame,
         return intersect(df.columns, selector)
     elif selector in selector_types():
         # if it's a string option, convert to type
-        dec_map = {"object": object,
-                   "category": CategoricalDtype,
-                   **dictzip(map(lambda n: n.__name__, t_numpy()), t_numpy())
+        dec_map = {
+            "object": object,
+            "category": CategoricalDtype,
+            **dictzip(map(lambda n: n.__name__, t_numpy()), t_numpy()),
         }
         if selector in dec_map.keys():
             selector = dec_map[selector]
@@ -91,18 +90,21 @@ def _get_selector_item(df: DataFrame,
             # try regex
             return pattern(selector, df, extended_regex=False)
         else:
-            # we assume it's in the index, and we return it, else allow pandas to raise the error.
+            # we assume it's in the index, and we
+            # return it, else allow pandas to raise the error.
             return Index([selector], name=df.columns.name)
     else:
         raise TypeError("selector type '{}' not recognized".format(type(selector)))
 
 
-def get_selector(df: DataFrame,
-                 meta: DataFrame,
-                 cached: Dict[str, SelectorType],
-                 selector: SelectorType,
-                 raise_error: bool = False,
-                 select_join: str = "union") -> Index:
+def get_selector(
+    df: DataFrame,
+    meta: DataFrame,
+    cached: Dict[str, SelectorType],
+    selector: SelectorType,
+    raise_error: bool = False,
+    select_join: str = "union",
+) -> Index:
     """
     Selector must be a list/tuple of selectors.
 
@@ -115,14 +117,20 @@ def get_selector(df: DataFrame,
     """
     if isinstance(selector, (tuple, list)):
         # iterate over all selector elements and get pd.Index es.
-        s_groups = [_get_selector_item(df, meta, cached, s, raise_error) for s in selector]
+        s_groups = [
+            _get_selector_item(df, meta, cached, s, raise_error) for s in selector
+        ]
         # print(s_groups)
         if select_join == "intersect":
             return intersect(*s_groups)
         elif select_join == "union":
             return union(*s_groups)
         else:
-            raise ValueError("join '{}' not recognized, use {}".format(select_join, ('union', 'intersect')))
+            raise ValueError(
+                "join '{}' not recognized, use {}".format(
+                    select_join, ("union", "intersect")
+                )
+            )
         # by default, use intersection for AND, union for OR
     else:
         # just one item, return asis

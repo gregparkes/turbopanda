@@ -9,10 +9,12 @@ from turbopanda.utils import instance_check, remove_na, nonnegative
 from ._kde import freedman_diaconis_bins
 
 
-def density(X: np.ndarray,
-            Y: Optional[np.ndarray] = None,
-            Z: Optional[np.ndarray] = None,
-            r: Optional[int] = None) -> np.ndarray:
+def density(
+    X: np.ndarray,
+    Y: Optional[np.ndarray] = None,
+    Z: Optional[np.ndarray] = None,
+    r: Optional[int] = None,
+) -> np.ndarray:
     """Estimates the density of X using binning, accepts np.ndarray.
 
     Parameters

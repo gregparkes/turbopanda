@@ -9,19 +9,18 @@ from typing import Union, Optional, Dict, List
 
 from turbopanda import vectorize, Param
 from turbopanda._metapanda import SelectorType, MetaPanda
-from turbopanda.str import patproduct, common_substrings, pattern
+from turbopanda.str import patproduct, common_substrings
 from turbopanda.ml import preprocess_continuous_X
 from turbopanda.ml.plot import overview_pca
-from turbopanda.utils import instance_check, upcast, bounds_check, nonnegative
+from turbopanda.utils import instance_check, bounds_check
+
+__all__ = ("pca", "stratified_pca")
 
 
-__all__ = ('pca', 'stratified_pca')
-
-
-def _create_pca_model(n, sparsity=0., whiten=False):
+def _create_pca_model(n, sparsity=0.0, whiten=False):
     from sklearn.decomposition import PCA, SparsePCA
 
-    if np.isclose(sparsity, 0.):
+    if np.isclose(sparsity, 0.0):
         return PCA(n_components=n, whiten=whiten)
     else:
         # use a sparsePCA model with sparsity as the alpha L1
@@ -29,16 +28,18 @@ def _create_pca_model(n, sparsity=0., whiten=False):
 
 
 @vectorize
-def pca(df: Union[np.ndarray, pd.DataFrame, MetaPanda],
-        x: Optional[SelectorType] = None,
-        preprocess: bool = True,
-        refit: bool = False,
-        with_transform: bool = False,
-        plot: bool = False,
-        whiten: bool = False,
-        sparsity: float = 0.,
-        variance_threshold: float = 0.9,
-        plot_kwargs: Optional[Dict] = None):
+def pca(
+    df: Union[np.ndarray, pd.DataFrame, MetaPanda],
+    x: Optional[SelectorType] = None,
+    preprocess: bool = True,
+    refit: bool = False,
+    with_transform: bool = False,
+    plot: bool = False,
+    whiten: bool = False,
+    sparsity: float = 0.0,
+    variance_threshold: float = 0.9,
+    plot_kwargs: Optional[Dict] = None,
+):
     """Fits a PCA model to the data set.
 
     .. note:: Supports vectorization and `Param`. See `turb.vectorize`.
@@ -87,7 +88,7 @@ def pca(df: Union[np.ndarray, pd.DataFrame, MetaPanda],
     instance_check((preprocess, plot, whiten, refit, with_transform), bool)
     instance_check(plot_kwargs, (type(None), dict))
     instance_check(sparsity, float)
-    bounds_check(variance_threshold, 0., 1.)
+    bounds_check(variance_threshold, 0.0, 1.0)
 
     # define our selected columns
     if x is None:
@@ -115,9 +116,9 @@ def pca(df: Union[np.ndarray, pd.DataFrame, MetaPanda],
     if plot:
         if plot_kwargs is None:
             plot_kwargs = {}
-        overview_pca(_model, labels=cols,
-                     cutoff_selection=variance_threshold,
-                     **plot_kwargs)
+        overview_pca(
+            _model, labels=cols, cutoff_selection=variance_threshold, **plot_kwargs
+        )
 
     # if we refit the model, refit it and return
     if refit:
@@ -138,12 +139,14 @@ def pca(df: Union[np.ndarray, pd.DataFrame, MetaPanda],
             return _model
 
 
-def stratified_pca(df: Union[np.ndarray, pd.DataFrame, MetaPanda],
-                   groups: Union[Dict[str, str], List[SelectorType]],
-                   preprocess: bool = True,
-                   whiten: bool = False,
-                   sparsity: float = 0.,
-                   variance_threshold: float = 0.9):
+def stratified_pca(
+    df: Union[np.ndarray, pd.DataFrame, MetaPanda],
+    groups: Union[Dict[str, str], List[SelectorType]],
+    preprocess: bool = True,
+    whiten: bool = False,
+    sparsity: float = 0.0,
+    variance_threshold: float = 0.9,
+):
     """Fits a stratified PCA or SparsePCA model to the data set.
 
     The idea is to break the dataset `df` into `k` groups, perform PCA on each group and join the results
@@ -190,24 +193,32 @@ def stratified_pca(df: Union[np.ndarray, pd.DataFrame, MetaPanda],
         _param = Param(*list(groups.values()))
 
     # call pca using PARAM
-    results = pca(df, _param, preprocess=preprocess,
-                  whiten=whiten, sparsity=sparsity,
-                  refit=True, with_transform=True,
-                  variance_threshold=variance_threshold)
+    results = pca(
+        df,
+        _param,
+        preprocess=preprocess,
+        whiten=whiten,
+        sparsity=sparsity,
+        refit=True,
+        with_transform=True,
+        variance_threshold=variance_threshold,
+    )
 
     if isinstance(groups, dict):
         for r, group in zip(results, groups.keys()):
-            r[1].columns = patproduct("%s_PC%d", [group], range(1, r[1].shape[1]+1))
+            r[1].columns = patproduct("%s_PC%d", [group], range(1, r[1].shape[1] + 1))
     else:
         # set column names for each transformed data
         for r, group in zip(results, groups):
             # if the group is a string, do something
             if isinstance(group, str):
-                r[1].columns = patproduct("%s_PC%d", [group], range(1,r[1].shape[1]+1))
+                r[1].columns = patproduct(
+                    "%s_PC%d", [group], range(1, r[1].shape[1] + 1)
+                )
             elif isinstance(group, (list, tuple, pd.Index, pd.Series)):
                 # use str to find common longest substring.
                 lcs = common_substrings(group, min_length=3).idxmax()
-                r[1].columns = patproduct(lcs + "_PC%d", range(1,r[1].shape[1]+1))
+                r[1].columns = patproduct(lcs + "_PC%d", range(1, r[1].shape[1] + 1))
 
     # join together pandas chunks
     joined_xt = pd.concat(

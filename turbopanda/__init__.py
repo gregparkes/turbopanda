@@ -1,33 +1,21 @@
-# check imports
-
-""" This block handles the import needs of the package """
-hard_dependencies = ("numpy", "scipy", "pandas", "matplotlib", "sklearn", "joblib")
-missing_dependencies = []
-
-for dependency in hard_dependencies:
-    try:
-        __import__(dependency)
-    except ImportError as e:
-        missing_dependencies.append("{0}: {1}".format(dependency, str(e)))
-
-if missing_dependencies:
-    raise ImportError("Unable to import required dependencies:\n" + "\n".join(missing_dependencies))
-del hard_dependencies, dependency, missing_dependencies
-""" Block ends """
+"""Module level file. """
 
 # folder extensions.
 from ._fileio import read
 from ._merge import merge
 from ._vectorize import vectorize, Param
 from ._melt import melt
+
 # import Objects and critical global functions
 from ._metapanda import MetaPanda
+
 # vectorization methods
 from .dev import cache, cached
 from ._pipe import Pipe
 from .corr import correlate
 
 from . import corr, dev, ml, plot, stats, str, utils, pipe
+
 
 __version__ = "0.2.8"
 __name__ = "turbopanda"

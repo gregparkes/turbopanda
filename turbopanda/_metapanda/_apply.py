@@ -6,7 +6,14 @@ import warnings
 
 from turbopanda.utils import instance_check, is_column_string
 
-__all__ = ('apply', 'apply_index', 'apply_columns', '_apply_function', '_apply_index_function', '_apply_column_function')
+__all__ = (
+    "apply",
+    "apply_index",
+    "apply_columns",
+    "_apply_function",
+    "_apply_index_function",
+    "_apply_column_function",
+)
 
 
 def _apply_function(self, fn: str, *fargs, **fkwargs):
@@ -22,9 +29,16 @@ def _apply_function(self, fn: str, *fargs, **fkwargs):
             return self
         else:
             raise ValueError(
-                "function '{}' not recognized in pandas.DataFrame.* API: {}".format(fn2, dir(_grouped)))
+                "function '{}' not recognized in pandas.DataFrame.* API: {}".format(
+                    fn2, dir(_grouped)
+                )
+            )
     else:
-        raise ValueError("function '{}' not recognized in pandas.DataFrame.* API: {}".format(fn, dir(self.df_)))
+        raise ValueError(
+            "function '{}' not recognized in pandas.DataFrame.* API: {}".format(
+                fn, dir(self.df_)
+            )
+        )
 
 
 def _apply_index_function(self, fn: str, *fargs, **fkwargs):
@@ -36,13 +50,17 @@ def _apply_index_function(self, fn: str, *fargs, **fkwargs):
             self.df_.index = getattr(self.df_.index.str, fn)(*fargs, **fkwargs)
         else:
             warnings.warn(
-                "operation pandas.Index.str.'{}' cannot operate on index because they are not of type str.".format(
-                    fn),
-                PendingDeprecationWarning
+                "operation pandas.Index.str.'{}' cannot operate"
+                " on index because they are not of type str.".format(fn),
+                PendingDeprecationWarning,
             )
         return self
     else:
-        raise ValueError("function '{}' not recognized in pandas.DataFrame.index.[str.]* API".format(fn))
+        raise ValueError(
+            "function '{}' not recognized in pandas.DataFrame.index.[str.]* API".format(
+                fn
+            )
+        )
 
 
 def _apply_column_function(self, fn: str, *fargs, **fkwargs):
@@ -56,16 +74,20 @@ def _apply_column_function(self, fn: str, *fargs, **fkwargs):
             self.meta_.index = getattr(self.meta_.index.str, fn)(*fargs, **fkwargs)
         else:
             warnings.warn(
-                "operation pandas.Index.str.'{}' invalid because column/index is not of type str.".format(
-                    fn),
-                PendingDeprecationWarning
+                "operation pandas.Index.str.'{}' invalid because "
+                "column/index is not of type str.".format(fn),
+                PendingDeprecationWarning,
             )
         return self
     else:
-        raise ValueError("function '{}' not recognized in pandas.DataFrame.columns.[str.]* API".format(fn))
+        raise ValueError(
+            "function '{}' not recognized in pandas.DataFrame.columns.[str.]* API".format(
+                fn
+            )
+        )
 
 
-def apply(self, f_name: str, *f_args, **f_kwargs) -> "MetaPanda":
+def apply(self, f_name: str, *f_args, **f_kwargs):
     """Apply a `pd.DataFrame` function to `df_`.
 
     e.g mdf.apply("groupby", ["counter","refseq_id"], as_index=False)
@@ -74,6 +96,7 @@ def apply(self, f_name: str, *f_args, **f_kwargs) -> "MetaPanda":
 
     Parameters
     ----------
+    self
     f_name : str
         The name of the function
     f_args : list/tuple, optional
@@ -89,10 +112,11 @@ def apply(self, f_name: str, *f_args, **f_kwargs) -> "MetaPanda":
     return self
 
 
-def apply_columns(self, f_name: str, *f_args, **f_kwargs) -> "MetaPanda":
+def apply_columns(self, f_name: str, *f_args, **f_kwargs):
     """Apply a `pd.Index` function to `df_.columns`.
 
-    The result is then returned to the columns attribute, so it should only accept transform-like operations.
+    The result is then returned to the columns attribute,
+        so it should only accept transform-like operations.
 
     Thus to apply `strip` to all column names:
 
@@ -117,10 +141,11 @@ def apply_columns(self, f_name: str, *f_args, **f_kwargs) -> "MetaPanda":
     return self
 
 
-def apply_index(self, f_name: str, *f_args, **f_kwargs) -> "MetaPanda":
+def apply_index(self, f_name: str, *f_args, **f_kwargs):
     """Apply a `pd.Index` function to `df_.index`.
 
-    The result is then returned to the index attribute, so it should only accept transform-like operations.
+    The result is then returned to the index attribute,
+        so it should only accept transform-like operations.
 
     Thus to apply `strip` to all index names:
 
@@ -130,6 +155,7 @@ def apply_index(self, f_name: str, *f_args, **f_kwargs) -> "MetaPanda":
 
     Parameters
     -------
+    self
     f_name : str
         The name of the function. This can be in the .str accessor attribute also.
     f_args : list/tuple, optional

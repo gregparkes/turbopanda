@@ -10,10 +10,21 @@ from pandas import Index, Series
 
 SetLike = Union[type(None), str, Set, Index, List, Tuple, Series]
 
-__all__ = ("dictsplit", "dict_to_tuple", "dictzip", "dictmap",
-           "dictchunk", "join", 'pairwise',
-           "set_like", "union", "intersect", "difference",
-           "absdifference", 'dictcopy')
+__all__ = (
+    "dictsplit",
+    "dict_to_tuple",
+    "dictzip",
+    "dictmap",
+    "dictchunk",
+    "join",
+    "pairwise",
+    "set_like",
+    "union",
+    "intersect",
+    "difference",
+    "absdifference",
+    "dictcopy",
+)
 
 """ DICTIONARY CONVENIENCE """
 
@@ -141,16 +152,20 @@ def dictchunk(d: Dict, k: int = 1) -> List:
     else:
         split_a, split_b = dictsplit(d)
         return [
-            dict(it.zip_longest(
-                it.islice(split_a, i, i+k), it.islice(split_b, i, i+k)
-            )) for i in range(0, len(d), k)
+            dict(
+                it.zip_longest(
+                    it.islice(split_a, i, i + k), it.islice(split_b, i, i + k)
+                )
+            )
+            for i in range(0, len(d), k)
         ]
 
 
 def join(*pipes) -> List:
     """Perform it.chain.from_iterable on iterables.
 
-    Does not accept strings, and returns them as is. None arguments are ignored, as well as list components
+    Does not accept strings, and returns them as is.
+        None arguments are ignored, as well as list components
         with no arguments inside them.
 
     Parameters
@@ -212,7 +227,11 @@ def set_like(x: SetLike = None) -> Index:
     elif isinstance(x, set):
         return Index(sorted(x, key=list(x).index))
     else:
-        raise TypeError("in `set_like`: `x` must be in {}, not of type {}".format(acc_types, type(x)))
+        raise TypeError(
+            "in `set_like`: `x` must be in {}, not of type {}".format(
+                acc_types, type(x)
+            )
+        )
 
 
 def union(*args: SetLike) -> Index:
@@ -234,7 +253,7 @@ def union(*args: SetLike) -> Index:
         Union between a | b | ... | k
     """
     if len(args) == 0:
-        raise ValueError('no arguments passed')
+        raise ValueError("no arguments passed")
     elif len(args) == 1:
         return set_like(args[0])
     else:
@@ -255,7 +274,7 @@ def intersect(*args: SetLike) -> Index:
         Intersect between a & b & ... & k
     """
     if len(args) == 0:
-        raise ValueError('no arguments passed')
+        raise ValueError("no arguments passed")
     elif len(args) == 1:
         return set_like(args[0])
     else:

@@ -5,7 +5,7 @@
 import numpy as np
 
 
-def _remove_na_single(x, axis='rows'):
+def _remove_na_single(x, axis="rows"):
     """Remove NaN in a single array.
     This is an internal Pingouin function.
     """
@@ -14,17 +14,17 @@ def _remove_na_single(x, axis='rows'):
         x_mask = ~np.isnan(x)
     else:
         # 2D arrays
-        ax = 1 if axis == 'rows' else 0
+        ax = 1 if axis == "rows" else 0
         x_mask = ~np.any(np.isnan(x), axis=ax)
     # Check if missing values are present
     if ~x_mask.all():
-        ax = 0 if axis == 'rows' else 1
+        ax = 0 if axis == "rows" else 1
         ax = 0 if x.ndim == 1 else ax
         x = x.compress(x_mask, axis=ax)
     return x
 
 
-def remove_na(x: np.ndarray, y: np.ndarray = None, paired=False, axis='rows'):
+def remove_na(x: np.ndarray, y: np.ndarray = None, paired=False, axis="rows"):
     """Remove missing values along a given axis in one or more (paired) numpy
     arrays.
 
@@ -51,8 +51,8 @@ def remove_na(x: np.ndarray, y: np.ndarray = None, paired=False, axis='rows'):
     """
     # Safety checks
     x = np.asarray(x)
-    assert x.size > 1, 'x must have more than one element.'
-    assert axis in ['rows', 'columns'], 'axis must be rows or columns.'
+    assert x.size > 1, "x must have more than one element."
+    assert axis in ["rows", "columns"], "axis must be rows or columns."
 
     if y is None:
         return _remove_na_single(x, axis=axis)
@@ -76,13 +76,13 @@ def remove_na(x: np.ndarray, y: np.ndarray = None, paired=False, axis='rows'):
         y_mask = ~np.isnan(y)
     else:
         # 2D arrays
-        ax = 1 if axis == 'rows' else 0
+        ax = 1 if axis == "rows" else 0
         x_mask = ~np.any(np.isnan(x), axis=ax)
         y_mask = ~np.any(np.isnan(y), axis=ax)
 
     # Check if missing values are present
     if ~x_mask.all() or ~y_mask.all():
-        ax = 0 if axis == 'rows' else 1
+        ax = 0 if axis == "rows" else 1
         ax = 0 if x.ndim == 1 else ax
         both = np.logical_and(x_mask, y_mask)
         x = x.compress(both, axis=ax)

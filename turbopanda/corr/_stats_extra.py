@@ -11,8 +11,15 @@ from scipy.stats import norm
 __all__ = ("compute_esci", "power_corr")
 
 
-def compute_esci(stat=None, nx=None, ny=None, paired=False, eftype='cohen',
-                 confidence=.95, decimals=2):
+def compute_esci(
+    stat=None,
+    nx=None,
+    ny=None,
+    paired=False,
+    eftype="cohen",
+    confidence=0.95,
+    decimals=2,
+):
     """Parametric confidence intervals around a Cohen d or a
     correlation coefficient.
     Parameters
@@ -99,8 +106,7 @@ def compute_esci(stat=None, nx=None, ny=None, paired=False, eftype='cohen',
     0.1537753990658328 [-0.68  0.99]
     """
     # Safety check
-    assert eftype.lower() in ['r', 'pearson', 'spearman', 'cohen',
-                              'd', 'g', 'hedges']
+    assert eftype.lower() in ["r", "pearson", "spearman", "cohen", "d", "g", "hedges"]
     assert stat is not None and nx is not None
     assert isinstance(confidence, float)
     assert 0 < confidence < 1
@@ -110,7 +116,7 @@ def compute_esci(stat=None, nx=None, ny=None, paired=False, eftype='cohen',
     # crit = np.abs(t.ppf((1 - confidence) / 2), dof)
     crit = np.abs(norm.ppf((1 - confidence) / 2))
 
-    if eftype.lower() in ['r', 'pearson', 'spearman']:
+    if eftype.lower() in ["r", "pearson", "spearman"]:
         # Standardize correlation coefficient
         z = np.arctanh(stat)
         se = 1 / np.sqrt(nx - 3)
@@ -128,7 +134,7 @@ def compute_esci(stat=None, nx=None, ny=None, paired=False, eftype='cohen',
     return np.round(ci, decimals)
 
 
-def power_corr(r=None, n=None, power=None, alpha=0.05, tail='two-sided'):
+def power_corr(r=None, n=None, power=None, alpha=0.05, tail="two-sided"):
     """
     Evaluate power, sample size, correlation coefficient or
     significance level of a correlation test.
@@ -183,7 +189,7 @@ def power_corr(r=None, n=None, power=None, alpha=0.05, tail='two-sided'):
     # Check the number of arguments that are None
     n_none = sum([v is None for v in [r, n, power, alpha]])
     if n_none != 1:
-        raise ValueError('Exactly one of n, r, power, and alpha must be None')
+        raise ValueError("Exactly one of n, r, power, and alpha must be None")
 
     # Safety checks
     if r is not None:
@@ -195,11 +201,13 @@ def power_corr(r=None, n=None, power=None, alpha=0.05, tail='two-sided'):
         assert 0 < power <= 1
     if n is not None:
         if n <= 4:
-            warnings.warn("Sample size is too small to estimate power "
-                          "(n <= 4). Returning NaN.")
+            warnings.warn(
+                "Sample size is too small to estimate power " "(n <= 4). Returning NaN."
+            )
             return np.nan
     # Define main function
-    if tail == 'two-sided':
+    if tail == "two-sided":
+
         def func(_r, _n, _pow, _alpha):
             """Custom function."""
             dof = _n - 2
@@ -207,10 +215,13 @@ def power_corr(r=None, n=None, power=None, alpha=0.05, tail='two-sided'):
             rc = np.sqrt(ttt ** 2 / (ttt ** 2 + dof))
             zr = np.arctanh(_r) + _r / (2 * (_n - 1))
             zrc = np.arctanh(rc)
-            _pow = stats.norm.cdf((zr - zrc) * np.sqrt(_n - 3)) + \
-                   stats.norm.cdf((-zr - zrc) * np.sqrt(_n - 3))
+            _pow = stats.norm.cdf((zr - zrc) * np.sqrt(_n - 3)) + stats.norm.cdf(
+                (-zr - zrc) * np.sqrt(_n - 3)
+            )
             return _pow
+
     else:
+
         def func(_r, _n, _pow, _alpha):
             """Custom function option 2."""
             dof = _n - 2
@@ -231,7 +242,7 @@ def power_corr(r=None, n=None, power=None, alpha=0.05, tail='two-sided'):
             return func(_r, _n, _pow, _alpha) - _pow
 
         try:
-            return brenth(_eval_n, 4 + 1e-10, 1e+09, args=(r, power, alpha))
+            return brenth(_eval_n, 4 + 1e-10, 1e09, args=(r, power, alpha))
         except ValueError:  # pragma: no cover
             return np.nan
 

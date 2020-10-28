@@ -8,7 +8,7 @@ import pandas as pd
 
 from turbopanda.utils import instance_check, nonnegative
 
-__all__ = ('head', 'dtypes', 'copy', 'info')
+__all__ = ("head", "dtypes", "copy", "info")
 
 
 def head(self, k: int = 5) -> pd.DataFrame:
@@ -40,7 +40,8 @@ def dtypes(self, grouped: bool = True) -> Union[pd.Series, pd.DataFrame]:
     Parameters
     --------
     grouped : bool, optional
-        If True, returns the value_counts of each data type, else returns the direct types.
+        If True, returns the value_counts of each data type,
+            else returns the direct types.
 
     Returns
     -------
@@ -48,10 +49,12 @@ def dtypes(self, grouped: bool = True) -> Union[pd.Series, pd.DataFrame]:
         A series of index (group/name) and value (count/type)
     """
     instance_check(grouped, bool)
-    return self.meta_['true_type'].value_counts() if grouped else self.meta_['true_type']
+    return (
+        self.meta_["true_type"].value_counts() if grouped else self.meta_["true_type"]
+    )
 
 
-def copy(self) -> "MetaPanda":
+def copy(self):
     """Create a copy of this instance.
 
     Raises
@@ -69,10 +72,11 @@ def copy(self) -> "MetaPanda":
     copy.deepcopy(x) : Return a deep copy of x.
     """
     from copy import deepcopy
+
     return deepcopy(self)
 
 
-def info(self) -> "MetaPanda":
+def info(self):
     """Displays the aggregate information on the Dataframe.
 
     Directly copies from pandas.DataFrame.info. Prints to standard output.

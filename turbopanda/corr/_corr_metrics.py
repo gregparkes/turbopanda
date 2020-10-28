@@ -10,7 +10,7 @@ from turbopanda._dependency import is_sklearn_installed
 __all__ = ("skipped", "bsmahal", "shepherd", "percbend")
 
 
-def skipped(x, y, method='spearman'):
+def skipped(x, y, method="spearman"):
     """
     Skipped correlation (Rousselet and Pernet 2012).
     Parameters
@@ -61,7 +61,7 @@ def skipped(x, y, method='spearman'):
     # Compute center and distance to center
     center = MinCovDet(random_state=42).fit(X).location_
     B = X - center
-    B2 = B**2
+    B2 = B ** 2
     bot = B2.sum(axis=1)
 
     # Loop over rows
@@ -72,8 +72,7 @@ def skipped(x, y, method='spearman'):
 
     # Detect outliers
     def idealf(x):
-        """Compute the ideal fourths IQR (Wilcox 2012).
-        """
+        """Compute the ideal fourths IQR (Wilcox 2012)."""
         n = len(x)
         j = int(np.floor(n / 4 + 5 / 12))
         y = np.sort(x)
@@ -86,11 +85,11 @@ def skipped(x, y, method='spearman'):
     # One can either use the MAD or the IQR (see Wilcox 2012)
     # MAD = mad(dis, axis=1)
     iqr = np.apply_along_axis(idealf, 1, dis)
-    thresh = (np.median(dis, axis=1) + gval * iqr)
+    thresh = np.median(dis, axis=1) + gval * iqr
     outliers = np.apply_along_axis(np.greater, 0, dis, thresh).any(axis=0)
 
     # Compute correlation on remaining data
-    if method == 'spearman':
+    if method == "spearman":
         r, pval = spearmanr(X[~outliers, 0], X[~outliers, 1])
     else:
         r, pval = pearsonr(X[~outliers, 0], X[~outliers, 1])
@@ -127,7 +126,7 @@ def bsmahal(a, b, n_boot=200):
         mu = X.mean(0)
         _, R = np.linalg.qr(X - mu)
         sol = np.linalg.solve(R.T, (a - mu).T)
-        MD[:, i] = np.sum(sol**2, 0) * (n - 1)
+        MD[:, i] = np.sum(sol ** 2, 0) * (n - 1)
 
     # Average across all bootstraps
     return MD.mean(1)
@@ -163,7 +162,7 @@ def shepherd(x, y, n_boot=200):
     m = bsmahal(X, X, n_boot)
 
     # Determine outliers
-    outliers = (m >= 6)
+    outliers = m >= 6
 
     # Compute correlation
     r, pval = spearmanr(x[~outliers], y[~outliers])
@@ -174,7 +173,7 @@ def shepherd(x, y, n_boot=200):
     return r, pval, outliers
 
 
-def percbend(x, y, beta=.2):
+def percbend(x, y, beta=0.2):
     """
     Percentage bend correlation (Wilcox 1994).
     Parameters
@@ -229,7 +228,7 @@ def percbend(x, y, beta=.2):
 
     # Get r, tval and pval
     a, b = a
-    r = (a * b).sum() / np.sqrt((a**2).sum() * (b**2).sum())
-    tval = r * np.sqrt((nx - 2) / (1 - r**2))
+    r = (a * b).sum() / np.sqrt((a ** 2).sum() * (b ** 2).sum())
+    tval = r * np.sqrt((nx - 2) / (1 - r ** 2))
     pval = 2 * t.sf(abs(tval), nx - 2)
     return r, pval

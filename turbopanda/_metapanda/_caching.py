@@ -10,10 +10,10 @@ from turbopanda.utils import dictmap, t_numpy
 from ._types import SelectorType
 from turbopanda._deprecator import deprecated
 
-__all__ = ('cache', 'cache_k', 'cache_pipe')
+__all__ = ("cache", "cache_k", "cache_pipe")
 
 
-def cache(self, name: str, *selector: SelectorType) -> "MetaPanda":
+def cache(self, name: str, *selector: SelectorType):
     """Add a cache element to `selectors_`.
 
     Saves a 'selector' to use at a later date. This can be useful if you
@@ -42,13 +42,15 @@ def cache(self, name: str, *selector: SelectorType) -> "MetaPanda":
     cache_pipe : Adds a pipe element to `pipe_`.
     """
     if name in self._select and self._with_warnings:
-        warnings.warn("cache '{}' already exists in .cache, overriding".format(name), UserWarning)
+        warnings.warn(
+            "cache '{}' already exists in .cache, overriding".format(name), UserWarning
+        )
     # convert selector over to list to make it mutable
     selector = list(selector)
     # encode to string
     enc_map = {
         **{object: "object", pd.CategoricalDtype: "category"},
-        **dictmap(t_numpy(), lambda n: n.__name__)
+        **dictmap(t_numpy(), lambda n: n.__name__),
     }
     # update to encode the selector as a string ALWAYS.
     selector = [enc_map[s] if s in enc_map else s for s in selector]
@@ -57,7 +59,7 @@ def cache(self, name: str, *selector: SelectorType) -> "MetaPanda":
     return self
 
 
-def cache_k(self, **caches: SelectorType) -> "MetaPanda":
+def cache_k(self, **caches: SelectorType):
     """Add k cache elements to `selectors_`.
 
     Saves a group of 'selectors' to use at a later date. This can be useful
@@ -93,8 +95,10 @@ def cache_k(self, **caches: SelectorType) -> "MetaPanda":
     return self
 
 
-@deprecated("0.2.7", "0.3", reason="duplicates with pipe functions", instead="turbopanda.pipe")
-def cache_pipe(self, name: str, pipeline) -> "MetaPanda":
+@deprecated(
+    "0.2.7", "0.3", reason="duplicates with pipe functions", instead="turbopanda.pipe"
+)
+def cache_pipe(self, name: str, pipeline):
     """Add a pipe element to `pipe_`.
 
     Saves a pipeline to use at a later date. Calls to `compute` can reference the name
@@ -119,6 +123,8 @@ def cache_pipe(self, name: str, pipeline) -> "MetaPanda":
     self
     """
     if name in self.pipe_.keys() and self._with_warnings:
-        warnings.warn("pipe '{}' already exists in .pipe, overriding".format(name), UserWarning)
+        warnings.warn(
+            "pipe '{}' already exists in .pipe, overriding".format(name), UserWarning
+        )
     self.pipe_[name] = pipeline
     return self

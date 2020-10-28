@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function
 
 import itertools as it
 from typing import Optional, Union
-import matplotlib.pyplot as plt
+
 # imports
 import numpy as np
 from pandas import DataFrame
@@ -22,13 +22,15 @@ from ._save_fig import save
 __all__ = ("scatter_grid", "hist_grid")
 
 
-def hist_grid(mdf: Union[DataFrame, "MetaPanda"],
-              subset: SelectorType,
-              arrange: str = "square",
-              plot_size: int = 3,
-              shared_dist: str = "auto",
-              savepath: Optional[Union[str, bool]] = None,
-              **hist_kws):
+def hist_grid(
+    mdf: Union[DataFrame, "MetaPanda"],
+    subset: SelectorType,
+    arrange: str = "square",
+    plot_size: int = 3,
+    shared_dist: str = "auto",
+    savepath: Optional[Union[str, bool]] = None,
+    **hist_kws
+):
     """
     Plots a grid of histograms comparing the distributions in a MetaPanda
     selector.
@@ -76,7 +78,9 @@ def hist_grid(mdf: Union[DataFrame, "MetaPanda"],
 
         if not isinstance(shared_dist, dict):
             for i, x in enumerate(selection):
-                _ = histogram(_mdf[x].dropna(), ax=axes[i], title=x, kde=shared_dist, **hist_kws)
+                _ = histogram(
+                    _mdf[x].dropna(), ax=axes[i], title=x, kde=shared_dist, **hist_kws
+                )
             fig.tight_layout()
         else:
             for i, (x, d) in enumerate(shared_dist.items()):
@@ -85,7 +89,13 @@ def hist_grid(mdf: Union[DataFrame, "MetaPanda"],
             remaining = difference(selection, tuple(shared_dist.keys()))
             if remaining.shape[0] > 0:
                 for i, x in enumerate(remaining):
-                    _ = histogram(_mdf[x].dropna(), ax=axes[i+len(shared_dist)], title=x, kde="auto", **hist_kws)
+                    _ = histogram(
+                        _mdf[x].dropna(),
+                        ax=axes[i + len(shared_dist)],
+                        title=x,
+                        kde="auto",
+                        **hist_kws
+                    )
             fig.tight_layout()
 
         if isinstance(savepath, bool):
@@ -94,14 +104,16 @@ def hist_grid(mdf: Union[DataFrame, "MetaPanda"],
             save(fig, "hist", _mdf.name_, fp=savepath)
 
 
-def scatter_grid(mdf: Union[DataFrame, "MetaPanda"],
-                 x: SelectorType,
-                 y: SelectorType,
-                 arrange: str = "square",
-                 plot_size: int = 3,
-                 best_fit: bool = True,
-                 best_fit_deg: int = 1,
-                 savepath: Optional[Union[bool, str]] = None):
+def scatter_grid(
+    mdf: Union[DataFrame, "MetaPanda"],
+    x: SelectorType,
+    y: SelectorType,
+    arrange: str = "square",
+    plot_size: int = 3,
+    best_fit: bool = True,
+    best_fit_deg: int = 1,
+    savepath: Optional[Union[bool, str]] = None,
+):
     """
     Plots a grid of scatter plots comparing each column for MetaPanda
     in selector to y target value.
@@ -136,7 +148,12 @@ def scatter_grid(mdf: Union[DataFrame, "MetaPanda"],
     instance_check((plot_size, best_fit_deg), int)
     instance_check(savepath, (type(None), str, bool))
     instance_check(best_fit, bool)
-    nonnegative((best_fit_deg, plot_size,))
+    nonnegative(
+        (
+            best_fit_deg,
+            plot_size,
+        )
+    )
     belongs(arrange, ["square", "row", "column"])
 
     # make a metapanda if we have a dataframe.
@@ -153,15 +170,15 @@ def scatter_grid(mdf: Union[DataFrame, "MetaPanda"],
         for i, (_x, _y) in enumerate(prod):
             # pair x, y
             __x, __y = remove_na(_mdf[_x].values, _mdf[_y].values, paired=True)
-            axes[i].scatter(__x.flatten(), __y, alpha=.5)
+            axes[i].scatter(__x.flatten(), __y, alpha=0.5)
             # line of best fit
             if best_fit:
                 xn = np.linspace(__x.min(), __x.max(), 100)
                 z = np.polyfit(__x.flatten(), __y, deg=best_fit_deg)
-                axes[i].plot(xn, np.polyval(z, xn), 'k--')
+                axes[i].plot(xn, np.polyval(z, xn), "k--")
 
             # spearman correlation
-            pair_corr = bicorr(_mdf[_x], _mdf[_y]).loc['spearman', 'r']
+            pair_corr = bicorr(_mdf[_x], _mdf[_y]).loc["spearman", "r"]
             axes[i].set_title("r={:0.3f}".format(pair_corr))
             axes[i].set_xlabel(_x)
             axes[i].set_ylabel(_y)

@@ -8,12 +8,10 @@ import numpy as np
 import pandas as pd
 from matplotlib import cm
 from matplotlib import colors
-from random import shuffle
 
 from turbopanda.utils import instance_check, unique_ordered
 
-
-__all__ = ('color_qualitative', 'cat_array_to_color', 'palette_cmap')
+__all__ = ("color_qualitative", "cat_array_to_color", "palette_cmap")
 
 
 def _tuple_to_hex(t):
@@ -21,11 +19,11 @@ def _tuple_to_hex(t):
 
 
 def _color_scale_off_pair(cmap):
-    return _colormap_to_hex(cm.get_cmap(cmap)(np.linspace(.25, .75, 2)))
+    return _colormap_to_hex(cm.get_cmap(cmap)(np.linspace(0.25, 0.75, 2)))
 
 
 def _luminance(arr):
-    return np.dot(arr, np.array([.299, .587, .114, 0.]))
+    return np.dot(arr, np.array([0.299, 0.587, 0.114, 0.0]))
 
 
 def _colormap_to_hex(cm_array: np.ndarray):
@@ -39,52 +37,63 @@ def _colormap_to_hex(cm_array: np.ndarray):
     Computes the hexadecimal for each row and returns as list
     """
     if isinstance(cm_array, np.ndarray):
-        return ["#%02x%02x%02x" % (int(r * 255), int(g * 255), int(b * 255)) for r, g, b, _ in cm_array]
+        return [
+            "#%02x%02x%02x" % (int(r * 255), int(g * 255), int(b * 255))
+            for r, g, b, _ in cm_array
+        ]
     elif isinstance(cm_array, pd.Series):
         # convert to ndarray
         cm_array = pd.DataFrame(np.vstack(cm_array.values))
     if isinstance(cm_array, pd.DataFrame):
         if cm_array.shape[1] == 4:
-            return ["#%02x%02x%02x" % (int(r * 255), int(g * 255), int(b * 255)) for idx, (r, g, b, _) in
-                    cm_array.iterrows()]
+            return [
+                "#%02x%02x%02x" % (int(r * 255), int(g * 255), int(b * 255))
+                for idx, (r, g, b, _) in cm_array.iterrows()
+            ]
         elif cm_array.shape[1] == 3:
-            return ["#%02x%02x%02x" % (int(r * 255), int(g * 255), int(b * 255)) for idx, (r, g, b) in
-                    cm_array.iterrows()]
+            return [
+                "#%02x%02x%02x" % (int(r * 255), int(g * 255), int(b * 255))
+                for idx, (r, g, b) in cm_array.iterrows()
+            ]
         else:
-            raise ValueError("dimension of 'cm_array' must be 3 or 4, not {}".format(cm_array.shape[1]))
+            raise ValueError(
+                "dimension of 'cm_array' must be 3 or 4, not {}".format(
+                    cm_array.shape[1]
+                )
+            )
 
 
-def lighten(c, frac_change=.3):
+def lighten(c, frac_change=0.3):
     """Given a color name, returns a slightly lighter version of that color.
 
-        c can be a str or list of str.
+    c can be a str or list of str.
     """
     x = np.asarray(colors.to_rgba(c))
     other = np.array([frac_change, frac_change, frac_change, 0])
-    clipped = np.clip(x + other, 0., 1.)
+    clipped = np.clip(x + other, 0.0, 1.0)
     # convert to hex str and return
     return colors.rgb2hex(clipped)
 
 
-def darken(c, frac_change=.3):
+def darken(c, frac_change=0.3):
     """Given a color name, returns a slightly lighter version of that color"""
     x = np.asarray(colors.to_rgba(c))
     other = np.array([frac_change, frac_change, frac_change, 0])
-    clipped = np.clip(x - other, 0., 1.)
+    clipped = np.clip(x - other, 0.0, 1.0)
     # convert to hex str and return
     return colors.rgb2hex(clipped)
 
 
-def autoshade(c, frac_change=.3):
+def autoshade(c, frac_change=0.3):
     """Given a color name, returns a slightly lighter OR darker version of that color"""
     x = np.asarray(colors.to_rgba(c))
     # determine luminousity
     lum = _luminance(x)
     other = np.array([frac_change, frac_change, frac_change, 0])
-    if lum > .5:
-        clipped = np.clip(x - other, 0., 1.)
+    if lum > 0.5:
+        clipped = np.clip(x - other, 0.0, 1.0)
     else:
-        clipped = np.clip(x + other, 0., 1.)
+        clipped = np.clip(x + other, 0.0, 1.0)
     return colors.rgb2hex(clipped)
 
 
@@ -101,10 +110,10 @@ def noncontrast(c):
         _c = np.asarray(c)
 
     # calculate perpective luminance
-    lum_weights = np.array([.299, .587, .114, 0.])
+    lum_weights = np.array([0.299, 0.587, 0.114, 0.0])
     luminance = np.dot(_c, lum_weights)
     # if luminance is high, use black font, else use white font
-    if luminance < .5:
+    if luminance < 0.5:
         return "#000000"
     else:
         return "#ffffff"
@@ -125,7 +134,7 @@ def contrast(c):
     # calculate perpective luminance
     luminance = _luminance(_c)
     # if luminance is high, use black font, else use white font
-    if luminance > .5:
+    if luminance > 0.5:
         return "#000000"
     else:
         return "#ffffff"
@@ -156,20 +165,17 @@ def palette_blue(n: int):
 
 def palette_pairs(n: int):
     """Returns a palette-pair (2 colors), as (darker, lighter)"""
-    options_ = ('Greys', "Blues", "Reds", "Greens", "Purples", "Oranges")
+    options_ = ("Greys", "Blues", "Reds", "Greens", "Purples", "Oranges")
     cols = map(_color_scale_off_pair, options_)
     return list(it.islice(it.cycle(cols), 0, n))
 
 
 def palette_cmap(n: int, cmap: str):
     """given n, calculate the linspace searched for monocolor scales"""
-    start = lambda _n: .4 / _n
-    end = lambda _n: 1. - .4 / _n
-    return _colormap_to_hex(cm.get_cmap(cmap)(np.linspace(start(n), end(n), n)))
+    return _colormap_to_hex(cm.get_cmap(cmap)(np.linspace(0.4 / n, 0.6 / n, n)))
 
 
-def color_qualitative(n: Union[int, List, Tuple],
-                      sharp: bool = True) -> List[str]:
+def color_qualitative(n: Union[int, List, Tuple], sharp: bool = True) -> List[str]:
     """Generates a qualitative palette generator as hex.
 
     Parameters
@@ -190,17 +196,21 @@ def color_qualitative(n: Union[int, List, Tuple],
     if isinstance(n, (list, tuple)):
         n = len(n)
 
-    lt8_sharp = ('Accent', 'Dark2')
-    lt8_pastel = ('Pastel2', 'Set2')
+    lt8_sharp = ("Accent", "Dark2")
+    lt8_pastel = ("Pastel2", "Set2")
     # lt9 = ('Set1', 'Pastel1')
     # lt10 = ['tab10']
     # lt12 = ['Set3']
-    lt20 = ('tab20', 'tab20b', 'tab20c')
+    lt20 = ("tab20", "tab20b", "tab20c")
     # choose random cmap
     if n <= 8 and sharp:
-        return _colormap_to_hex(getattr(cm, np.random.choice(lt8_sharp))(np.linspace(0, 1, n)))
+        return _colormap_to_hex(
+            getattr(cm, np.random.choice(lt8_sharp))(np.linspace(0, 1, n))
+        )
     elif n <= 8 and not sharp:
-        return _colormap_to_hex(getattr(cm, np.random.choice(lt8_pastel))(np.linspace(0, 1, n)))
+        return _colormap_to_hex(
+            getattr(cm, np.random.choice(lt8_pastel))(np.linspace(0, 1, n))
+        )
     elif n <= 9 and sharp:
         return _colormap_to_hex(cm.Set1(np.linspace(0, 1, n)))
     elif n <= 9 and not sharp:
@@ -210,10 +220,22 @@ def color_qualitative(n: Union[int, List, Tuple],
     elif n <= 12:
         return _colormap_to_hex(cm.Set3(np.linspace(0, 1, n)))
     elif n <= 20:
-        return _colormap_to_hex(getattr(cm, np.random.choice(lt20))(np.linspace(0, 1, n)))
+        return _colormap_to_hex(
+            getattr(cm, np.random.choice(lt20))(np.linspace(0, 1, n))
+        )
     else:
         # we cycle one of the lt20s
-        return list(it.islice(it.cycle(_colormap_to_hex(getattr(cm, np.random.choice(lt20))(np.linspace(0, 1, 20)))), 0, n))
+        return list(
+            it.islice(
+                it.cycle(
+                    _colormap_to_hex(
+                        getattr(cm, np.random.choice(lt20))(np.linspace(0, 1, 20))
+                    )
+                ),
+                0,
+                n,
+            )
+        )
 
 
 def cat_array_to_color(array, cmap="Blues"):
@@ -230,9 +252,13 @@ def cat_array_to_color(array, cmap="Blues"):
     instance_check(cmap, (str, dict, list, tuple))
 
     # map to numpy
-    _array = np.asarray(array).flatten() if not isinstance(array, (np.ndarray, pd.Series)) else array
+    _array = (
+        np.asarray(array).flatten()
+        if not isinstance(array, (np.ndarray, pd.Series))
+        else array
+    )
     # if boolean, cast as a 'string'
-    if _array.dtype.kind == 'b':
+    if _array.dtype.kind == "b":
         _array = _array.astype(np.str)
     if (_array.dtype.kind == "U") | (_array.dtype.kind == "O"):
         # i.e we have a string array
@@ -247,6 +273,3 @@ def cat_array_to_color(array, cmap="Blues"):
         return dmap(_array), "discrete"
     else:
         return _array, "continuous"
-
-
-

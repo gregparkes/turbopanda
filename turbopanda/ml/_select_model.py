@@ -7,9 +7,10 @@ from turbopanda.ml._package import find_sklearn_model
 from turbopanda.str import pattern
 
 
-@deprecated("0.2.8", "0.3", reason="This move is to reduce dependency on MetaPanda objects.")
-def get_best_model(cv_results: "MetaPanda",
-                   minimize: bool = True):
+@deprecated(
+    "0.2.8", "0.3", reason="This move is to reduce dependency on MetaPanda objects."
+)
+def get_best_model(cv_results, minimize: bool = True):
     """Returns the best model (with correct params) given the cv_results from a `fit_grid` call.
 
     The idea behind this function is to fetch from the pool of models the best model
@@ -36,11 +37,11 @@ def get_best_model(cv_results: "MetaPanda",
     fit_basic : Performs a rudimentary fit model with no parameter searching
     """
     if minimize:
-        select = cv_results.df_['mean_test_score'].idxmin()
+        select = cv_results.df_["mean_test_score"].idxmin()
     else:
-        select = cv_results.df_['mean_test_score'].idxmax()
+        select = cv_results.df_["mean_test_score"].idxmax()
 
-    M = cv_results.df_.loc[select, 'model']
+    M = cv_results.df_.loc[select, "model"]
     # instantiate a model from text M
     inst_M = find_sklearn_model(M)[0]
     # get dict params

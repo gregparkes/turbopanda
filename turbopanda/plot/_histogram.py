@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Code for plotting pretty histograms in primitive matplotlib."""
 
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -11,8 +11,7 @@ import pandas as pd
 from scipy import stats
 
 from turbopanda.stats import get_bins, univariate_kde, auto_fit
-from turbopanda.utils import instance_check, as_flattened_numpy, nonnegative,\
-    bounds_check
+from turbopanda.utils import instance_check, as_flattened_numpy, bounds_check
 
 from ._default import _ArrayLike, _ListLike
 
@@ -20,23 +19,25 @@ from ._default import _ArrayLike, _ListLike
 
 
 def _plot_hist(_x, _ax, *args, **kwargs):
-    if _x.dtype.kind == 'f':
+    if _x.dtype.kind == "f":
         _ = _ax.hist(_x, *args, **kwargs)
-    elif _x.dtype.kind == 'i' or _x.dtype.kind == 'u':
+    elif _x.dtype.kind == "i" or _x.dtype.kind == "u":
         # make sure to align all the bars to the left in this case
-        _ = _ax.hist(_x, align='left', *args, **kwargs)
+        _ = _ax.hist(_x, align="left", *args, **kwargs)
     else:
-        raise TypeError("np.ndarray type '{}' not recognized; must be float or int".format(_x.dtype))
+        raise TypeError(
+            "np.ndarray type '{}' not recognized; must be float or int".format(_x.dtype)
+        )
 
 
 def _criteria_corr_qqplot(r: float) -> str:
-    if r > .99:
+    if r > 0.99:
         return "***"
-    elif r > .95:
+    elif r > 0.95:
         return "**"
-    elif r > .9:
+    elif r > 0.9:
         return "*"
-    elif r > .75:
+    elif r > 0.75:
         return "~"
     else:
         return ".."
@@ -46,7 +47,7 @@ def _assign_x_label(title, series_x_l, is_kde, auto_fitted, frozen_dist):
     # this only executes if `x_label` is "".
     if not is_kde:
         # no frozen dist, no autokde
-        if series_x_l != '':
+        if series_x_l != "":
             return series_x_l
         elif title is not None:
             return title
@@ -54,15 +55,17 @@ def _assign_x_label(title, series_x_l, is_kde, auto_fitted, frozen_dist):
             return "x-axis"
     else:
         if auto_fitted is not None:
-            best_model_ = auto_fitted.loc[auto_fitted['r'].idxmax()]
-            _crit = _criteria_corr_qqplot(best_model_['r'])
+            best_model_ = auto_fitted.loc[auto_fitted["r"].idxmax()]
+            _crit = _criteria_corr_qqplot(best_model_["r"])
             _args = ", ".join(["{:0.2f}".format(a) for a in frozen_dist.args])
-            if series_x_l != '':
-                return "{}\n[{}{}({})]".format(series_x_l, frozen_dist.dist.name, _crit, _args)
+            if series_x_l != "":
+                return "{}\n[{}{}({})]".format(
+                    series_x_l, frozen_dist.dist.name, _crit, _args
+                )
             else:
                 return "{}{}({})".format(frozen_dist.dist.name, _crit, _args)
         else:
-            if series_x_l != '':
+            if series_x_l != "":
                 if frozen_dist is None:
                     return series_x_l
                 else:
@@ -76,19 +79,21 @@ def _assign_x_label(title, series_x_l, is_kde, auto_fitted, frozen_dist):
 """ The meat and bones """
 
 
-def histogram(X: _ArrayLike,
-              kde: Optional[str] = "freeform",
-              bins: Optional[Union[int, _ListLike]] = None,
-              density: bool = True,
-              stat: bool = False,
-              ax: Optional[mpl.axes.Axes] = None,
-              x_label: str = "",
-              title: str = "",
-              kde_range: float = 1e-3,
-              smoothen_kde: bool = True,
-              verbose: int = 0,
-              *hist_args,
-              **hist_kwargs):
+def histogram(
+    X: _ArrayLike,
+    kde: str = "freeform",
+    bins: Optional[Union[int, _ListLike]] = None,
+    density: bool = True,
+    stat: bool = False,
+    ax: Optional[mpl.axes.Axes] = None,
+    x_label: str = "",
+    title: str = "",
+    kde_range: float = 1e-3,
+    smoothen_kde: bool = True,
+    verbose: int = 0,
+    *hist_args,
+    **hist_kwargs
+) -> mpl.axes.Axes:
     """Draws pretty histograms using `X`.
 
     Parameters
@@ -154,15 +159,25 @@ def histogram(X: _ArrayLike,
 
     if stat:
         stat_label = "mean: {:0.2f}, sd: {:0.3f},\n skew: {:0.3f} kurt: {:0.3f}".format(
-            np.nanmean(_X), np.nanstd(_X), stats.skew(_X), stats.kurtosis(_X))
+            np.nanmean(_X), np.nanstd(_X), stats.skew(_X), stats.kurtosis(_X)
+        )
         # plot the histogram
-        _plot_hist(_X, ax, bins=bins, density=density, rwidth=.9,
-                   label=stat_label, *hist_args, **hist_kwargs)
-        ax.legend(loc='best')
+        _plot_hist(
+            _X,
+            ax,
+            bins=bins,
+            density=density,
+            rwidth=0.9,
+            label=stat_label,
+            *hist_args,
+            **hist_kwargs
+        )
+        ax.legend(loc="best")
     else:
         # plot the histogram
-        _plot_hist(_X, ax, bins=bins, density=density, rwidth=.9,
-                   *hist_args, **hist_kwargs)
+        _plot_hist(
+            _X, ax, bins=bins, density=density, rwidth=0.9, *hist_args, **hist_kwargs
+        )
 
     ax.set_title(title)
 
@@ -172,30 +187,49 @@ def histogram(X: _ArrayLike,
         ax.set_ylabel("Counts")
 
     if kde is not None:
-        if kde == 'auto' or isinstance(kde, (list, tuple)):
+        if kde == "auto" or isinstance(kde, (list, tuple)):
             # uses slim parameters by default
             auto_fitted = auto_fit(_X, kde)
-            best_model_ = auto_fitted.loc[auto_fitted['r'].idxmax()]
+            best_model_ = auto_fitted.loc[auto_fitted["r"].idxmax()]
             # set kde to the name given
-            x_kde, y_kde, model = univariate_kde(_X, bins, best_model_.name, kde_range=1e-3, smoothen_kde=smoothen_kde,
-                                                 verbose=verbose, return_dist=True)
-        elif (kde == 'freeform') or hasattr(stats, kde):
+            x_kde, y_kde, model = univariate_kde(
+                _X,
+                bins,
+                best_model_.name,
+                kde_range=1e-3,
+                smoothen_kde=smoothen_kde,
+                verbose=verbose,
+                return_dist=True,
+            )
+        elif (kde == "freeform") or hasattr(stats, kde):
             # fetches the kde if possible
             auto_fitted = None
-            x_kde, y_kde, model = univariate_kde(_X, bins, kde, kde_range=1e-3, smoothen_kde=smoothen_kde,
-                                                 verbose=verbose, return_dist=True)
+            x_kde, y_kde, model = univariate_kde(
+                _X,
+                bins,
+                kde,
+                kde_range=1e-3,
+                smoothen_kde=smoothen_kde,
+                verbose=verbose,
+                return_dist=True,
+            )
         else:
             raise ValueError("kde value '{}' not found in scipy.stats".format(kde))
 
         # plot
-        ax.plot(x_kde, y_kde, "-", color='r')
+        ax.plot(x_kde, y_kde, "-", color="r")
     else:
         auto_fitted = None
         model = None
 
     if x_label == "":
-        x_label = _assign_x_label(title, X.name if isinstance(X, pd.Series) else "", kde is not None, auto_fitted,
-                                  model if not kde == "freeform" else None)
+        x_label = _assign_x_label(
+            title,
+            X.name if isinstance(X, pd.Series) else "",
+            kde is not None,
+            auto_fitted,
+            model if not kde == "freeform" else None,
+        )
 
     ax.set_xlabel(x_label)
 

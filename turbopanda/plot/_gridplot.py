@@ -47,19 +47,24 @@ def _generate_diag_like_grid(n, direction, ax_size):
     axf1, axf2 = ax_size
     fmax, fmin = max(f1, f2), min(f1, f2)
     # get longest one
-    tup, nc, nr = ((axf1 * fmin, axf2 * fmax), fmin, fmax) \
-        if direction == 'row' else ((axf1 * fmax, axf2 * fmin), fmax, fmin)
+    tup, nc, nr = (
+        ((axf1 * fmin, axf2 * fmax), fmin, fmax)
+        if direction == "row"
+        else ((axf1 * fmax, axf2 * fmin), fmax, fmin)
+    )
     fig, axes = plt.subplots(ncols=nc, nrows=nr, figsize=tup)
     axes = _clean_axes_objects(n, axes)
     return fig, axes
 
 
-def gridplot(n_plots: int,
-             arrange: str = "square",
-             ax_size: Union[int, Tuple[int, int]] = 2,
-             annotate_labels: bool = False,
-             annotate_offset: float = 0.01,
-             **annotate_args):
+def gridplot(
+    n_plots: int,
+    arrange: str = "square",
+    ax_size: Union[int, Tuple[int, int]] = 2,
+    annotate_labels: bool = False,
+    annotate_offset: float = 0.01,
+    **annotate_args
+):
     """Determines the most optimal shape for a set of plots.
 
     Parameters
@@ -84,10 +89,13 @@ def gridplot(n_plots: int,
     """
     instance_check(annotate_labels, bool)
     nonnegative((n_plots,), int)
-    belongs(arrange, ['square', 'row', 'column'])
+    belongs(arrange, ["square", "row", "column"])
 
-    annot_props = {'weight': 'bold', 'horizontalalignment': 'left',
-                   'verticalalignment': 'center'}
+    annot_props = {
+        "weight": "bold",
+        "horizontalalignment": "left",
+        "verticalalignment": "center",
+    }
     # update with args
     annot_props.update(annotate_args)
     if isinstance(ax_size, int):
@@ -99,11 +107,14 @@ def gridplot(n_plots: int,
         fig, ax = plt.subplots(figsize=fs)  #
         # wrap ax as a list to iterate over.
         if annotate_labels:
-            fig.text(0.01, .98, "A", **annot_props)
+            fig.text(0.01, 0.98, "A", **annot_props)
         return fig, [ax]
     else:
-        fig, ax = _generate_square_like_grid(n_plots, ax_size=fs) \
-            if arrange == 'square' else _generate_diag_like_grid(n_plots, arrange, ax_size=fs)
+        fig, ax = (
+            _generate_square_like_grid(n_plots, ax_size=fs)
+            if arrange == "square"
+            else _generate_diag_like_grid(n_plots, arrange, ax_size=fs)
+        )
         # add annotation labels, hmmm
         if annotate_labels:
             # we use tight layout to make sure text isnt overlapping
@@ -111,7 +122,10 @@ def gridplot(n_plots: int,
             for a, n in zip(ax, string.ascii_uppercase):
                 pos_ = a.get_position().bounds
                 # add label
-                fig.text(pos_[0] - annotate_offset,
-                         pos_[1] + pos_[3] + annotate_offset,
-                         n, **annot_props)
+                fig.text(
+                    pos_[0] - annotate_offset,
+                    pos_[1] + pos_[3] + annotate_offset,
+                    n,
+                    **annot_props
+                )
         return fig, ax

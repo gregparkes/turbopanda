@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 """Provides an interface to the naming of columns/index in MetaPanda."""
 
-from typing import Tuple
-
-import pandas as pd
+from typing import Tuple, Optional
 
 from turbopanda._deprecator import deprecated
 from turbopanda.str import string_replace
@@ -12,7 +10,7 @@ from turbopanda.utils import belongs, is_twotuple
 from ._inspect import inspect
 from ._types import SelectorType
 
-__all__ = ('rename_axis', 'add_prefix', 'add_suffix')
+__all__ = ("rename_axis", "add_prefix", "add_suffix")
 
 
 def _rename_axis(df, meta, old, new, axis: int = 1):
@@ -25,10 +23,9 @@ def _rename_axis(df, meta, old, new, axis: int = 1):
         raise ValueError("axis '{}' not recognized".format(axis))
 
 
-def rename_axis(self,
-                ops: Tuple[str, str],
-                selector: SelectorType = None,
-                axis: int = 1) -> "MetaPanda":
+def rename_axis(
+    self, ops: Tuple[str, str], selector: Optional[SelectorType] = None, axis: int = 1
+):
     """Perform a chain of .str.replace operations on one of the axes.
 
     .. note:: strings that are unchanged remain the same (are not NA'd).
@@ -53,7 +50,9 @@ def rename_axis(self,
     is_twotuple(ops)
     belongs(axis, [0, 1])
 
-    curr_cols = sel_cols = inspect(self.df_, self.meta_, self.selectors_, selector, axis=axis, mode='view')
+    curr_cols = sel_cols = inspect(
+        self.df_, self.meta_, self.selectors_, selector, axis=axis, mode="view"
+    )
     # performs the replacement operation inplace
     curr_cols = string_replace(curr_cols, ops)
     # rename using mapping
@@ -61,14 +60,18 @@ def rename_axis(self,
     return self
 
 
-@deprecated("0.2.5", "0.2.9", instead="apply_columns('add_prefix', ...)",
-            reason="This pandas replacement is not necessary to warrant a function")
-def add_prefix(self, pref: str,
-               selector: SelectorType = None) -> "MetaPanda":
+@deprecated(
+    "0.2.5",
+    "0.2.9",
+    instead="apply_columns('add_prefix', ...)",
+    reason="This pandas replacement is not necessary to warrant a function",
+)
+def add_prefix(self, pref: str, selector: Optional[SelectorType] = None):
     """Add a prefix to all of the columns or selected columns.
 
     Parameters
     -------
+    self
     pref : str
         The prefix to add
     selector : None, str, or tuple args, optional
@@ -83,16 +86,21 @@ def add_prefix(self, pref: str,
     --------
     add_suffix : Add a suffix to all of the columns or selected columns..
     """
-    sel_cols = inspect(self.df_, self.meta_, self.selectors_, selector, axis=1, mode='view')
+    sel_cols = inspect(
+        self.df_, self.meta_, self.selectors_, selector, axis=1, mode="view"
+    )
     # set to df_ and meta_
     _rename_axis(self.df_, self.meta_, sel_cols, pref + sel_cols, axis=1)
     return self
 
 
-@deprecated("0.2.5", "0.2.9", instead="apply('pipe', turb.pipe.add_suffix, ...)",
-            reason="This pandas replacement is not necessary to warrant a function")
-def add_suffix(self, suf: str,
-               selector: SelectorType = None) -> "MetaPanda":
+@deprecated(
+    "0.2.5",
+    "0.2.9",
+    instead="apply('pipe', turb.pipe.add_suffix, ...)",
+    reason="This pandas replacement is not necessary to warrant a function",
+)
+def add_suffix(self, suf: str, selector: SelectorType = None):
     """Add a suffix to all of the columns or selected columns.
 
     Parameters
@@ -111,7 +119,9 @@ def add_suffix(self, suf: str,
     --------
     add_prefix : Add a prefix to all of the columns or selected columns.
     """
-    sel_cols = inspect(self.df_, self.meta_, self.selectors_, selector, axis=1, mode='view')
+    sel_cols = inspect(
+        self.df_, self.meta_, self.selectors_, selector, axis=1, mode="view"
+    )
     # set to df_ and meta_
     _rename_axis(self.df_, self.meta_, sel_cols, sel_cols + suf, axis=1)
     return self

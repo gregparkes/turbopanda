@@ -12,11 +12,18 @@ from ._error_raise import instance_check
 
 ArrayLike = Union[np.ndarray, pd.Series, pd.DataFrame]
 
-__all__ = ('as_flattened_numpy', 'listify', 'switcheroo',
-           'integer_to_boolean', "upcast",
-           'object_to_categorical', 'boolean_to_integer',
-           'boolean_to_categorical',
-           'float_to_integer', 'ordinal')
+__all__ = (
+    "as_flattened_numpy",
+    "listify",
+    "switcheroo",
+    "integer_to_boolean",
+    "upcast",
+    "object_to_categorical",
+    "boolean_to_integer",
+    "boolean_to_categorical",
+    "float_to_integer",
+    "ordinal",
+)
 
 
 def as_flattened_numpy(x):
@@ -45,10 +52,10 @@ def ordinal(num: int) -> str:
     Taken from https://www.pythoncentral.io/validate-python-function-parameters-and-return-types-with-decorators/
     """
     if 10 <= num % 100 < 20:
-        return '{0}th'.format(num)
+        return "{0}th".format(num)
     else:
-        ordn = {1: 'st', 2: 'nd', 3: 'rd'}.get(num % 10, 'th')
-        return '{0}{1}'.format(num, ordn)
+        ordn = {1: "st", 2: "nd", 3: "rd"}.get(num % 10, "th")
+        return "{0}{1}".format(num, ordn)
 
 
 def switcheroo(ser: pd.Series) -> pd.Series:
@@ -58,8 +65,11 @@ def switcheroo(ser: pd.Series) -> pd.Series:
 
 def integer_to_boolean(ser: pd.Series) -> pd.Series:
     """ Convert an integer series into boolean if possible """
-    return ser.astype(np.bool) if \
-        (is_column_int(ser) and is_n_value_column(ser, 2)) else ser
+    return (
+        ser.astype(np.bool)
+        if (is_column_int(ser) and is_n_value_column(ser, 2))
+        else ser
+    )
 
 
 def float_to_integer(ser: pd.Series) -> pd.Series:
@@ -74,9 +84,9 @@ def float_to_integer(ser: pd.Series) -> pd.Series:
         return ser
 
 
-def object_to_categorical(ser: pd.Series,
-                          order: Optional[Tuple] = None,
-                          thresh: int = 30) -> pd.Series:
+def object_to_categorical(
+    ser: pd.Series, order: Optional[Tuple] = None, thresh: int = 30
+) -> pd.Series:
     """Convert ser to be of type 'category' if possible."""
     # get uniques if possible
     if 1 < ser.nunique() < thresh:
@@ -88,9 +98,7 @@ def object_to_categorical(ser: pd.Series,
         return ser
 
 
-def boolean_to_categorical(ser: pd.Series,
-                           true: str,
-                           false: str) -> pd.Series:
+def boolean_to_categorical(ser: pd.Series, true: str, false: str) -> pd.Series:
     """Converts a boolean series into two-categorical state with labels."""
     return ser.astype("category").cat.rename_categories({True: true, False: false})
 

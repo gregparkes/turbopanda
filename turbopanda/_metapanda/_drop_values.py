@@ -2,14 +2,11 @@
 # -*- coding: utf-8 -*-
 """Provides an interface to the dropping rows or columns in Metapanda."""
 
-from typing import Callable
-
 import pandas as pd
 
-from ._inspect import inspect
 from ._types import SelectorType
 
-__all__ = ('drop', 'keep', 'drop_columns')
+__all__ = ("drop", "keep", "drop_columns")
 
 
 def _remove_unused_categories(meta):
@@ -26,7 +23,7 @@ def drop_columns(df: pd.DataFrame, meta: pd.DataFrame, select: pd.Index):
         _remove_unused_categories(meta)
 
 
-def drop(self, *selector: SelectorType) -> "MetaPanda":
+def drop(self, *selector: SelectorType):
     """Drop the selected columns from `df_`.
 
     Given a selector or group of selectors, drop all of the columns selected within
@@ -52,7 +49,7 @@ def drop(self, *selector: SelectorType) -> "MetaPanda":
     return self
 
 
-def keep(self, *selector: SelectorType) -> "MetaPanda":
+def keep(self, *selector: SelectorType):
     """Keep the selected columns from `df_` only.
 
     Given a selector or group of selectors, keep all of the columns selected within

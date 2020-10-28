@@ -9,18 +9,19 @@ import matplotlib as mpl
 from pandas import Series, Index
 import matplotlib.pyplot as plt
 
-from turbopanda.utils import instance_check, arrays_equal_size, \
-    as_flattened_numpy
+from turbopanda.utils import instance_check, arrays_equal_size, as_flattened_numpy
 from turbopanda.str import shorten
 
 
-def annotate(X: Union[np.ndarray, Series, List, Tuple],
-             Y: Union[np.ndarray, Series, List, Tuple],
-             T: Union[np.ndarray, Series, List, Tuple],
-             subset: Optional[Union[np.ndarray, Series, List, Tuple]] = None,
-             ax: mpl.axes.Axes = None,
-             word_shorten: Optional[int] = None,
-             **annotate_kws):
+def annotate(
+    X: Union[np.ndarray, Series, List, Tuple],
+    Y: Union[np.ndarray, Series, List, Tuple],
+    T: Union[np.ndarray, Series, List, Tuple],
+    subset: Optional[Union[np.ndarray, Series, List, Tuple]] = None,
+    ax: mpl.axes.Axes = None,
+    word_shorten: Optional[int] = None,
+    **annotate_kws
+):
     """Annotates a matplotlib plot with text.
 
     Offsets are pre-determined according to the scale of the plot.
@@ -63,9 +64,9 @@ def annotate(X: Union[np.ndarray, Series, List, Tuple],
     if word_shorten:
         _T = shorten(_T, newl=word_shorten)
 
-    if _X.dtype.kind == 'f':
-        _X += (_X.max() - _X.min()) / 30.
-        _Y += -((_Y.max() - _Y.min()) / 30.)
+    if _X.dtype.kind == "f":
+        _X += (_X.max() - _X.min()) / 30.0
+        _Y += -((_Y.max() - _Y.min()) / 30.0)
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 5))

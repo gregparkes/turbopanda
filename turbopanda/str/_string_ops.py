@@ -9,11 +9,9 @@ import numpy as np
 from typing import Tuple, Union, Iterable, List
 from pandas import DataFrame, Index, Series
 
-from turbopanda.utils import set_like, belongs, instance_check,\
-    umap, transform_copy
+from turbopanda.utils import belongs, instance_check, umap, transform_copy
 
-
-__all__ = ('patproduct', 'string_replace', 'reformat', 'shorten')
+__all__ = ("patproduct", "string_replace", "reformat", "shorten")
 
 
 def patproduct(pat: str, *args: Iterable) -> List[str]:
@@ -57,14 +55,16 @@ def _shorten_string(s: str, approp_len: int = 15, method: str = "middle") -> str
         return s
     else:
         if method == "start":
-            return ".." + s[-approp_len - 2:]
+            return ".." + s[-approp_len - 2 :]
         elif method == "end":
-            return s[:approp_len - 2] + ".."
+            return s[: approp_len - 2] + ".."
         elif method == "middle":
             midpoint = (approp_len - 2) // 2
             return s[:midpoint] + ".." + s[-midpoint:]
         else:
-            raise ValueError("method '{}' not in {}".format(method, ('middle', 'start', 'end')))
+            raise ValueError(
+                "method '{}' not in {}".format(method, ("middle", "start", "end"))
+            )
 
 
 def shorten(s, newl: int = 15, method: str = "middle"):
@@ -94,9 +94,11 @@ def shorten(s, newl: int = 15, method: str = "middle"):
         return [_shorten_string(_s, newl, method) for _s in s]
 
 
-def string_replace(strings: Union[str, List[str], Tuple[str, ...], Series, Index],
-                   *operations: Tuple[str, str]):
-    """ Performs all replace operations on the string inplace.
+def string_replace(
+    strings: Union[str, List[str], Tuple[str, ...], Series, Index],
+    *operations: Tuple[str, str]
+):
+    """Performs all replace operations on the string inplace.
 
     By default, if operations is a list of these tuples, it will work also.
 
@@ -126,7 +128,7 @@ def string_replace(strings: Union[str, List[str], Tuple[str, ...], Series, Index
     >>> ['badbye', 'i am', 'pleased']
     Note that to provide backwards compatibility, if there is only argument and its a list, it will
     attempt to treat this as a stack of arguments to parse:
-    >>> strrepl(['hello', 'i am', 'pleased'], [("hello", "goodbye"), ("good", "bad")])
+    >>> strrepl(['hello', 'i am', 'pleased'], ("hello", "goodbye"), ("good", "bad"))
     >>> ['badbye', 'i am', 'pleased']
 
     See Also
@@ -141,12 +143,11 @@ def string_replace(strings: Union[str, List[str], Tuple[str, ...], Series, Index
         operations = operations[0]
 
     if isinstance(strings, str):
-        return reduce(lambda sold, arg: sold.replace(*arg),
-                      [strings, *operations])
+        return reduce(lambda sold, arg: sold.replace(*arg), [strings, *operations])
     else:
         strings_new = reduce(
             lambda sold, arg: umap(lambda s: s.replace(*arg), sold),
-            [strings, *operations]
+            [strings, *operations],
         )
         return transform_copy(strings, strings_new)
 
@@ -173,8 +174,8 @@ def reformat(s: str, df: DataFrame) -> Series:
     ser : pd.Series
         Reformatted column.
     """
-    import re
-    columns = re.findall('.*?{([a-zA-Z0-9_-]+)}.*?', s)
+
+    columns = re.findall(".*?{([a-zA-Z0-9_-]+)}.*?", s)
     d = []
     for i, r in df.iterrows():
         mmap = dict(zip(columns, r[columns]))

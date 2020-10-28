@@ -27,9 +27,15 @@ def get_slim_continuous_param(param_name: str):
     """Given param name, gives the basic range of the parameter, must be continuous"""
     _pt = param_types()
     if param_name not in _pt.index:
-        raise ValueError("param name '{}' not found in available parameters".format(param_name))
+        raise ValueError(
+            "param name '{}' not found in available parameters".format(param_name)
+        )
     if _pt.loc[param_name, "DataType"] == "float":
-        return _pt.loc[param_name, "Range Min"], _pt.loc[param_name, "Default"], _pt.loc[param_name, "Range Max"]
+        return (
+            _pt.loc[param_name, "Range Min"],
+            _pt.loc[param_name, "Default"],
+            _pt.loc[param_name, "Range Max"],
+        )
     else:
         raise ValueError("parameter '{}' is not of type float")
 
@@ -38,37 +44,49 @@ def get_bounded_continuous_param(param_name: str):
     """Given param name, gives the basic range of the parameter, with bounds, must be continuous"""
     _pt = param_types()
     if param_name not in _pt.index:
-        raise ValueError("param name '{}' not found in available parameters".format(param_name))
+        raise ValueError(
+            "param name '{}' not found in available parameters".format(param_name)
+        )
     if _pt.loc[param_name, "DataType"] == "float":
         return (
             _pt.loc[param_name, "Bound Min"],
             _pt.loc[param_name, "Range Min"],
             _pt.loc[param_name, "Default"],
             _pt.loc[param_name, "Range Max"],
-            _pt.loc[param_name, "Bound Max"]
+            _pt.loc[param_name, "Bound Max"],
         )
     else:
         raise ValueError("parameter '{}' is not of type float")
 
 
-def _get_default_params(model: str, param: Optional[str] = None, return_list: bool = True):
+def _get_default_params(
+    model: str, param: Optional[str] = None, return_list: bool = True
+):
     """Given model m, gets the list of primary parameter values."""
     _pt = param_types()
     _param = _get_default_param_name(model) if param is None else param
     # is parameter available?
     if _param not in _pt.index:
-        raise ValueError("parameter '{}' not found as valid option: {}".format(_param, _pt.index.tolist()))
+        raise ValueError(
+            "parameter '{}' not found as valid option: {}".format(
+                _param, _pt.index.tolist()
+            )
+        )
 
-    if _pt.loc[_param, "Scale"] == 'log':
-        x = np.logspace(np.log10(_pt.loc[_param, "Range Min"]),
-                        np.log10(_pt.loc[_param, "Range Max"]),
-                        int(_pt.loc[_param, "Suggested N"]))
-    elif _pt.loc[_param, 'Scale'] == "normal":
-        x = np.linspace(_pt.loc[_param, 'Range Min'],
-                        _pt.loc[_param, 'Range Max'],
-                        int(_pt.loc[_param, 'Suggested N']))
+    if _pt.loc[_param, "Scale"] == "log":
+        x = np.logspace(
+            np.log10(_pt.loc[_param, "Range Min"]),
+            np.log10(_pt.loc[_param, "Range Max"]),
+            int(_pt.loc[_param, "Suggested N"]),
+        )
+    elif _pt.loc[_param, "Scale"] == "normal":
+        x = np.linspace(
+            _pt.loc[_param, "Range Min"],
+            _pt.loc[_param, "Range Max"],
+            int(_pt.loc[_param, "Suggested N"]),
+        )
     else:
-        return _pt.loc[_param, 'Options'].split(", ")
+        return _pt.loc[_param, "Options"].split(", ")
 
     if _pt.loc[_param, "DataType"] == "int":
         x = x.astype(np.int)
@@ -103,7 +121,11 @@ def make_optimize_grid(models):
     elif isinstance(models, dict):
         return tuple(models.values())
     else:
-        raise TypeError("model input type '{}' not recognized, must be [list, tuple, dict]".format(type(models)))
+        raise TypeError(
+            "model input type '{}' not recognized, must be [list, tuple, dict]".format(
+                type(models)
+            )
+        )
 
 
 def make_parameter_grid(models, header: str = "model") -> Union[Dict, List[Dict]]:
@@ -126,15 +148,25 @@ def make_parameter_grid(models, header: str = "model") -> Union[Dict, List[Dict]
         The parameter grid.
     """
     if isinstance(models, (list, tuple)):
-        _p = [{header: [find_sklearn_model(model)[0]],
-               header + "__" + _get_default_param_name(model): broadsort(_get_default_params(model))}
-              for model in models]
+        _p = [
+            {
+                header: [find_sklearn_model(model)[0]],
+                header
+                + "__"
+                + _get_default_param_name(model): broadsort(_get_default_params(model)),
+            }
+            for model in models
+        ]
         return _p
     elif isinstance(models, dict):
+
         def _handle_single_model(name, _val):
             if isinstance(_val, (list, tuple)):
                 # if the values are list/tuple, they are parameter names, use defaults
-                _p = {header + "__" + _v: broadsort(_get_default_params(name, _v)) for _v in _val}
+                _p = {
+                    header + "__" + _v: broadsort(_get_default_params(name, _v))
+                    for _v in _val
+                }
                 _p[header] = listify(find_sklearn_model(name)[0])
                 return _p
             elif isinstance(_val, dict):
@@ -142,10 +174,14 @@ def make_parameter_grid(models, header: str = "model") -> Union[Dict, List[Dict]
                 _p[header] = listify(find_sklearn_model(name)[0])
                 return _p
 
-        arg = [_handle_single_model(model_name, val) for model_name, val in models.items()]
+        arg = [
+            _handle_single_model(model_name, val) for model_name, val in models.items()
+        ]
         if len(arg) == 1:
             return arg[0]
         else:
             return arg
     else:
-        raise TypeError("input type for 'models' {} is not recognized; choose from [list, tuple, dict]").format(type(models))
+        raise TypeError(
+            "input type for 'models' {} is not recognized; choose from [list, tuple, dict]"
+        ).format(type(models))

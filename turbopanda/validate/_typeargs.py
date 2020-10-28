@@ -5,7 +5,11 @@
 import functools
 
 from turbopanda.utils import ordinal
-from ._typeerrors import InvalidArgumentNumberError, InvalidReturnType, ArgumentValidationError
+from ._typeerrors import (
+    InvalidArgumentNumberError,
+    InvalidReturnType,
+    ArgumentValidationError,
+)
 
 
 def accepts(*accepted_arg_types):
@@ -20,6 +24,7 @@ def accepts(*accepted_arg_types):
     ----------
     Taken from https://www.pythoncentral.io/validate-python-function-parameters-and-return-types-with-decorators/
     """
+
     def _accept_decorator(validate_function):
         # Check if the number of arguments to the validator
         # function is the same as the arguments provided
@@ -34,16 +39,19 @@ def accepts(*accepted_arg_types):
 
             # We're using enumerate to get the index, so we can pass the
             # argument number with the incorrect type to ArgumentValidationError.
-            for arg_num, (actual_arg, accepted_arg_type) in enumerate(zip(function_args, accepted_arg_types)):
+            for arg_num, (actual_arg, accepted_arg_type) in enumerate(
+                zip(function_args, accepted_arg_types)
+            ):
                 if not type(actual_arg) is accepted_arg_type:
                     ord_num = ordinal(arg_num + 1)
-                    raise ArgumentValidationError(ord_num,
-                                                  validate_function.__name__,
-                                                  accepted_arg_type)
+                    raise ArgumentValidationError(
+                        ord_num, validate_function.__name__, accepted_arg_type
+                    )
 
             return validate_function(*function_args)
 
         return _decorator_wrapper
+
     return _accept_decorator
 
 
@@ -61,16 +69,17 @@ def returns(*accepted_return_type_tuple):
     ----------
     Taken from https://www.pythoncentral.io/validate-python-function-parameters-and-return-types-with-decorators/
     """
+
     def _return_decorator(validate_function):
         # No return type has been specified.
         if len(accepted_return_type_tuple) == 0:
-            raise TypeError('You must specify a return type.')
+            raise TypeError("You must specify a return type.")
 
         @functools.wraps(validate_function)
         def _decorator_wrapper(*function_args):
             # More than one return type has been specified.
             if len(accepted_return_type_tuple) > 1:
-                raise TypeError('You must specify one return type.')
+                raise TypeError("You must specify one return type.")
 
             # Since the decorator receives a tuple of arguments
             # and the is only ever one object returned, we'll just
@@ -83,10 +92,10 @@ def returns(*accepted_return_type_tuple):
             return_value_type = type(return_value)
 
             if return_value_type is not accepted_return_type:
-                raise InvalidReturnType(return_value_type,
-                                        validate_function.__name__)
+                raise InvalidReturnType(return_value_type, validate_function.__name__)
 
             return return_value
 
         return _decorator_wrapper
+
     return _return_decorator

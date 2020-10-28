@@ -3,12 +3,17 @@
 """Methods utility file-related functions."""
 
 import glob
-from typing import Any, List
+from typing import Any, List, Iterable
 
-from ._error_raise import instance_check
 from ._sets import join
 
-__all__ = ("list_dir", "split_file_directory", 'insert_prefix', 'insert_suffix', 'get_file_expanded')
+__all__ = (
+    "list_dir",
+    "split_file_directory",
+    "insert_prefix",
+    "insert_suffix",
+    "get_file_expanded",
+)
 
 
 def _is_filepath_object(f):
@@ -20,7 +25,7 @@ def _is_filepath_object(f):
         return False
 
 
-def get_file_expanded(files: List[str]) -> List:
+def get_file_expanded(files: List[str]) -> Iterable:
     """Given a list of filenames, get the associated found files."""
     return join(*[glob.glob(f) for f in files if _is_filepath_object(f)])
 
@@ -30,8 +35,10 @@ def list_dir(obj: Any) -> List:
     return [a for a in dir(obj) if not a.startswith("__") and not a.startswith("_")]
 
 
-def list_dir_object(obj: Any) -> List:
+def list_dir_object(obj: Any) -> List[str]:
+    """Lists all of the non-hidden directories"""
     import string
+
     """Lists all public objects within a directory."""
     return [a for a in dir(obj) if a[0] in string.ascii_uppercase]
 

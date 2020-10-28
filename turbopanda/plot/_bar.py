@@ -6,25 +6,33 @@ import numpy as np
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from typing import Union, Optional, List, Tuple
+from typing import Union, Optional
 
-from turbopanda.utils import as_flattened_numpy, instance_check, belongs
-from turbopanda._deprecator import unstable
+from turbopanda.utils import as_flattened_numpy, belongs
 
 from ._palette import palette_cmap, cat_array_to_color, lighten
 from ._annotate import annotate as annotate_labels
 from ._default import _Numeric, _ArrayLike, _ListLike
 from ._widgets import map_legend
 
-__all__ = ('bar1d', 'widebar', 'errorbar1d')
+__all__ = ("bar1d", "widebar", "errorbar1d")
 
 
-def _plot_bar_orient(ax, ticks, labels,
-                     values, sd=None, vert=True,
-                     c='k', w=0.8,
-                     lrot=0., annotate=False,
-                     lines=None, vlabel=None):
-    bar_args = {'ecolor': 'k', 'capsize': 4}
+def _plot_bar_orient(
+    ax,
+    ticks,
+    labels,
+    values,
+    sd=None,
+    vert=True,
+    c="k",
+    w=0.8,
+    lrot=0.0,
+    annotate=False,
+    lines=None,
+    vlabel=None,
+):
+    bar_args = {"ecolor": "k", "capsize": 4}
     # plot bar here
     bar_f = ax.bar if vert else ax.barh
     tick_pos_f = ax.set_xticks if vert else ax.set_yticks
@@ -34,7 +42,7 @@ def _plot_bar_orient(ax, ticks, labels,
 
     if sd is not None:
         err_args = {"yerr": sd, "width": w} if vert else {"xerr": sd, "height": w}
-        err_c = lighten(c, .2)
+        err_c = lighten(c, 0.2)
         bar_f(ticks, values, color=err_c, **err_args, **bar_args)
     else:
         err_args = {"width": w} if vert else {"height": w}
@@ -45,7 +53,11 @@ def _plot_bar_orient(ax, ticks, labels,
     tick_label_f(labels, rotation=lrot)
     # add optional horizontal lines
     if lines:
-        line_args = {'xmin': -.5, 'xmax': ticks.shape[0] - .5} if vert else {'ymin': -.5, 'ymax': ticks.shape[0] - .5}
+        line_args = (
+            {"xmin": -0.5, "xmax": ticks.shape[0] - 0.5}
+            if vert
+            else {"ymin": -0.5, "ymax": ticks.shape[0] - 0.5}
+        )
         bar_line_f(lines, linestyle="--", color="k", **line_args)
     # add optional annotations
     if annotate:
@@ -72,21 +84,23 @@ def _apply_data_sort(order, *arrays):
     return list(map(lambda x: x[order], arrays))
 
 
-def bar1d(X: _ArrayLike,
-          Y: Optional[_ListLike] = None,
-          c: Optional[Union[_ArrayLike, str]] = 'k',
-          vert: bool = True,
-          sort: bool = True,
-          ax: Optional[mpl.axes.Axes] = None,
-          scale: str = "linear",
-          annotate: bool = False,
-          legend: bool = False,
-          width: float = 0.8,
-          label_rotation: float = 0.0,
-          value_label: Optional[str] = None,
-          sort_by: str = "values",
-          cmap: str = "Blues",
-          linesAt: Optional[Union[_Numeric, _ListLike]] = None):
+def bar1d(
+    X: _ArrayLike,
+    Y: Optional[_ListLike] = None,
+    c: Optional[Union[_ArrayLike, str]] = "k",
+    vert: bool = True,
+    sort: bool = True,
+    ax: Optional[mpl.axes.Axes] = None,
+    scale: str = "linear",
+    annotate: bool = False,
+    legend: bool = False,
+    width: float = 0.8,
+    label_rotation: float = 0.0,
+    value_label: Optional[str] = None,
+    sort_by: str = "values",
+    cmap: str = "Blues",
+    linesAt: Optional[Union[_Numeric, _ListLike]] = None,
+):
     """Plots a 1 dimensional barplot.
 
     Parameters
@@ -134,7 +148,7 @@ def bar1d(X: _ArrayLike,
     """
     # define plot if not set
 
-    belongs(sort_by, ('values', 'labels'))
+    belongs(sort_by, ("values", "labels"))
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 5))
@@ -166,7 +180,9 @@ def bar1d(X: _ArrayLike,
         elif sort_by == "labels":
             _order = np.argsort(_labels)
         else:
-            raise ValueError("sort_by '{}': must be ['values', 'labels']".format(sort_by))
+            raise ValueError(
+                "sort_by '{}': must be ['values', 'labels']".format(sort_by)
+            )
         # apply sort
         if not isinstance(c, (type(None), str)):
             _labels, _values, pal = _apply_data_sort(_order, _labels, _values, pal)
@@ -174,8 +190,19 @@ def bar1d(X: _ArrayLike,
             _labels, _values = _apply_data_sort(_order, _labels, _values)
 
     # plot the bar
-    _plot_bar_orient(ax, _ticks, _labels, _values, c=pal, w=width, vert=vert, lrot=label_rotation,
-                     annotate=annotate, lines=linesAt, vlabel=value_label)
+    _plot_bar_orient(
+        ax,
+        _ticks,
+        _labels,
+        _values,
+        c=pal,
+        w=width,
+        vert=vert,
+        lrot=label_rotation,
+        annotate=annotate,
+        lines=linesAt,
+        vlabel=value_label,
+    )
     # orient scale
     if vert:
         ax.set_yscale(scale)
@@ -184,20 +211,22 @@ def bar1d(X: _ArrayLike,
 
     # map a legend to it
     if legend and not isinstance(c, str):
-        map_legend(c, pal, 'o', ax, False)
+        map_legend(c, pal, "o", ax, False)
 
     return ax
 
 
-def errorbar1d(data: pd.DataFrame,
-               c: Optional[Union[_ArrayLike, str]] = 'k',
-               axis: Union[str, int] = 1,
-               vert: bool = True,
-               sort: bool = True,
-               ax: Optional[mpl.axes.Axes] = None,
-               width: float = 0.8,
-               label_rotation: float = 0.0,
-               cmap: str = "Blues"):
+def errorbar1d(
+    data: pd.DataFrame,
+    c: Optional[Union[_ArrayLike, str]] = "k",
+    axis: Union[str, int] = 1,
+    vert: bool = True,
+    sort: bool = True,
+    ax: Optional[mpl.axes.Axes] = None,
+    width: float = 0.8,
+    label_rotation: float = 0.0,
+    cmap: str = "Blues",
+):
     """Plots a barplot with error bars.
 
     Data is to be arranged such that one axis is the categorical variables,
@@ -237,7 +266,7 @@ def errorbar1d(data: pd.DataFrame,
         fig, ax = plt.subplots(figsize=(8, 5))
 
     # fetch ticks and labels based on the opposite axis
-    _labels = data.index if axis in ('columns', 1) else data.columns
+    _labels = data.index if axis in ("columns", 1) else data.columns
     _ticks = np.arange(len(_labels))
     # given axis, get mean and std values to plot.
     m_v = data.mean(axis=axis).values
@@ -255,22 +284,25 @@ def errorbar1d(data: pd.DataFrame,
             _labels, m_v, m_sd = _apply_data_sort(_ord, _labels, m_v, m_sd)
 
     # now plot
-    _plot_bar_orient(ax, _ticks, _labels, m_v, m_sd, c=pal,
-                     w=width, vert=vert, lrot=label_rotation)
+    _plot_bar_orient(
+        ax, _ticks, _labels, m_v, m_sd, c=pal, w=width, vert=vert, lrot=label_rotation
+    )
 
     return ax
 
 
-def widebar(data: pd.DataFrame,
-            c: Optional[_ArrayLike] = None,
-            vert: bool = True,
-            ax: Optional[mpl.axes.Axes] = None,
-            legend: bool = True,
-            measured: Optional[str] = None,
-            total_width: float = 0.8,
-            label_rotation: float = 0.0,
-            cmap: str = 'Blues',
-            **bar_kws):
+def widebar(
+    data: pd.DataFrame,
+    c: Optional[_ArrayLike] = None,
+    vert: bool = True,
+    ax: Optional[mpl.axes.Axes] = None,
+    legend: bool = True,
+    measured: Optional[str] = None,
+    total_width: float = 0.8,
+    label_rotation: float = 0.0,
+    cmap: str = "Blues",
+    **bar_kws
+):
     """Plots a barplot with column data as hues.
 
     Note that columns in the data correspond to data that
@@ -337,8 +369,15 @@ def widebar(data: pd.DataFrame,
 
     # using the appropriate functions, map with vert considered.
     for j in range(_p):
-        bar_plot_f(x + j * w, data.iloc[:, j], w, label=data.columns[j], color=pal[j], **bar_kws)
-    ticks_f((x - w / 2.) + (total_width / 2.))
+        bar_plot_f(
+            x + j * w,
+            data.iloc[:, j],
+            w,
+            label=data.columns[j],
+            color=pal[j],
+            **bar_kws
+        )
+    ticks_f((x - w / 2.0) + (total_width / 2.0))
     labels_f(data.index, rotation=label_rotation)
     # add legend
     if legend:

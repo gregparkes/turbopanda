@@ -3,10 +3,7 @@
 """Operations for handling the longest common substring match problem."""
 
 import itertools as it
-from typing import List, Tuple, Union, Optional
-
-import matplotlib.pyplot as plt
-import numpy as np
+from typing import List, Union, Optional
 from pandas import Series, Index
 
 from turbopanda.utils import instance_check, nonnegative, disallow_instance_pair
@@ -15,19 +12,22 @@ from turbopanda.utils import instance_check, nonnegative, disallow_instance_pair
 def _single_common_substring_match(a: str, b: str) -> str:
     """Given two strings, find the longest common substring.
 
-     Also known as the Longest Common Substring problem."""
+    Also known as the Longest Common Substring problem."""
     from difflib import SequenceMatcher
+
     match = SequenceMatcher(None, a, b).find_longest_match(0, len(a), 0, len(b))
     # return the longest substring
     if match.size != 0:
-        return a[match.a:match.a + match.size]
+        return a[match.a : match.a + match.size]
     else:
         return ""
 
 
-def common_substrings(a: Union[str, List[str]],
-                      b: Optional[Union[str, List[str]]] = None,
-                      min_length: int = 2) -> Union[str, Series]:
+def common_substrings(
+    a: Union[str, List[str]],
+    b: Optional[Union[str, List[str]]] = None,
+    min_length: int = 2,
+) -> Union[str, Series]:
     """Given at least one pair of strings, find all the best common substring matches.
 
     By default, if one a is passed, it uses the pairwise combinations between all values in the list,
@@ -79,6 +79,7 @@ def common_substrings(a: Union[str, List[str]],
         def filter_func(x):
             """Custom function which filters according to tuple and keeps elements >= min length"""
             return (x in filters) or (len(x) < min_length) or (z.count(x) <= 1)
+
         # filter out naff elements
         z_up = list(it.filterfalse(filter_func, z))
         # save as series valuecounts.

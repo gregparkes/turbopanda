@@ -2,19 +2,24 @@
 # -*- coding: utf-8 -*-
 """Handles package-based methods for sklearn."""
 
-import sklearn
 from sklearn.base import is_classifier, is_regressor
 
 from turbopanda.utils import panderfy
 from ._default import model_types
 
-__all__ = ('skpackages', 'is_sklearn_model',
-           'find_sklearn_package', 'find_model_family', 'find_sklearn_model')
+__all__ = (
+    "skpackages",
+    "is_sklearn_model",
+    "find_sklearn_package",
+    "find_model_family",
+    "find_sklearn_model",
+)
 
 
 def skpackages():
     """Returns compliant sklearn packages."""
     from sklearn import linear_model, tree, neighbors, ensemble, svm, gaussian_process
+
     return linear_model, tree, neighbors, ensemble, svm, gaussian_process
 
 
@@ -25,7 +30,7 @@ def is_sklearn_model(name):
             if hasattr(pkg, name):
                 return True
         _mt = model_types()
-        if _mt['Short'].eq(name).any():
+        if _mt["Short"].eq(name).any():
             return True
     elif is_classifier(name):
         return True
@@ -59,7 +64,7 @@ def find_sklearn_model(name, mt="regression"):
             return find_sklearn_model(q.index[0])
         elif q.shape[0] > 1:
             # determine whether we want a classifier or a regressor
-            return find_sklearn_model(q[q['ModelType'] == mt].index[0])
+            return find_sklearn_model(q[q["ModelType"] == mt].index[0])
         else:
             raise ValueError("name '{}' does not exist as a model".format(name))
     elif is_classifier(name):

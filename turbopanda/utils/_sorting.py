@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 """Operations for sorting lists/tuples."""
 
-import itertools as it
-from typing import Callable, List, Tuple, Union
+from typing import List, Tuple, Union
 import numpy as np
 
 from ._error_raise import instance_check

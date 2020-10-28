@@ -14,28 +14,34 @@ from turbopanda.str import pattern
 from turbopanda.utils import belongs, instance_check, union, intersect
 from turbopanda.pipe import zscore, clean1
 
-
-__all__ = ('select_xcols', 'preprocess_continuous_X', 'preprocess_continuous_X_y')
+__all__ = ("select_xcols", "preprocess_continuous_X", "preprocess_continuous_X_y")
 
 
 def select_xcols(df: pd.DataFrame, xs, y):
     """Selects the appropriate x-column selection from a dataset for ML use."""
-    if x is None:
+    if xs is None:
         return df.columns.difference(pd.Index([y]))
-    elif isinstance(x, str):
+    elif isinstance(xs, str):
         return pattern(xs, df.columns)
     else:
         return xs
 
 
-@deprecated("0.2.8", "0.2.9", instead="preprocess_continuous_X_y", reason="reliance on MetaPanda object and pipes")
-def ml_ready(df: "MetaPanda",
-             x: SelectorType,
-             y: Optional[str] = None,
-             x_std: bool = True,
-             y_std: bool = False,
-             std_func: str = "standardize",
-             verbose: int = 0):
+@deprecated(
+    "0.2.8",
+    "0.2.9",
+    instead="preprocess_continuous_X_y",
+    reason="reliance on MetaPanda object and pipes",
+)
+def ml_ready(
+    df: "MetaPanda",
+    x: SelectorType,
+    y: Optional[str] = None,
+    x_std: bool = True,
+    y_std: bool = False,
+    std_func: str = "standardize",
+    verbose: int = 0,
+):
     """Make sci-kit learn ready datasets from high-level dataset.
 
     Operations performed:
@@ -78,8 +84,12 @@ def ml_ready(df: "MetaPanda",
     xcols : pd.Index
         The names of the columns selected for ML
     """
-    std_funcs_ = {'standardize': scale, 'power': power_transform,
-                  'quantile': quantile_transform, 'normalize': normalize}
+    std_funcs_ = {
+        "standardize": scale,
+        "power": power_transform,
+        "quantile": quantile_transform,
+        "normalize": normalize,
+    }
     instance_check(y, (type(None), str))
     instance_check(y_std, bool)
     if isinstance(std_func, str):
@@ -107,12 +117,21 @@ def ml_ready(df: "MetaPanda",
     __df = _df[cols].dropna()
 
     if verbose > 0:
-        print("MLReady Chain: [drop nunique==1: k={} -> standardize: k={} -> y_std: {} -> drop: n={}]".format(
-            len(elim_cols), len(std_cols), y is not None and y_std, _df.n_ - __df.shape[0]
-        ))
+        print(
+            "MLReady Chain: [drop nunique==1: k={} -> standardize: k={} -> y_std: {} -> drop: n={}]".format(
+                len(elim_cols),
+                len(std_cols),
+                y is not None and y_std,
+                _df.n_ - __df.shape[0],
+            )
+        )
 
     # access x, y
-    _x = np.asarray(__df[xcols]).reshape(-1, 1) if len(xcols) == 1 else np.asarray(__df[xcols])
+    _x = (
+        np.asarray(__df[xcols]).reshape(-1, 1)
+        if len(xcols) == 1
+        else np.asarray(__df[xcols])
+    )
     if y is None:
         return __df, _x, xcols
     else:
@@ -140,11 +159,13 @@ def preprocess_continuous_X(df, cols=None):
     if cols is None:
         cols = df.columns
 
-    return (df[cols]
-            .pipe(zscore)
-            .pipe(clean1)
-            .select_dtypes(exclude=['category', 'object'])
-            .dropna())
+    return (
+        df[cols]
+        .pipe(zscore)
+        .pipe(clean1)
+        .select_dtypes(exclude=["category", "object"])
+        .dropna()
+    )
 
 
 def preprocess_continuous_X_y(df, xcols, ycols, for_sklearn=True):
@@ -175,7 +196,9 @@ def preprocess_continuous_X_y(df, xcols, ycols, for_sklearn=True):
         # returns np.ndarray objects properly configured
         _x = np.asarray(__data[xcols])
         _y = np.asarray(__data[ycols])
-        if isinstance(xcols, str) or (isinstance(xcols, (list, tuple)) and len(xcols) == 1):
+        if isinstance(xcols, str) or (
+            isinstance(xcols, (list, tuple)) and len(xcols) == 1
+        ):
             _x = _x.reshape(-1, 1)
         return _x, _y
     else:

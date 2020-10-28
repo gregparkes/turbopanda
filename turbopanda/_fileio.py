@@ -6,37 +6,36 @@
 from __future__ import absolute_import, division, print_function
 
 # locals
+import glob
+import joblib
 from typing import List, Optional, Union
 
 from ._metapanda import MetaPanda
 from .utils import instance_check, join
 
 
-def read(filename: str,
-         name: Optional[Union[str, List[str]]] = None,
-         *args,
-         **kwargs) -> Union[MetaPanda, List[MetaPanda]]:
+def read(
+    filename: str, name: Optional[Union[str, List[str]]] = None, **kwargs
+) -> Union[MetaPanda, List[MetaPanda]]:
     """Reads in a data source from file and creates a MetaPanda object from it.
 
-    Note that if multiple files are selected, they are returned in ALPHABETICAL ORDER, not
-    necessarily the order in the file directory. If a list of `name` is passed, this is
-    sorted so as to match the filename ordering returned.
+    .. note:: multiple files are returned in 'alphabetical order'.
+
+
 
     Parameters
     ----------
     filename : str
         A relative/absolute link to the file, with extension provided.
         Accepted extensions: {'csv'', 'xls', 'xlsx', 'sql', 'json', 'pkl'}
-        .json is a special use case and will use the MetaPanda format, NOT the pd.read_json function.
+        .json is a special use case and will use the MetaPanda format.
         .pkl is a pickable object which will use `joblib` to load in.
-        `filename` now accepts glob-compliant input to read in multiple files if selected.
     name : str/list of str, optional
-        A custom name to use for the MetaPanda, else `filename` is used. Where this is a `list`, this
-        is sorted to alphabetically match `filename`. Not compatible with .pkl file types.
-    args : list, optional
-        Additional args to pass to pd.read_[ext]/MetaPanda()
+        Name to use for the MetaPanda, else `filename` is used.
+            If `list`, this is sorted to alphabetically match `filename`.
+        Not compatible with .pkl file types.
     kwargs : dict, optional
-        Additional args to pass to pd.read_[ext]MetaPanda()
+        Additional args to pass to pd.read_<ext>MetaPanda()
 
     Raises
     ------
@@ -51,11 +50,6 @@ def read(filename: str,
         A MetaPanda object. Returns a list of MetaPanda if `filename` is glob-like and
         selects multiple files.
     """
-    # imports for this function
-    import glob
-    import itertools as it
-    import joblib
-
     # checks
     instance_check(filename, str)
     instance_check(name, (type(None), str, list, tuple))
@@ -67,23 +61,26 @@ def read(filename: str,
     else:
         # maps the file type to a potential pandas function.
         pandas_types = ("csv", "xls", "xlsx", "sql")
-        extra_types = ('json', 'pkl')
+        extra_types = ("json", "pkl")
 
         def ext(s):
             """Extracts the file extension (in lower)"""
             return s.rsplit(".", 1)[-1].lower()
 
-        def fetch_db(fl: str, n=None) -> "MetaPanda":
+        def fetch_db(fl, n=None):
             """Fetches the appropriate datafile set."""
             if ext(fl) in pandas_types:
-                return MetaPanda.from_pandas(fl, n, *args, **kwargs)
-            elif ext(fl) == 'json':
+                return MetaPanda.from_pandas(fl, n, **kwargs)
+            elif ext(fl) == "json":
                 return MetaPanda.from_json(fl, name=n, **kwargs)
-            elif ext(fl) == 'pkl':
+            elif ext(fl) == "pkl":
                 return joblib.load(fl)
             else:
                 raise ValueError(
-                    "file ending '.{}' not recognized, must end with {}".format(fl, join(pandas_types, extra_types)))
+                    "file ending '.{}' not recognized, must end with {}".format(
+                        fl, join(pandas_types, extra_types)
+                    )
+                )
 
         if isinstance(name, (list, tuple)):
             ds = list(map(fetch_db, glob_name, sorted(name)))

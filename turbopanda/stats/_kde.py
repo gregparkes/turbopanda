@@ -49,7 +49,11 @@ def freedman_diaconis_bins(a: np.ndarray) -> int:
     a = as_flattened_numpy(a)
     if len(a) < 2:
         return 1
-    h = 2 * (stats.scoreatpercentile(a, 75) - stats.scoreatpercentile(a, 25)) / (a.shape[0] ** (1 / 3))
+    h = (
+        2
+        * (stats.scoreatpercentile(a, 75) - stats.scoreatpercentile(a, 25))
+        / (a.shape[0] ** (1 / 3))
+    )
     # fall back to sqrt(a) bins if iqr is 0
     if h == 0:
         return int(np.sqrt(a.size))
@@ -63,14 +67,16 @@ def get_bins(x):
     xmax = np.max(x)
     xmin = np.min(x)
 
-    if x.dtype.kind == 'f' or (xmax - xmin > 100):
+    if x.dtype.kind == "f" or (xmax - xmin > 100):
         bin_n = min(freedman_diaconis_bins(x), 50)
         _, bins = np.histogram(x, bin_n)
-    elif (x.dtype.kind == 'i' or x.dtype.kind == 'u') and (xmax - xmin <= 100):
+    elif (x.dtype.kind == "i" or x.dtype.kind == "u") and (xmax - xmin <= 100):
         # firstly we determine if the range is small, because if not we just use the above technique
         bins = np.arange(xmin, xmax + 2, step=1)
     else:
-        raise TypeError("np.ndarray type '{}' not recognized; must be float or int".format(x.dtype))
+        raise TypeError(
+            "np.ndarray type '{}' not recognized; must be float or int".format(x.dtype)
+        )
     return bins
 
 
@@ -80,7 +86,9 @@ def get_bins(x):
 def _get_discrete_single():
     """These models have a single parameter and are easily fitted."""
     return {
-        'bernoulli': np.mean, 'poisson': np.mean, 'geom': lambda x: 1. / np.mean(x)
+        "bernoulli": np.mean,
+        "poisson": np.mean,
+        "geom": lambda x: 1.0 / np.mean(x),
     }
 
 
@@ -88,20 +96,53 @@ def _get_discrete_multiple():
     """These models have more than one parameter, and require log-likelihood maximization; which is expensive."""
     return {
         # function to calculate + estimate initial parameters for n, p, loc
-        "binom": (_negative_binomial_loglikelihood, _clean_binomial,
-                  np.nanmax, lambda x: (np.bincount(x).argmax() + 1) / np.nanmax(x), np.nanmin),
-        "nbinom": (_negative_negbinomial_loglikelihood, _clean_binomial,
-                   lambda x: np.nanmean(x) / 2., lambda x: (np.bincount(x).argmax() + 1) / np.nanmax(x), np.nanmin)
+        "binom": (
+            _negative_binomial_loglikelihood,
+            _clean_binomial,
+            np.nanmax,
+            lambda x: (np.bincount(x).argmax() + 1) / np.nanmax(x),
+            np.nanmin,
+        ),
+        "nbinom": (
+            _negative_negbinomial_loglikelihood,
+            _clean_binomial,
+            lambda x: np.nanmean(x) / 2.0,
+            lambda x: (np.bincount(x).argmax() + 1) / np.nanmax(x),
+            np.nanmin,
+        ),
     }
 
 
 def _problem_distributions():
-    return ('argus', 'betaprime', 'erlang', 'cosine', 'exponnorm', 'foldcauchy',
-            'foldnorm', 'genexpon', 'gausshyper', 'invgauss', 'levy_stable',
-            'ksone', 'ncf', 'nct', 'ncx2', 'norminvgauss', 'powerlognorm',
-            'rdist', 'recipinvgauss', 'rv_continuous', 'rv_histogram',
-            'skewnorm', 'tukeylambda', 'wrapcauchy', 'semicircular', 'vonmises',
-            'vonmises_line')
+    return (
+        "argus",
+        "betaprime",
+        "erlang",
+        "cosine",
+        "exponnorm",
+        "foldcauchy",
+        "foldnorm",
+        "genexpon",
+        "gausshyper",
+        "invgauss",
+        "levy_stable",
+        "ksone",
+        "ncf",
+        "nct",
+        "ncx2",
+        "norminvgauss",
+        "powerlognorm",
+        "rdist",
+        "recipinvgauss",
+        "rv_continuous",
+        "rv_histogram",
+        "skewnorm",
+        "tukeylambda",
+        "wrapcauchy",
+        "semicircular",
+        "vonmises",
+        "vonmises_line",
+    )
 
 
 def fit_model(X, name, verbose=0, return_params=False):
@@ -124,12 +165,19 @@ def fit_model(X, name, verbose=0, return_params=False):
             # guess good starting locations for optimization.
             inits_ = [v(X) for v in var_[2:]]
             # minimization function
-            params = var_[1](so.fmin(var_[0], inits_, args=(X,), ftol=1e-4, full_output=True, disp=False)[0])
+            params = var_[1](
+                so.fmin(
+                    var_[0], inits_, args=(X,), ftol=1e-4, full_output=True, disp=False
+                )[0]
+            )
             if verbose > 0:
                 print("initial guess: {}, minimized guess: {}".format(inits_, params))
         else:
-            raise ValueError("discrete kde '{}' not found in {}".format(name, list(_get_discrete_single()) + list(
-                _get_discrete_multiple())))
+            raise ValueError(
+                "discrete kde '{}' not found in {}".format(
+                    name, list(_get_discrete_single()) + list(_get_discrete_multiple())
+                )
+            )
         _fitted = _model(*params)
 
     if return_params:
@@ -138,13 +186,15 @@ def fit_model(X, name, verbose=0, return_params=False):
         return _fitted
 
 
-def univariate_kde(X: np.ndarray,
-                   bins: Optional[np.ndarray] = None,
-                   kde_name: str = 'norm',
-                   kde_range: float = 1e-3,
-                   smoothen_kde: bool = True,
-                   verbose: int = 0,
-                   return_dist: bool = False):
+def univariate_kde(
+    X: np.ndarray,
+    bins: Optional[np.ndarray] = None,
+    kde_name: str = "norm",
+    kde_range: float = 1e-3,
+    smoothen_kde: bool = True,
+    verbose: int = 0,
+    return_dist: bool = False,
+):
     """Determines a univariate KDE approximation on a 1D sample, either continuous or discrete.
 
     .. note:: If x is multi-dimensional, the array is flattened.
@@ -173,6 +223,8 @@ def univariate_kde(X: np.ndarray,
         The x-coordinates of the KDE
     y_kde : np.ndarray
         The kernel density approximation as a density score
+    model : scipy.stats.rv_distribution (optional)
+        The scipy model that has the distribution on it.
     """
 
     supported_disc_dists = list(_get_discrete_single()) + list(_get_discrete_multiple())
@@ -181,7 +233,7 @@ def univariate_kde(X: np.ndarray,
     if bins is None:
         bins = get_bins(_X)
 
-    if kde_name == 'freeform':
+    if kde_name == "freeform":
         _model = stats.gaussian_kde(_X)
         x_kde = np.linspace(_X.min(), _X.max(), 200)
         y_kde = _model.pdf(x_kde)

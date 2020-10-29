@@ -34,9 +34,9 @@ class MetaPanda(object):
         Meta information (p, k)-shaped describing column data
     name_ : str
         The name of the dataset
-    n_ : int
+    n : int
         The number of rows in `df_`
-    p_ : int
+    p : int
         The number of columns in `df_`
     shape: tuple (int, int)
         The number of rows and columns in data
@@ -355,7 +355,7 @@ class MetaPanda(object):
             self.name_, self.df_.shape[0], p, self.memory_, opts
         )
 
-    """ ######## PROPERTIES ################# """
+    """ ######## PROPERTIES ############ """
 
     """ DataFrame attributes """
 
@@ -406,13 +406,23 @@ class MetaPanda(object):
         return self.df_.shape[0]
 
     @property
+    def n(self) -> int:
+        """Fetch the number of rows/samples within the df_ attribute."""
+        return self.df_.shape[0]
+
+    @property
     @deprecated_param("0.2.8", "p_", "0.3", "renamed to `p`")
     def p_(self) -> int:
         """Fetch the number of dimensions within the df_ attribute."""
         return self.df_.shape[1]
 
     @property
-    def shape(self) -> Tuple:
+    def p(self):
+        """Fetches the number of dimensions within the df+ attribute."""
+        return self.df_.shape[1]
+
+    @property
+    def shape(self) -> Tuple[int, int]:
         """Fetches the shape of the dataset."""
         return self.df_.shape
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Raising errors, by doing basic checks."""
-from typing import Any, List, Tuple, Union, Type
+from typing import Any, List, Tuple, Union, Type, Iterable
 
 import numpy as np
 import pandas as pd
@@ -23,7 +23,7 @@ __all__ = (
 )
 
 
-def belongs(elem: Any, home: Union[List[Any], Tuple[Any, ...]], raised=True):
+def belongs(elem: str, home: Union[List[str], Tuple[str, ...]], raised=True):
     """Check whether elem belongs in a list."""
     if elem not in home:
         if raised:
@@ -79,7 +79,7 @@ def instance_check(
 
 
 def nonnegative(
-    a: Union[float, int, Tuple],
+    a: Union[float, int, Tuple[Union[float, int], ...]],
     i: Union[Type, Tuple[Type, Type]] = (float, int),
     raised=True,
 ):
@@ -178,7 +178,7 @@ def disallow_instance_pair(a: object, i: Type, b: object, j: Type):
     return True
 
 
-def check_list_type(elems: Tuple, t: Type, raised=True):
+def check_list_type(elems: Iterable, t: Type, raised=True):
     """Checks the type of every element in the list."""
     for i, elem in enumerate(elems):
         if not isinstance(elem, t):

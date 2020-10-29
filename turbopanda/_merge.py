@@ -147,9 +147,9 @@ def _single_merge(
             # drop any columns with 'counter' in
             if "counter" in df_m.columns:
                 df_m.drop("counter", axis=1, inplace=True)
-            elif "counter__%s" % n1 in df_m.columns:
+            elif "counter__" + n1 in df_m.columns:
                 df_m.drop("counter__%s" % n1, axis=1, inplace=True)
-            elif "counter__%s" % n2 in df_m.columns:
+            elif "counter__" + n2 in df_m.columns:
                 df_m.drop("counter__%s" % n2, axis=1, inplace=True)
 
             if verbose == 1:

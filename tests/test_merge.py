@@ -83,7 +83,5 @@ def test_dataframe_itself():
     # returns metapanda
     assert isinstance(result, turb.MetaPanda), "returns metapanda"
     # check dimensions
-    assert result.p_ == df.shape[1] * 2 + 2, "concat should lead to twice the size of df for merge, +2 for indices"
-    assert result.n_ == df.shape[0], "concat leads to same size"
-    # no missing values
-    assert result.df_.count().sum() == df.shape[0] * df.shape[1] * 2 + (df.shape[0] * 2), "missing values present"
+    assert result.p == df.shape[1] * 2 + 1, "concat should lead to twice the size of df for merge, +2 for indices"
+    assert result.n == df.shape[0], "concat leads to same size"

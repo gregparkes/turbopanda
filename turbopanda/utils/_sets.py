@@ -316,13 +316,13 @@ def absdifference(a: SetLike, b: SetLike) -> Index:
         Difference between a - b
     """
     # check that a is greater size than b
-    if len(a) > len(b):
-        return set_like(a).difference(set_like(b))
-    else:
-        raise ValueError("a: {} must be greater than b: {}".format(len(a), len(b)))
+    return set_like(a).difference(set_like(b))
 
 
-def pairwise(f: Callable, x: SetLike, *args, **kwargs) -> List:
+def pairwise(f: Callable,
+             x: SetLike,
+             *args,
+             **kwargs) -> Iterable:
     """Conduct a pairwise operation on a list of elements, receiving them in pairs.
 
     e.g for list x = [1, 2, 3] we conduct:

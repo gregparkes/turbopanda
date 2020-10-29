@@ -13,7 +13,7 @@ import turbopanda as turb
 
 def _toy_dataset_1():
     return pd.DataFrame({
-        "a": [1, 2, 3],
+        "a": np.array([1, 2, 3], dtype=np.uint8),
         "b": ['Ha', 'Ho', 'He'],
         "c": [True, False, True],
         "d": np.random.rand(3),
@@ -29,10 +29,9 @@ def test_init():
     assert hasattr(mdf, "name_")
     assert hasattr(mdf, "df_")
     assert hasattr(mdf, "meta_")
-    assert hasattr(mdf, "n_")
-    assert hasattr(mdf, "p_")
+    assert hasattr(mdf, "n")
+    assert hasattr(mdf, "p")
     assert hasattr(mdf, "selectors_")
-    assert hasattr(mdf, "pipe_")
     assert hasattr(mdf, "columns")
     assert hasattr(mdf, "mapper_")
     # type checks
@@ -40,14 +39,14 @@ def test_init():
     assert isinstance(mdf.name_, str)
     assert isinstance(mdf.df_, pd.DataFrame)
     assert isinstance(mdf.meta_, pd.DataFrame)
-    assert isinstance(mdf.n_, int)
-    assert isinstance(mdf.p_, int)
+    assert isinstance(mdf.n, int)
+    assert isinstance(mdf.p, int)
     assert isinstance(mdf.columns, pd.Index)
     assert isinstance(mdf.selectors_, dict)
     assert isinstance(mdf.mapper_, dict)
     # check size
-    assert mdf.n_ == 3
-    assert mdf.p_ == 4
+    assert mdf.n == 3
+    assert mdf.p == 4
 
 
 def test_dtypes():
@@ -57,7 +56,7 @@ def test_dtypes():
     # has downcasted to np.uint8
     assert mdf.df_['a'].dtype == np.uint8
     assert mdf.df_['b'].dtype in (object, pd.CategoricalDtype)
-    assert mdf.df_['c'].dtype == np.uint8
+    assert mdf.df_['c'].dtype == np.bool
     assert mdf.df_['d'].dtype == np.float64
     # check dtypes function
     assert hasattr(mdf, "dtypes")
@@ -96,11 +95,11 @@ def test_view():
 
     # try type objects
     assert len(mdf.view(float)) == 1
-    assert len(mdf.view(np.uint8)) == 2
+    assert len(mdf.view(np.uint8)) == 1
     assert len(mdf.view(object)) == 1
     assert len(mdf.view(np.float64)) == 1
     assert len(mdf.view("object")) == 1
-    assert len(mdf.view("uint8")) == 2
+    assert len(mdf.view("bool")) == 1
     assert len(mdf.view("float64")) == 1
 
     print(mdf.view('a'))

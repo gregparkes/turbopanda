@@ -20,6 +20,10 @@ We are now public on PyPI.
 - |Fix| using the `__setitem__` property now works, so column assignment is functional
 - |API| `add_prefix` and `add_suffix` to be removed next version
 
+`turbopanda.corr`
+.................
+- |API| `bicorr` and `partial_bicorr` now return float or dict rather than 1-line pandas.DataFrame object
+
 `turbopanda.dev`
 ................
 - |API| `cached` and `cached_chunk` are now deprecated, to be removed in 0.3
@@ -45,6 +49,7 @@ We are now public on PyPI.
 
 `turbopanda.str`
 ................
+- |Efficiency| `levenshtein` now supports a parameter for parallelization with `joblib`
 - |Fix| `pattern` now drops NA values when receives a pandas.Series object before regex search
 - |API| `pattern` docs now has some examples to learn from
 

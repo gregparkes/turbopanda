@@ -67,23 +67,18 @@ def _ratio_and_distance(s: str, t: str, ratio_calc: bool = True) -> float:
         return distance[-1][-1]
 
 
-def _levenshtein_comb(X: List[str], with_replacement=True) -> pd.DataFrame:
-    if with_replacement:
-        comb = tuple(it.combinations_with_replacement(X, 2))
+def _compute_combination(gen, parallel):
+    n = len(gen)
+    if parallel:
+        ncpu = n if n < joblib.cpu_count() else (joblib.cpu_count() - 1)
+        F = joblib.Parallel(ncpu)(
+            joblib.delayed(_ratio_and_distance)(a, b, True) for a, b in gen
+        )
     else:
-        comb = tuple(it.combinations(X, 2))
+        F = [_ratio_and_distance(a, b, True) for a, b in gen]
 
-    L = [_ratio_and_distance(a, b, True) for a, b in comb]
-    res = pd.DataFrame(comb, columns=["x", "y"])
-    res["L"] = L
-    return res
-
-
-def _levenshtein_product(X: List[str], Y: List[str]) -> pd.DataFrame:
-    prod = tuple(it.product(X, Y))
-    L = [_ratio_and_distance(a, b, True) for a, b in prod]
-    res = pd.DataFrame(prod, columns=["x", "y"])
-    res["L"] = L
+    res = pd.DataFrame(gen, columns=["x", "y"])
+    res["L"] = F
     return res
 
 
@@ -99,6 +94,7 @@ def levenshtein(
     Y: Optional[List[str]] = None,
     as_matrix: bool = False,
     with_replacement: bool = True,
+    parallel: bool = False,
 ) -> pd.DataFrame:
     """Determines the levenshtein matrix distance between every pair of column names.
 
@@ -114,21 +110,29 @@ def levenshtein(
         If True, returns DataFrame in matrix-form.
     with_replacement : bool, default=True
         If true, returns diagonal elements x_i = x_i.
+    parallel : bool, default=False
+        If True, uses joblib to run calculations in parallel
 
     Returns
     -------
     L : DataFrame (n x p, 3) or (n, p)
-        The levenshtein distance, where n is the number of X elements, p is the number of y elements
+        The levenshtein distance, where n is the number of X elements,
+            p is the number of y elements
     """
     if as_matrix:
         with_replacement = True
 
     if Y is None:
-        res = _levenshtein_comb(X, with_replacement)
+        if with_replacement:
+            comb = tuple(it.combinations_with_replacement(X, 2))
+        else:
+            comb = tuple(it.combinations(X, 2))
+        res = _compute_combination(comb, parallel)
         if as_matrix:
             res = _mirror_matrix_lev(res)
     else:
-        res = _levenshtein_product(X, Y)
+        prod = tuple(it.product(X, Y))
+        res = _compute_combination(prod, parallel)
         if as_matrix:
             res = res.pivot("x", "y", "L")
 

@@ -91,6 +91,8 @@ def pattern(
     Here only float columns AND that contain 'pixel_' in the column name are selected
     """
     instance_check(pat, str)
+    if len(K) == 0:
+        return []
 
     if extended_regex:
         # split pat into different terms.

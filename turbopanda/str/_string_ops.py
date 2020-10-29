@@ -48,26 +48,24 @@ def patproduct(pat: str, *args: Iterable) -> List[str]:
     return [pat % item for item in it.product(*args)]
 
 
-def _shorten_string(s: str, approp_len: int = 15, method: str = "middle") -> str:
+def _shorten_string(s: str, approp_len: int = 15, strategy: str = "middle") -> str:
     instance_check(s, str)
 
-    if len(s) <= approp_len:
+    if (len(s) == 0) | (len(s) <= approp_len):
         return s
     else:
-        if method == "start":
-            return ".." + s[-approp_len - 2 :]
-        elif method == "end":
-            return s[: approp_len - 2] + ".."
-        elif method == "middle":
+        if strategy == "end":
+            return s[:approp_len - 2] + ".."
+        elif strategy == "middle":
             midpoint = (approp_len - 2) // 2
             return s[:midpoint] + ".." + s[-midpoint:]
         else:
             raise ValueError(
-                "method '{}' not in {}".format(method, ("middle", "start", "end"))
+                "strategy '{}' not in {}".format(strategy, ("middle", "start", "end"))
             )
 
 
-def shorten(s, newl: int = 15, method: str = "middle"):
+def shorten(s, newl: int = 15, strategy: str = "middle"):
     """Shortens a string or array of strings to length `newl`.
 
     Parameters
@@ -76,8 +74,8 @@ def shorten(s, newl: int = 15, method: str = "middle"):
         The string or list of strings to shorten
     newl : int, default=15
         The number of characters to preserve (5 on each side + spaces)
-    method : str, default="middle"
-        Choose from {'start', 'middle', 'end'}, determines where to put dots...
+    strategy : str, default="middle"
+        Choose from {'middle', 'end'}, determines where to put dots...
 
     Returns
     -------
@@ -86,17 +84,17 @@ def shorten(s, newl: int = 15, method: str = "middle"):
     """
     instance_check(s, (str, list, tuple, np.ndarray, Series, Index))
     instance_check(newl, int)
-    belongs(method, ("middle", "start", "end"))
+    belongs(strategy, ("middle", "end"))
 
     if isinstance(s, str):
-        return _shorten_string(s, newl, method)
+        return _shorten_string(s, newl, strategy)
     else:
-        return [_shorten_string(_s, newl, method) for _s in s]
+        return [_shorten_string(_s, newl, strategy) for _s in s]
 
 
 def string_replace(
-    strings: Union[str, List[str], Tuple[str, ...], Series, Index],
-    *operations: Tuple[str, str]
+        strings: Union[str, List[str], Tuple[str, ...], Series, Index],
+        *operations: Tuple[str, str]
 ):
     """Performs all replace operations on the string inplace.
 
@@ -145,11 +143,14 @@ def string_replace(
     if isinstance(strings, str):
         return reduce(lambda sold, arg: sold.replace(*arg), [strings, *operations])
     else:
-        strings_new = reduce(
-            lambda sold, arg: umap(lambda s: s.replace(*arg), sold),
-            [strings, *operations],
-        )
-        return transform_copy(strings, strings_new)
+        if len(strings) == 0:
+            return strings
+        else:
+            strings_new = reduce(
+                lambda sold, arg: umap(lambda s: s.replace(*arg), sold),
+                [strings, *operations],
+            )
+            return transform_copy(strings, strings_new)
 
 
 def reformat(s: str, df: DataFrame) -> Series:
@@ -158,9 +159,6 @@ def reformat(s: str, df: DataFrame) -> Series:
     e.g reformat("{data_group}_{data_source}", df)
         Creates a pd.Series looking like pattern s using column data_group, data_sources input.
         Does not allow spaces within the column name.
-
-    .. note:: currently does not allow specification for type args:
-        e.g reformat("{data_number:0.3f}", df)
 
     Parameters
     ----------
@@ -174,6 +172,9 @@ def reformat(s: str, df: DataFrame) -> Series:
     ser : pd.Series
         Reformatted column.
     """
+
+    if len(df) == 0:
+        return Series([], dtype=object)
 
     columns = re.findall(".*?{([a-zA-Z0-9_-]+)}.*?", s)
     d = []

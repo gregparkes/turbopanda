@@ -25,10 +25,12 @@ def _remove_na_single(x, axis="rows"):
     return x
 
 
-def remove_na(x: np.ndarray,
-              y: Optional[np.ndarray] = None,
-              paired: bool = False,
-              axis: str = "rows"):
+def remove_na(
+    x: np.ndarray,
+    y: Optional[np.ndarray] = None,
+    paired: bool = False,
+    axis: str = "rows",
+):
     """Remove missing values along a given axis in one or more (paired) numpy
     arrays.
 

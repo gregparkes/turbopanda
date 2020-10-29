@@ -11,7 +11,7 @@ from sklearn.linear_model import LogisticRegression
 from turbopanda.utils import is_dataframe_float, is_column_discrete
 
 
-def _ordinary_least_squares(X, y):
+def _ordinary_least_squares(X: np.ndarray, y: np.ndarray):
     """Where X is continuous, y is continuous. X is of shape {n, p}, y is of shape {n,},
     Returns predictions, residuals"""
     _X = zscore(np.asarray(X))
@@ -23,7 +23,7 @@ def _ordinary_least_squares(X, y):
     return yp, _y - yp
 
 
-def _ordinary_logistic_reg(X, y):
+def _ordinary_logistic_reg(X: np.ndarray, y: np.ndarray):
     """Where X is continuous, y is binary. X is of shape {n, p}, y is of shape {n,},
     Returns predictions, residuals."""
     _X = zscore(np.asarray(X))
@@ -38,7 +38,8 @@ def _ordinary_logistic_reg(X, y):
     return yp, np.not_equal(_y, yp).astype(np.uint8)
 
 
-def lm(X: Union[np.ndarray, pd.Series, pd.DataFrame], y: Union[np.ndarray, pd.Series]):
+def lm(X: Union[np.ndarray, pd.Series, pd.DataFrame],
+       y: Union[np.ndarray, pd.Series]):
     """Creates a basic linear model between X and y depending on the state it is in.
 
     Parameters

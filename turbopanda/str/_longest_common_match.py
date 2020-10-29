@@ -11,22 +11,23 @@ from turbopanda.utils import instance_check, nonnegative, disallow_instance_pair
 
 def _single_common_substring_match(a: str, b: str) -> str:
     """Given two strings, find the longest common substring.
-
     Also known as the Longest Common Substring problem."""
     from difflib import SequenceMatcher
+    if len(a) == 0 or len(b) == 0:
+        return ""
 
     match = SequenceMatcher(None, a, b).find_longest_match(0, len(a), 0, len(b))
     # return the longest substring
     if match.size != 0:
-        return a[match.a : match.a + match.size]
+        return a[match.a: match.a + match.size]
     else:
         return ""
 
 
 def common_substrings(
-    a: Union[str, List[str]],
-    b: Optional[Union[str, List[str]]] = None,
-    min_length: int = 2,
+        a: Union[str, List[str]],
+        b: Optional[Union[str, List[str]]] = None,
+        min_length: int = 2,
 ) -> Union[str, Series]:
     """Given at least one pair of strings, find all the best common substring matches.
 
@@ -56,16 +57,15 @@ def common_substrings(
     disallow_instance_pair(a, str, b, type(None))
 
     filters = ("", "_", "__", "-")
-    if isinstance(a, str) and isinstance(b, str):
+    if isinstance(a, str) and isinstance(b, type(None)):
+        return a
+    elif isinstance(a, str) and isinstance(b, str):
         return _single_common_substring_match(a, b)
     else:
         if isinstance(a, str):
             a = [a]
         elif isinstance(b, str):
             b = [b]
-        # if a is a list of length 1 with no b, return a[0]
-        elif isinstance(a, (list, tuple)) and len(a) == 1:
-            return a[0]
         # determine pair set.
         if b is None:
             # combination iterator
@@ -83,4 +83,4 @@ def common_substrings(
         # filter out naff elements
         z_up = list(it.filterfalse(filter_func, z))
         # save as series valuecounts.
-        return Series(z_up).value_counts()
+        return Series(z_up, dtype=object).value_counts()

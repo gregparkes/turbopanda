@@ -319,10 +319,7 @@ def absdifference(a: SetLike, b: SetLike) -> Index:
     return set_like(a).difference(set_like(b))
 
 
-def pairwise(f: Callable,
-             x: SetLike,
-             *args,
-             **kwargs) -> Iterable:
+def pairwise(f: Callable, x: SetLike, *args, **kwargs) -> Iterable:
     """Conduct a pairwise operation on a list of elements, receiving them in pairs.
 
     e.g for list x = [1, 2, 3] we conduct:

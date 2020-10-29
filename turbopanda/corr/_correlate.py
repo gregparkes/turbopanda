@@ -98,10 +98,9 @@ def _corr_combination(data, comb, covar, parallel, cart_z, method, verbose):
         result_k = _parallel_partial_bicorr(
             data, covar, comb, parallel, cart_z, method=method, verbose=verbose
         )
+    # we should have a list of dict - assemble the records
     return (
-        pd.concat(result_k, axis=0, sort=False)
-        .reset_index()
-        .rename(columns={"index": "method"})
+        pd.DataFrame.from_records(result_k)
     )
 
 

@@ -208,7 +208,7 @@ def set_like(x: SetLike = None) -> Index:
 
     Returns
     -------
-    y : pd.Index
+    y : set
         Set-like result.
     """
     acc_types = (type(None), str, list, tuple, Series, Index, set)
@@ -257,7 +257,7 @@ def union(*args: SetLike) -> Index:
     elif len(args) == 1:
         return set_like(args[0])
     else:
-        return reduce(operator.or_, map(set_like, args))
+        return reduce(Index.union, map(set_like, args))
 
 
 def intersect(*args: SetLike) -> Index:
@@ -278,7 +278,7 @@ def intersect(*args: SetLike) -> Index:
     elif len(args) == 1:
         return set_like(args[0])
     else:
-        return reduce(operator.and_, map(set_like, args))
+        return reduce(Index.intersection, map(set_like, args))
 
 
 def difference(a: SetLike, b: SetLike) -> Index:

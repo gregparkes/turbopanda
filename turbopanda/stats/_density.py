@@ -39,7 +39,7 @@ def density(
     instance_check(r, (type(None), int))
 
     if r is None:
-        r = freedman_diaconis_bins(X)
+        r = min(freedman_diaconis_bins(X), 50)
     else:
         nonnegative(r, int)
 

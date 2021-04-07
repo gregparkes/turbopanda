@@ -58,7 +58,7 @@ def freedman_diaconis_bins(a: np.ndarray) -> int:
     if h == 0:
         return int(np.sqrt(a.size))
     else:
-        return int(np.ceil((np.max(a) - np.min(a)) / h))
+        return int(np.ceil((np.nanmax(a) - np.nanmin(a)) / h))
 
 
 def get_bins(x):

@@ -8,9 +8,11 @@ Changelog
 ---------
 We are now public on PyPI.
 
+- |Feature| High-density scatterplots can be fine-tuned using `scatter_slim`, a new plotting function to reduce subsequent file image size
 - |Enhancement| `turb.read` now accepts `.pkl` files using joblib
 - |API| Added `tqdm` library as requirement
 - |API| Removed `statsmodels` requirement
+- |API| Removed `remove_dup_cols` function from utils removing `toolz` requirement
 
 `turbopanda.MetaPanda`
 ......................
@@ -40,6 +42,7 @@ We are now public on PyPI.
 
 `turbopanda.plot`
 .................
+- |Feature| Added `scatter_slim` function which is the same as `scatter` but plots less points for high-density scatters.
 - |Enhancement| `widebar` now has keyword argument allowance.
 - |Enhancement| `bar1d` has a scale parameter to do log transform plots
 - |Enhancement| `legend` now allows for ncol and title selection

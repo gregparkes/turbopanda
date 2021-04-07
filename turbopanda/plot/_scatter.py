@@ -18,6 +18,7 @@ from turbopanda.utils import (
     belongs,
     as_flattened_numpy,
     unique_ordered,
+    nonnegative
 )
 from turbopanda.stats._kde import freedman_diaconis_bins
 
@@ -100,28 +101,28 @@ def _draw_scatter(x, y, c, s, m, alpha, ax, **kwargs):
 
 
 def scatter(
-    X: _ArrayLike,
-    Y: _ArrayLike,
-    c: Union[str, _ArrayLike] = "k",
-    marker: Union[str, _ArrayLike] = "o",
-    s: Optional[Union[_Numeric, _ArrayLike]] = None,
-    dense: bool = False,
-    fit_line: bool = False,
-    ax: Optional[mpl.axes.Axes] = None,
-    alpha: Optional[float] = None,
-    cmap: str = "viridis",
-    legend: bool = True,
-    colorbar: bool = True,
-    with_jitter: bool = False,
-    x_label: Optional[str] = None,
-    y_label: Optional[str] = None,
-    x_scale: str = "linear",
-    y_scale: str = "linear",
-    legend_outside: bool = False,
-    title: str = "",
-    with_grid: bool = False,
-    fit_line_degree: int = 1,
-    **scatter_kws
+        X: _ArrayLike,
+        Y: _ArrayLike,
+        c: Union[str, _ArrayLike] = "k",
+        marker: Union[str, _ArrayLike] = "o",
+        s: Optional[Union[_Numeric, _ArrayLike]] = None,
+        dense: bool = False,
+        fit_line: bool = False,
+        ax: Optional[mpl.axes.Axes] = None,
+        alpha: Optional[float] = None,
+        cmap: str = "viridis",
+        legend: bool = True,
+        colorbar: bool = True,
+        with_jitter: bool = False,
+        x_label: Optional[str] = None,
+        y_label: Optional[str] = None,
+        x_scale: str = "linear",
+        y_scale: str = "linear",
+        legend_outside: bool = False,
+        title: str = "",
+        with_grid: bool = False,
+        fit_line_degree: int = 1,
+        **scatter_kws
 ):
     """Generates a scatterplot, with some useful features added to it.
 
@@ -290,3 +291,95 @@ def scatter(
     ax.set_title(title)
 
     return ax
+
+
+def scatter_slim(X: _ArrayLike,
+                 Y: _ArrayLike,
+                 bins: Optional[int] = None,
+                 threshold: Union[int, float] = 50,
+                 **turbo_kws):
+    """
+    Generates a slim-down scatterplot.
+
+    This is useful where there are thousands of points overlapping, and for visualization and storage size,
+    you only plot so many points within a given bin area.
+
+    Parameters
+    ----------
+    X : list/tuple/np.ndarray/pd.Series (1d)
+        The data column to draw on the x-axis. Flattens if np.ndarray
+    Y : list/tuple/np.ndarray/pd.Series (1d)
+        The data column to draw on the y-axis. Flattens if np.ndarray
+    bins : int, optional
+        Specifies the bins to split X,Y domain, if optional this is optimized for
+    threshold : int or float
+        Specifies the threshold above which nsamples are dropped in each bin.
+        If float, specifies the proportion of points [0..1] to keep in each bin.
+    turbo_kws : dict
+        Keyword arguments to pass to `turb.plot.scatter`. All other arguments go to `ax.scatter`.
+
+    Returns
+    -------
+    ax : matplotlib.ax object
+        Allows further modifications to the axes post-scatter
+    """
+
+    # defines some turbo keywords, everything else is scatter_kws
+    turbo_keys = {'c', 's', 'marker', 'dense', 'fit_line', 'ax', 'alpha',
+                  'cmap', 'legend', 'colorbar',
+                  'with_jitter', 'x_label', 'y_label', 'x_scale',
+                  'y_scale', 'legend_outside', 'title', 'with_grid',
+                  'fit_line_degree'}
+
+    # intersection between the two.
+    used_keys = turbo_keys & set(turbo_kws.keys())
+    t_kws = {x: turbo_kws[x] for x in used_keys}
+
+    # get subset where missing values from either are dropped
+    _X = as_flattened_numpy(X)
+    _Y = as_flattened_numpy(Y)
+
+    # get the bins
+    if bins is None:
+        # we just use x here.
+        bins_x = freedman_diaconis_bins(_X)
+        bins_y = freedman_diaconis_bins(_Y)
+        # take the average, integer divison
+        bins = (bins_x + bins_y) // 2
+    else:
+        # ensure its non-negative
+        nonnegative(bins, int)
+
+    # compute the binned density
+    s, xs, ys = np.histogram2d(_X, _Y, bins=bins)
+    xs_lw = xs[:-1]
+    xs_up = xs[1:]
+    ys_lw = ys[:-1]
+    ys_up = ys[1:]
+
+    indices = []
+    # loop through all the bins and compute a valid sample subset
+    for i in range(bins):
+        for j in range(bins):
+            x_b = np.logical_and(_X >= xs_lw[i], _X < xs_up[i])
+            y_b = np.logical_and(_Y >= ys_lw[j], _Y < ys_up[j])
+            # selected bool array.
+            r_b = np.logical_and(x_b, y_b)
+            # indices
+            i_b = np.argwhere(r_b).flatten()
+            i_bn = i_b.shape[0]
+            # if this is empty, do nothing else, select subset and return
+            if i_bn > 0:
+                samp_size = i_bn
+                if type(threshold) == int:
+                    samp_size = min(i_bn, threshold)
+                elif type(threshold) == float:
+                    samp_size = min(i_bn, int(i_bn * threshold))
+                # sample
+                samp = np.random.choice(i_b, samp_size, replace=False)
+                indices.append(samp)
+
+    ni = np.hstack(indices)
+    # x and y is now selected using ni
+
+    return scatter(_X[ni], _Y[ni], **t_kws)

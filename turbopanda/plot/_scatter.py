@@ -331,9 +331,11 @@ def scatter_slim(X: _ArrayLike,
                   'y_scale', 'legend_outside', 'title', 'with_grid',
                   'fit_line_degree'}
 
+    our_keys = set(turbo_kws.keys())
     # intersection between the two.
-    used_keys = turbo_keys & set(turbo_kws.keys())
+    used_keys = turbo_keys & our_keys
     t_kws = {x: turbo_kws[x] for x in used_keys}
+    mpl_kws = {x: turbo_kws[x] for x in our_keys - used_keys}
 
     # get subset where missing values from either are dropped
     _X = as_flattened_numpy(X)
@@ -382,4 +384,4 @@ def scatter_slim(X: _ArrayLike,
     ni = np.hstack(indices)
     # x and y is now selected using ni
 
-    return scatter(_X[ni], _Y[ni], **t_kws)
+    return scatter(_X[ni], _Y[ni], **t_kws, **mpl_kws)

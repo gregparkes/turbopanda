@@ -14,7 +14,7 @@ from .dev import cache, cached
 from ._pipe import Pipe
 from .corr import correlate
 
-from . import corr, dev, ml, plot, stats, str, utils, pipe
+from . import corr, dev, ml, plot, stats, str, utils, pipe, sample
 
 
 __version__ = "0.2.8"

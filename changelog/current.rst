@@ -8,6 +8,7 @@ Changelog
 ---------
 We are now public on PyPI.
 
+- |MajorFeature| New sampling folder with `multivariate_gaussians` method to get correlated synthetic data.
 - |Feature| High-density scatterplots can be fine-tuned using `scatter_slim`, a new plotting function to reduce subsequent file image size
 - |Enhancement| `turb.read` now accepts `.pkl` files using joblib
 - |API| Added `tqdm` library as requirement
@@ -58,9 +59,14 @@ We are now public on PyPI.
 
 `turbopanda.utils`
 ..................
-- |MajorFeature| Added `zipe` function, with extended zip functionality. Comes with examples
+- |Feature| Added `zipe` function, with extended zip functionality. Comes with examples
 - |Enhancement| `cache` now exists as a util option, gradually making `dev.cache` redundant
 - |Enhancement| `umap` and `umapc` now have in-built progress bar using tqdm library
 - |Efficiency| `intersect` and `union` now use `reduce` instead of for loops
 - |Fix| `arrays_dimension` now properly handles DataFrames
+- |Fix| `intersect` and `union` now use `pd.Index.intersection` and union respectively instead of `operator.and` etc.
 - |API| `lparallel` is now deprecated, to be removed in 0.3
+
+`turbopanda.sample`
+...................
+- |MajorFeature| Added `covariance_matrix` and `multivariate_gaussians` to generate synthetic datasets.

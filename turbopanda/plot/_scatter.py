@@ -365,10 +365,8 @@ def scatter_slim(X: _ArrayLike,
         for j in range(bins):
             x_b = np.logical_and(_X >= xs_lw[i], _X < xs_up[i])
             y_b = np.logical_and(_Y >= ys_lw[j], _Y < ys_up[j])
-            # selected bool array.
-            r_b = np.logical_and(x_b, y_b)
             # indices
-            i_b = np.argwhere(r_b).flatten()
+            i_b = np.argwhere(np.logical_and(x_b, y_b)).flatten()
             i_bn = i_b.shape[0]
             # if this is empty, do nothing else, select subset and return
             if i_bn > 0:

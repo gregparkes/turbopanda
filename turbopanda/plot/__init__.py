@@ -5,7 +5,7 @@
 from ._gridplot import gridplot
 from ._histogram import histogram
 from ._scatter import scatter, scatter_slim
-from ._heatmap import heatmap
+from ._heatmap import heatmap, hinton
 from ._boxplot import box1d, bibox1d, widebox
 from ._bar import bar1d, errorbar1d, widebar
 

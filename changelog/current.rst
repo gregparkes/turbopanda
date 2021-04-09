@@ -25,6 +25,7 @@ We are now public on PyPI.
 
 `turbopanda.corr`
 .................
+- |Fix| `bicorr` now uses Spearman-rank correlation between two integer-based columns x and y.
 - |API| `bicorr` and `partial_bicorr` now return float or dict rather than 1-line pandas.DataFrame object
 
 `turbopanda.dev`
@@ -43,6 +44,7 @@ We are now public on PyPI.
 
 `turbopanda.plot`
 .................
+- |Feature| Added `hinton` method to plot correlation matrices using Hinton's technique
 - |Feature| Added `scatter_slim` function which is the same as `scatter` but plots less points for high-density scatters.
 - |Enhancement| `widebar` now has keyword argument allowance.
 - |Enhancement| `bar1d` has a scale parameter to do log transform plots
@@ -70,3 +72,4 @@ We are now public on PyPI.
 `turbopanda.sample`
 ...................
 - |MajorFeature| Added `covariance_matrix` and `multivariate_gaussians` to generate synthetic datasets.
+- |Fix| Bounded `corr_ratio` parameter to ensure semipositive-definite matrix property

@@ -15,6 +15,7 @@ from turbopanda.utils import (
     instance_check,
     is_column_boolean,
     is_column_float,
+    is_column_int,
     remove_na,
     union,
     is_dataframe_float,
@@ -29,6 +30,10 @@ __all__ = ("bicorr", "partial_bicorr")
 
 def _both_continuous(x, y):
     return is_column_float(x) and is_column_float(y)
+
+
+def _both_integers(x, y):
+    return is_column_int(x) and is_column_int(y)
 
 
 def _continuous_bool(x, y):
@@ -79,6 +84,11 @@ def _bicorr_inner(x: pd.Series,
             r, pval, outliers = skipped(x_arr, y_arr, method="spearman")
         else:
             raise ValueError("Method not recognized.")
+
+    elif _both_integers(x, y):
+        # handle the integer-integer use case.
+        r, pval = spearmanr(x_arr, y_arr)
+        method = "spearman"
     elif _continuous_bool(x, y):
         # sort them into order, it matters
         r, pval = pointbiserialr(x_arr, y_arr.astype(np.uint8))

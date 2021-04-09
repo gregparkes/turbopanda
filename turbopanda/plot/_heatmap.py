@@ -9,6 +9,14 @@ https://matplotlib.org/3.1.0/gallery/images_contours_and_fields/image_annotated_
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from scipy.cluster.hierarchy import linkage, dendrogram
+from matplotlib.patches import Rectangle
+from pandas import factorize
+
+
+def _hinton_square_bias(x, b=1.):
+    b = np.clip(b, 1, 10)
+    return x**(1./b)
 
 
 def annotate_heatmap(
@@ -132,3 +140,125 @@ def heatmap(data, row_labels, col_labels, ax=None, cbar_kw={}, cbarlabel="", **k
     ax.tick_params(which="minor", bottom=False, left=False)
 
     return im, cbar
+
+
+def hinton(C,
+           pad=0.01,
+           min_square_size=0.01,
+           square_bias=1.,
+           cluster=False,
+           draw_cluster_boxes=False,
+           ax=None,
+           colorbar=True,
+           cmap=mpl.cm.seismic):
+    """Plots a Hinton correlation matrix with adjusted square sizes.
+
+    Note that with square bias, y=r**(1/b) where b is the bias, allows for augmentation of
+    smaller r values, depending on need.
+
+    Parameters
+    ----------
+    C : pd.DataFrame(p, p)
+        The symmetric (p,p) correlation matrix in the range [-1, 1], with diagonal elements 1
+    pad : float, default (0.01)
+        The padding between each square
+    min_square_size : float, default (0.01)
+        The minimize size of each square
+    square_bias : float, default (1)
+        Bias parameter to augment square size, default has no effect
+    cluster : bool, default=False
+        Whether to use hierarchical clustering on the data
+    draw_cluster_boxes : bool, default=False
+        If `cluster`, also draws rectangle boxes around hierarchical groups
+    ax : matplotlib.ax.Axes, default None
+        A plot to draw upon
+    colorbar : bool, default=True
+        Whether to draw a colorbar if an ax isnt provided
+    cmap : Colormap, default 'seismic'
+        Which matplotlib color map to use
+
+    Returns
+    -------
+    fig : matplotlib.Figure
+        The main figure object
+    ax : matplotlib axes
+        The ax created if no ax was provided
+    """
+
+    # check that C is symmetric
+    if C.shape[0] != C.shape[1]:
+        raise ValueError("C dimensions {} do not match".format(C.shape))
+
+    no_plot = ax is None
+
+    if no_plot:
+        fig, ax = plt.subplots(figsize=(12, 10))
+
+    # if clustering, sort the data first
+    if cluster:
+        Z = linkage(C)
+        dn = dendrogram(Z, no_plot=True, get_leaves=True)
+        # use the leaves to sort the data matrix
+        data = np.asarray(C.iloc[dn['leaves'], dn['leaves']])
+        columns = C.columns[dn['leaves']]
+    else:
+        data = np.asarray(C)
+        columns = C.columns
+
+    p = data.shape[0]
+    box_size = 1./p
+    tick_pos = pad/2. + (np.arange(p)/p) + (box_size-pad)/2.
+    max_size = box_size - pad
+
+    # iterate through the grid and draw rectangles
+    for i in range(p):
+        for j in range(p):
+            # convert correlation from [-1, 1] to [0, 1] range
+            r_01 = (data[i, j] / 2.) + .5
+            # calculate appropriate size
+            size = np.clip(
+                max_size * _hinton_square_bias(np.abs(data[i, j]), square_bias),
+                min_square_size,
+                max_size
+            )
+            x = tick_pos[i] - (size/2.)
+            y = tick_pos[p-j-1] - (size/2)
+            # add rect patch
+            ax.add_patch(Rectangle((x, y), size, size, color=cmap(r_01)))
+
+    # draw line rectangles around cluster groups if we have clustered
+    if cluster and draw_cluster_boxes:
+        _F, dX = factorize(dn['leaves_color_list'])
+        # compute the indices of where the rectangles should start
+        idx_nonz = np.hstack((np.array([0], dtype=int), np.nonzero(np.diff(_F))[0] + 1))
+        # x,y points
+        pX = np.linspace(0, 1., p + 1)
+        # calculate size of the boxes
+        _sf = np.diff(idx_nonz)
+        _boxes = np.hstack((_sf, np.array([p - np.sum(_sf)])))
+        _actual_sizes = _boxes / p
+
+        # iterate through and draw boxes.
+        for i in range(len(idx_nonz)):
+            x = pX[idx_nonz][i]
+            y = 1 - x - box_size * _boxes[i]
+            ax.add_patch(Rectangle((x, y), _actual_sizes[i], _actual_sizes[i],
+                                   facecolor='none', edgecolor='k',
+                                   linestyle='dashed', linewidth=2))
+
+    # modify ticks and labels
+    ax.set_xticks(tick_pos)
+    ax.set_xticklabels(columns, rotation=90)
+    ax.set_yticks(tick_pos)
+    ax.set_yticklabels(columns[::-1])
+    ax.tick_params(top=True, bottom=False, labeltop=True, labelbottom=False)
+
+    if no_plot and colorbar:
+        cb = fig.colorbar(
+            mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(vmin=-1., vmax=1.),
+                                  cmap=cmap),
+            ax=ax, orientation='vertical', shrink=.75)
+        cb.set_label(r"$r$", fontsize=15)
+
+    if no_plot:
+        return fig, ax

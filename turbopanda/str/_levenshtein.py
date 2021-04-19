@@ -6,11 +6,14 @@ import itertools as it
 import numpy as np
 import pandas as pd
 from numba import jit
+from tqdm import tqdm
 
 # integrating joblib
 import joblib
 
 from typing import Optional, List
+
+from turbopanda._deprecator import deprecated_param
 
 
 @jit(nopython=True)
@@ -67,16 +70,8 @@ def _ratio_and_distance(s: str, t: str, ratio_calc: bool = True) -> float:
         return distance[-1][-1]
 
 
-def _compute_combination(gen, parallel):
-    n = len(gen)
-    if parallel:
-        ncpu = n if n < joblib.cpu_count() else (joblib.cpu_count() - 1)
-        F = joblib.Parallel(ncpu)(
-            joblib.delayed(_ratio_and_distance)(a, b, True) for a, b in gen
-        )
-    else:
-        F = [_ratio_and_distance(a, b, True) for a, b in gen]
-
+def _compute_combination(gen):
+    F = [_ratio_and_distance(a, b, True) for a, b in tqdm(gen, position=0)]
     res = pd.DataFrame(gen, columns=["x", "y"])
     res["L"] = F
     return res
@@ -89,6 +84,7 @@ def _mirror_matrix_lev(D):
     return X
 
 
+@deprecated_param("0.2.8", "parallel", "0.3")
 def levenshtein(
     X: List[str],
     Y: Optional[List[str]] = None,
@@ -127,12 +123,12 @@ def levenshtein(
             comb = tuple(it.combinations_with_replacement(X, 2))
         else:
             comb = tuple(it.combinations(X, 2))
-        res = _compute_combination(comb, parallel)
+        res = _compute_combination(comb)
         if as_matrix:
             res = _mirror_matrix_lev(res)
     else:
         prod = tuple(it.product(X, Y))
-        res = _compute_combination(prod, parallel)
+        res = _compute_combination(prod)
         if as_matrix:
             res = res.pivot("x", "y", "L")
 

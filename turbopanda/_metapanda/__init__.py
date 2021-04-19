@@ -65,6 +65,8 @@ class MetaPanda(object):
         Views the non-selected columns in `df_`.
     select(sel_str)
         Views the selection of columns using an eval-like string
+    sample(p)
+        Views a random Series (column) from the dataset.
     patsy(X, y=None)
         Describes a statistical model in basic patsy language
     copy(None)
@@ -173,6 +175,9 @@ class MetaPanda(object):
 
     # shadowed columns
     from ._shadow import head, dtypes, copy, info
+
+    # random sampling
+    from ._random import sample
 
     # saving files
     from ._write import write, _write_csv, _write_json, _write_pickle, printf

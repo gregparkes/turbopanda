@@ -4,9 +4,12 @@
 
 import numpy as np
 import warnings
+from numba import jit
+
 from turbopanda.utils import nonnegative, instance_check, arrays_equal_size
 
 
+@jit
 def _negative_matrix_direction(p):
     # calculates the negative direction matrix
     _X = np.ones((p, p))
@@ -14,6 +17,33 @@ def _negative_matrix_direction(p):
     _X[::2, ::2] = -1.
     _X[1::2, 1::2] = -1.
     return _X
+
+
+@jit
+def _generate_covariance(p, c, diag_v, rng_dir):
+    # diag elements
+    _diag = np.full(p, diag_v) + np.random.normal(0, 0.005, p)
+    _diag_mat = np.full((p, p), _diag)
+
+    _cov_min = np.minimum(_diag_mat, _diag_mat.T) * c
+
+    # a matrix to flip random directions.
+    if rng_dir:
+        # randomly -1 or 1.
+        _dir = np.sign(np.random.uniform(-1, 1))
+    else:
+        _dir = np.sign(corr_ratio)
+
+    if _dir < 0:
+        # alternative pos and negative diag terms
+        _cov_lower = np.tril(_cov_min * _negative_matrix_direction(p), k=-1)
+    else:
+        # all positive values.
+        _cov_lower = np.tril(np.abs(_cov_min), k=-1)
+
+    # make full cov matrix
+    _cov_total = _cov_lower + _cov_lower.T + np.diag(_diag)
+    return _cov_total
 
 
 def covariance_matrix(p,
@@ -57,30 +87,7 @@ def covariance_matrix(p,
             corr_ratio, _corr_ratio
         ))
 
-    # diag elements
-    _diag = np.full(p, diag_var) + np.random.normal(0, 0.005, p)
-    _diag_mat = np.full((p, p), _diag)
-
-    _cov_min = np.minimum(_diag_mat, _diag_mat.T) * _corr_ratio
-
-    # a matrix to flip random directions.
-    if random_direction:
-        # randomly -1 or 1.
-        _dir = np.sign(np.random.uniform(-1, 1))
-    else:
-        _dir = np.sign(corr_ratio)
-
-    if _dir < 0:
-        # alternative pos and negative diag terms
-        _cov_lower = np.tril(_cov_min * _negative_matrix_direction(p), k=-1)
-    else:
-        # all positive values.
-        _cov_lower = np.tril(np.abs(_cov_min), k=-1)
-
-    # make full cov matrix
-    _cov_total = _cov_lower + _cov_lower.T + np.diag(_diag)
-
-    return _cov_total
+    return _generate_covariance(p, _corr_ratio, diag_var, random_direction)
 
 
 def multivariate_gaussians(n, k, C=0.5):

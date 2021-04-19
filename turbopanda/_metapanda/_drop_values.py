@@ -11,7 +11,8 @@ __all__ = ("drop", "keep", "drop_columns")
 
 def _remove_unused_categories(meta):
     for col in meta.columns[meta.dtypes == "category"]:
-        meta[col].cat.remove_unused_categories(inplace=True)
+        # updated for pandas 1.2
+        meta[col] = meta[col].cat.remove_unused_categories()
 
 
 def drop_columns(df: pd.DataFrame, meta: pd.DataFrame, select: pd.Index):

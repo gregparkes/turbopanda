@@ -24,7 +24,7 @@ from turbopanda._fileio import read
 from turbopanda._metapanda import MetaPanda
 from turbopanda.utils import belongs, dictcopy, insert_suffix, instance_check, intersect
 
-__all__ = ("cached", "cache", "cached_chunk")
+__all__ = ("cached", "cache", "cached_chunk", "cachedec")
 
 
 def _stack_rows(rows: List[DataFrame]) -> "MetaPanda":
@@ -244,7 +244,7 @@ def cached_chunk(
 
 @deprecated(
     "0.2.8",
-    "0.3.1",
+    "0.3.0",
     instead="This function is being renamed to 'cachedec' to reflect its a decorator",
     reason="We don't want confusion between this function and .utils.cache",
 )
@@ -310,6 +310,126 @@ def cache(
     These also work with numpy arrays or python objects by using `joblib`:
     >>> from turbopanda import cache
     >>> @cache("meta.pkl")
+    >>> def g(x):
+    ...     return [1, 2, [3, 4], {"hi":"moto"}]
+    """
+    # check it is string
+    instance_check(filename, str)
+    file_ext = filename.rsplit(".")[-1]
+    # check that file ends with json or csv
+    belongs(file_ext, ("json", "csv", "pkl"))
+
+    # define decorator
+    def _decorator_cache(func):
+        """Basic decorator."""
+
+        @functools.wraps(func)
+        def _wrapper_cache(*args, **kwargs):
+            # if we find the file
+            if os.path.isfile(filename):
+                # if its .csv or .json, use `read`
+                if file_ext in ("json", "csv"):
+                    # read it in
+                    mdf = read(filename)
+                    _set_index_def(mdf.df_)
+                    if return_as == "MetaPanda":
+                        return mdf
+                    else:
+                        return mdf.df_
+                else:
+                    mdf = joblib.load(filename)
+                    return mdf
+            else:
+                # returns MetaPanda or pandas.DataFrame
+                mpf = func(*args, **kwargs)
+                if isinstance(mpf, MetaPanda):
+                    # save file
+                    mpf.write(filename)
+                    if return_as == "MetaPanda":
+                        return mpf
+                    else:
+                        return mpf.df_
+                elif isinstance(mpf, DataFrame):
+                    # save - bumping index into the file.
+                    mpf.reset_index().to_csv(filename, index=None)
+                    if return_as == "MetaPanda":
+                        return MetaPanda(mpf)
+                    else:
+                        return mpf
+                else:
+                    # attempt to use joblib to dump
+                    joblib.dump(mpf, filename, compress=compress)
+                    return mpf
+
+        return _wrapper_cache
+
+    if _func is None:
+        return _decorator_cache
+    else:
+        return _decorator_cache(_func)
+
+
+def cachedec(
+    _func=None,
+    *,
+    filename: str = "example1.pkl",
+    compress: int = 0,
+    return_as: str = "MetaPanda"
+) -> Callable:
+    """Provides automatic decorator caching for objects.
+
+    Especially compatible with `turb.MetaPanda` or `pd.DataFrame`.
+
+    .. note:: this is a decorator function, not to be called directly.
+
+    Parameters
+    ----------
+    _func
+    filename : str, optional
+        The name of the file to cache to, or read from. This is fixed.
+         Accepts {'json', 'csv', 'pkl'} extensions only.
+    compress : int [0-9] or 2-tuple, optional
+        Optional compression level for the data. 0 or False is no compression.
+        Higher value means more compression, but also slower read and
+        write times. Using a value of 3 is often a good compromise.
+        See the notes for more details.
+        If compress is True, the compression level used is 3.
+        If compress is a 2-tuple, the first element must correspond to a string
+        between supported compressors (e.g 'zlib', 'gzip', 'bz2', 'lzma'
+        'xz'), the second element must be an integer from 0 to 9, corresponding
+        to the compression level.
+    return_as : str, default="MetaPanda"
+        Accepts {'pandas', 'MetaPanda'}
+        Only applies if filename is "csv" or "json". Attempts to cast the return object
+        as something palatable to the user.
+
+    Warnings
+    --------
+    ImportWarning
+        Returned object from cache isn't of type {pd.DataFrame, MetaPanda}
+
+    Raises
+    ------
+    TypeError
+        `filename` isn't of type `str`
+    ValueError
+        `filename` extension isn't found in {'json', 'csv', 'pkl'}
+
+    Returns
+    -------
+    mp : turb.MetaPanda / object
+        The MetaPanda object if {'csv' or 'json'}, otherwise uses
+        serialized pickling which can return an arbritrary object.
+
+    Examples
+    --------
+    For example, we call as a decorator to our custom function:
+    >>> from turbopanda import cachedec
+    >>> @cachedec('meta_file.json')
+    >>> def f(x):
+    ...     return turb.MetaPanda(x)
+    These also work with numpy arrays or python objects by using `joblib`:
+    >>> @cachedec("meta.pkl")
     >>> def g(x):
     ...     return [1, 2, [3, 4], {"hi":"moto"}]
     """

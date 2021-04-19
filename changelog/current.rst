@@ -25,6 +25,7 @@ We are now public on PyPI.
 
 `turbopanda.corr`
 .................
+- |Enhancement| `correlate` now uses `tqdm` progressbar library
 - |Fix| `bicorr` now uses Spearman-rank correlation between two integer-based columns x and y.
 - |API| `bicorr` and `partial_bicorr` now return float or dict rather than 1-line pandas.DataFrame object
 

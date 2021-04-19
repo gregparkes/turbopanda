@@ -52,7 +52,7 @@ def _map_comp(f, arg0, *args):
     if len(args) == 0:
         return [f(arg) for arg in arg0]
     else:
-        return [f(*arg) for arg in it.zip_longest(tqdm(arg0), *args)]
+        return [f(*arg) for arg in it.zip_longest(tqdm(arg0, position=0), *args)]
 
 
 def _parallel_list_comprehension(f, *args):

@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function
 import itertools as it
 
 # imports
+from tqdm import tqdm
 from typing import Optional, Union
 import numpy as np
 import pandas as pd
@@ -22,7 +23,7 @@ from turbopanda._metapanda import MetaPanda, SelectorType
 from turbopanda.str import pattern
 from turbopanda.utils import belongs, instance_check, is_dataframe_float, bounds_check
 
-from ._bicorr import _partial_bicorr_inner, _bicorr_inner
+from ._bicorr import _partial_bicorr_inner, _bicorr_inner_score, _bicorr_inner_full
 
 __all__ = ("correlate", "row_to_matrix")
 
@@ -39,83 +40,55 @@ def _row_to_matrix(rows: pd.DataFrame, x="x", y="y", piv="r") -> pd.DataFrame:
     return square
 
 
-""" Parallel bicorrelate methods """
-
-
-def _parallel_bicorr(data, comb, is_parallel, *args, **kwargs):
-    # performs optional parallelism on bicorrelations.
-    # where comb is ((col_name_x1, col_name_y1), (col_name_x2, col_name_y2), ...)
-    if is_parallel:
-        return Parallel(cpu_count() - 1)(
-            delayed(_bicorr_inner)(data[x], data[y], *args, **kwargs) for x, y in comb
-        )
-    else:
-        return [_bicorr_inner(data[x], data[y], *args, **kwargs) for x, y in comb]
-
-
-def _parallel_partial_bicorr(
-    data, covar, comb, is_parallel, is_cart_z, *args, **kwargs
-):
-    # performs optional parallelism on partial bicorrelations
-    # where comb can be ((col_name_x1, col_name_y1), (col_name_x2, col_name_y2), ...)
-    # or (((col_name_x1, col_name_y1), z1), ((col_name_x2, col_name_y2), z2), ...)
-    if is_cart_z:
-        comb_cart = it.product(comb, covar)
-        if is_parallel:
-            return Parallel(cpu_count() - 1)(
-                delayed(_partial_bicorr_inner)(data, x, y, z, *args, **kwargs)
-                for (x, y), z in comb_cart
-            )
-        else:
-            return [
-                _partial_bicorr_inner(data, x, y, z, *args, **kwargs)
-                for (x, y), z in comb_cart
-            ]
-    else:
-        if is_parallel:
-            return Parallel(cpu_count() - 1)(
-                delayed(_partial_bicorr_inner)(data, x, y, covar, *args, **kwargs)
-                for x, y in comb
-            )
-        else:
-            return [
-                _partial_bicorr_inner(data, x, y, covar, *args, **kwargs)
-                for x, y in comb
-            ]
-
-
 """ Helper methods to convert from complex `correlate`
     function to bivariate examples (with partials). """
 
 
-def _corr_combination(data, comb, covar, parallel, cart_z, method, verbose):
-    # iterate and perform two_variable as before
+def _corr_combination(data, comb, covar, cart_z, method, output, verbose):
+    # calculate the number of combinations to pass to tqdm to set the progressbar length
+    # as comb is an iterable
+    nelems = int(((data.shape[1] ** 2) / 2) + (data.shape[1] / 2))
+
+    # with no covariates, simple correlation.
     if covar is None:
-        result_k = _parallel_bicorr(
-            data, comb, parallel, method=method, verbose=verbose
-        )
+        # select appropriate function rho.
+        rho = _bicorr_inner_score if output == "score" else _bicorr_inner_full
+        # iterate and calculate rho
+        result_k = [rho(data[x], data[y], method)
+                    for x, y in tqdm(comb, position=0, total=nelems)]
     else:
-        result_k = _parallel_partial_bicorr(
-            data, covar, comb, parallel, cart_z, method=method, verbose=verbose
-        )
+        # if we cartesian over covariates, produce the product of combinations to each covariate
+        if cart_z:
+            nelems *= len(covar)
+            result_k = [
+                _partial_bicorr_inner(data, x, y, covar, method=method, output=output)
+                for (x, y), z in tqdm(it.product(comb, covar), position=0, total=nelems)
+            ]
+        else:
+            # otherwise do all pairwise correlations with a fixed covariate matrix
+            result_k = [
+                _partial_bicorr_inner(data, x, y, covar, method=method, output=output)
+                for x, y, in tqdm(comb, position=0, total=nelems)
+            ]
+
     # we should have a list of dict - assemble the records
     return (
         pd.DataFrame.from_records(result_k)
     )
 
 
-"""####### PUBLIC FUNCTIONS ############# """
+"""################ PUBLIC FUNCTIONS ################### """
 
 
 def correlate(
-    data: Union[pd.DataFrame, MetaPanda],
-    x: Optional[SelectorType] = None,
-    y: Optional[SelectorType] = None,
-    covar: Optional[SelectorType] = None,
-    cartesian_covar: bool = False,
-    parallel: bool = False,
-    method: str = "spearman",
-    verbose: int = 0,
+        data: Union[pd.DataFrame, MetaPanda],
+        x: Optional[SelectorType] = None,
+        y: Optional[SelectorType] = None,
+        covar: Optional[SelectorType] = None,
+        cartesian_covar: bool = False,
+        output: str = "full",
+        method: str = "spearman",
+        verbose: int = 0,
 ) -> pd.DataFrame:
     """Correlates X and Y together to generate a list of correlations.
 
@@ -138,9 +111,8 @@ def correlate(
         If True, and if covar is not None, separates every
             element in covar to individually control for
         using the cartesian product
-    parallel : bool, default=False
-        If True, computes multiple correlation pairs in parallel
-            using `joblib`. Uses `n_jobs=-2` for default.
+    output : str, default="full"
+        Choose from {'full', 'score'}. Score just returns `r` number.
     method : str, default="spearman"
         Method to correlate with. Choose from:
             'pearson' : Pearson product-moment correlation
@@ -211,6 +183,7 @@ def correlate(
             "skipped",
         ),
     )
+    belongs(output, ("full","score"))
     bounds_check(verbose, 0, 4)
 
     # downcast to dataframe option
@@ -248,7 +221,7 @@ def correlate(
         # list of y, x str -> matrix-vector cartesian product
         comb = it.product(y, [x])
     elif isinstance(x, (list, tuple, pd.Index)) and isinstance(
-        y, (list, tuple, pd.Index)
+            y, (list, tuple, pd.Index)
     ):
         # list of x, y -> cartesian product of x: y terms
         comb = it.product(x, y)
@@ -256,7 +229,7 @@ def correlate(
         raise ValueError("X: {}; Y: {}; Z: {} combination unknown.".format(x, y, covar))
     # return the combination of these effects.
     return _corr_combination(
-        df, comb, covar, parallel, cartesian_covar, method, verbose
+        df, comb, covar, cartesian_covar, method, output, verbose
     )
 
 

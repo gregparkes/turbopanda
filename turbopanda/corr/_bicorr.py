@@ -29,7 +29,7 @@ __all__ = ("bicorr", "partial_bicorr")
 
 
 def _both_continuous(x, y):
-    return is_column_float(x) and is_column_float(y)
+    return (x.dtype.kind == 'f') and (y.dtype.kind == 'f')
 
 
 def _both_integers(x, y):
@@ -48,61 +48,46 @@ def _boolbool(x, y):
     return is_column_boolean(x) and is_column_boolean(y)
 
 
-""" Main inner method for bi-correlation """
+def _preprocess_numpy_pair(x, y):
+    xo = np.asarray(x)
+    yo = np.asarray(y)
+    xo, yo = remove_na(xo, yo, paired=True)
+    return xo, yo
 
 
-def _bicorr_inner(x: pd.Series,
-                  y: pd.Series,
-                  tail: str = "two-sided",
-                  method: str = "spearman",
-                  verbose: int = 0,
-                  rounding_factor: int = 3):
-    """Internal method for bicorrelation here"""
-    # convert to numpy
-    x_arr = np.asarray(x)
-    y_arr = np.asarray(y)
-
-    # Remove NA
-    x_arr, y_arr = remove_na(x_arr, y_arr, paired=True)
-    nx = x_arr.size
-
+def _compute_correlative_all(x, y, xa, ya, method):
     outliers = []
-    # Compute correlation coefficient
+    # where x, y are pd.Series, xa, ya are preprocessed numpy arrays
     if _both_continuous(x, y):
-        # use method
         if method == "pearson":
-            r, pval = pearsonr(x_arr, y_arr)
+            r, pval = pearsonr(xa, ya)
         elif method == "spearman":
-            r, pval = spearmanr(x_arr, y_arr)
+            r, pval = spearmanr(xa, ya)
         elif method == "kendall":
-            r, pval = kendalltau(x_arr, y_arr)
+            r, pval = kendalltau(xa, ya)
         elif method == "percbend":
-            r, pval = percbend(x_arr, y_arr)
+            r, pval = percbend(xa, ya)
         elif method == "shepherd":
-            r, pval, outliers = shepherd(x_arr, y_arr)
+            r, pval, outliers = shepherd(xa, ya)
         elif method == "skipped":
-            r, pval, outliers = skipped(x_arr, y_arr, method="spearman")
+            r, pval, outliers = skipped(xa, ya, method="spearman")
         else:
             raise ValueError("Method not recognized.")
 
     elif _both_integers(x, y):
         # handle the integer-integer use case.
-        r, pval = spearmanr(x_arr, y_arr)
-        method = "spearman"
+        r, pval = spearmanr(xa, ya)
     elif _continuous_bool(x, y):
         # sort them into order, it matters
-        r, pval = pointbiserialr(x_arr, y_arr.astype(np.uint8))
+        r, pval = pointbiserialr(xa, ya.astype(np.uint8))
         # override method
-        method = "biserial"
     elif _bool_continuous(x, y):
         # sort them into order, it matters
-        r, pval = pointbiserialr(x_arr.astype(np.uint8), y_arr)
+        r, pval = pointbiserialr(xa.astype(np.uint8), ya)
         # override method
-        method = "biserial"
     elif _boolbool(x, y):
         # use spearman
-        r, pval = spearmanr(x_arr.astype(np.uint8), y_arr.astype(np.uint8))
-        method = "spearman"
+        r, pval = spearmanr(xa.astype(np.uint8), ya.astype(np.uint8))
     else:
         raise TypeError(
             "columns '{}':{} to '{}':{} combination not accepted for `bicorr`.".format(
@@ -110,9 +95,35 @@ def _bicorr_inner(x: pd.Series,
             )
         )
     assert not np.isnan(r), "Correlation returned NaN. Check your data."
+    return r, pval, outliers
 
-    if verbose > 0:
-        print("correlating {}:{}".format(x.name, y.name))
+
+""" Main inner method for bi-correlation """
+
+
+def _bicorr_inner_score(x: pd.Series,
+                        y: pd.Series,
+                        method: str = "spearman"):
+    """Internal method for bicorrelation here"""
+    # convert to numpy
+    x_arr, y_arr = _preprocess_numpy_pair(x, y)
+    r, _, _ = _compute_correlative_all(x, y, x_arr, y_arr, method)
+    return {
+        "x": x.name, "y": y.name, "r": r
+    }
+
+
+def _bicorr_inner_full(x: pd.Series,
+                       y: pd.Series,
+                       method: str = "spearman",
+                       tail: str = "two-sided",
+                       rounding_factor: int = 3):
+    """Internal method for bicorrelation here"""
+    # convert to numpy
+    x_arr, y_arr = _preprocess_numpy_pair(x, y)
+    nx = x_arr.size
+    # computes basic r and pvalue
+    r, pval, outliers = _compute_correlative_all(x, y, x_arr, y_arr, method)
 
     # Compute r2 and adj_r2
     r2 = r ** 2
@@ -127,7 +138,7 @@ def _bicorr_inner(x: pd.Series,
         pr = np.inf
 
     # Create dictionary
-    sd_d = {
+    return {
         "x": x.name,
         "y": y.name,
         "n": nx,
@@ -142,10 +153,6 @@ def _bicorr_inner(x: pd.Series,
         "outliers": sum(outliers) if method in ("shepherd", "skipped") else np.nan,
     }
 
-    # Convert to DataFrame
-    # _stm = pd.DataFrame.from_records(sd_d, index=[method])
-    return sd_d
-
 
 def _partial_bicorr_inner(
         data: pd.DataFrame,
@@ -154,7 +161,7 @@ def _partial_bicorr_inner(
         covar,
         tail: str = "two-sided",
         method: str = "spearman",
-        verbose: int = 0
+        output: str = "score"
 ):
     """Internal method for partial bi correlation here."""
     # all columns select
@@ -173,7 +180,11 @@ def _partial_bicorr_inner(
     res_y = pd.Series(r_y, name=y)
     """ Perform bivariate correlate as normal. """
     # calculate bicorrelation on residuals
-    return _bicorr_inner(res_x, res_y, method=method, tail=tail, verbose=0)
+
+    if output == "score":
+        return _bicorr_inner_score(res_x, res_y, method)
+    else:
+        return _bicorr_inner_full(res_x, res_y, method=method, tail=tail)
 
 
 """ #########  Public method ############### """
@@ -182,8 +193,8 @@ def _partial_bicorr_inner(
 def bicorr(
         x: pd.Series,
         y: pd.Series,
-        tail: str = "two-sided",
         method: str = "spearman",
+        tail: str = "two-sided",
         output: str = "score"
 ) -> Union[float, dict]:
     """(Robust) correlation between two variables.
@@ -196,8 +207,6 @@ def bicorr(
     ----------
     x, y : pd.Series
         First and second set of observations. x and y must be independent.
-    tail : str
-        Specify whether to return 'one-sided' or 'two-sided' p-value.
     method : str
         Specify which method to use for the computation of the correlation
         coefficient. Available methods are ::
@@ -208,6 +217,8 @@ def bicorr(
         'percbend' : percentage bend correlation (robust)
         'shepherd' : Shepherd's pi correlation (robust Spearman)
         'skipped' : skipped correlation (robust Spearman, requires sklearn)
+    tail : str
+        Specify whether to return 'one-sided' or 'two-sided' p-value.
     output : str, default='score'
         Determines whether to display the full output or
             just the correlation (r) score
@@ -283,11 +294,10 @@ def bicorr(
     if x.shape[0] != y.shape[0]:
         raise ValueError("x and y must have the same length.")
 
-    result = _bicorr_inner(x, y, tail, method)
-    if output == 'score':
-        return result['r']
+    if output == "score":
+        return _bicorr_inner_score(x, y, method)
     else:
-        return result
+        return _bicorr_inner_full(x, y, method, tail=tail)
 
 
 def partial_bicorr(
@@ -295,8 +305,8 @@ def partial_bicorr(
         x: str,
         y: str,
         covar: Union[str, List[str], Tuple[str, ...], pd.Index],
-        tail: str = "two-sided",
         method: str = "spearman",
+        tail: str = "two-sided",
         output: str = 'score'
 ) -> Union[float, dict]:
     """Partial and semi-partial correlation.
@@ -316,8 +326,6 @@ def partial_bicorr(
             covar must be made of continuous columns.
             If x, y are not continuous, will perform logistic regression
             to generate residuals.
-    tail : string
-        Specify whether to return the 'one-sided' or 'two-sided' p-value.
     method : string
         Specify which method to use for the computation of the correlation
         coefficient. Available methods are ::
@@ -328,6 +336,8 @@ def partial_bicorr(
         'percbend' : percentage bend correlation (robust)
         'shepherd' : Shepherd's pi correlation (robust Spearman)
         'skipped' : skipped correlation (robust Spearman, requires sklearn)
+    tail : string
+        Specify whether to return the 'one-sided' or 'two-sided' p-value.
     output : str, default='score'
         Determines whether to display the full output or
             just the correlation (r) score
@@ -395,8 +405,5 @@ def partial_bicorr(
             "all must be of type `float`/continuous."
         )
 
-    result = _partial_bicorr_inner(data, x, y, covar, tail, method)
-    if output == 'score':
-        return result['r']
-    else:
-        return result
+    return _partial_bicorr_inner(data, x, y, covar, tail=tail,
+                                 method=method, output=output)

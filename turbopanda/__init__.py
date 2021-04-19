@@ -10,7 +10,7 @@ from ._melt import melt
 from ._metapanda import MetaPanda
 
 # vectorization methods
-from .dev import cache, cached
+from .dev import cache, cached, cachedec
 from ._pipe import Pipe
 from .corr import correlate
 

@@ -1,4 +1,4 @@
-# turbopanda: The All-encompassing Data Science package
+# turbopanda: Pandas. But Smarter
 ========================================================================================
 Turbo-charging the Pandas library in an integrative, meta-orientated style.
 

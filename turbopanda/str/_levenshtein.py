@@ -13,8 +13,6 @@ import joblib
 
 from typing import Optional, List
 
-from turbopanda._deprecator import deprecated_param
-
 
 @jit(nopython=True)
 def _fill_matrix(d, s, t):
@@ -84,13 +82,11 @@ def _mirror_matrix_lev(D):
     return X
 
 
-@deprecated_param("0.2.8", "parallel", "0.3")
 def levenshtein(
     X: List[str],
     Y: Optional[List[str]] = None,
     as_matrix: bool = False,
-    with_replacement: bool = True,
-    parallel: bool = False,
+    with_replacement: bool = True
 ) -> pd.DataFrame:
     """Determines the levenshtein matrix distance between every pair of column names.
 
@@ -106,8 +102,6 @@ def levenshtein(
         If True, returns DataFrame in matrix-form.
     with_replacement : bool, default=True
         If true, returns diagonal elements x_i = x_i.
-    parallel : bool, default=False
-        If True, uses joblib to run calculations in parallel
 
     Returns
     -------

@@ -17,9 +17,9 @@ from .corr import correlate
 from . import corr, dev, ml, plot, stats, str, utils, pipe, sample
 
 
-__version__ = "0.2.8"
+__version__ = "0.2.9"
 __name__ = "turbopanda"
-__doc__ = """turbopanda: Turbo-charging the Pandas library in an integrative, meta-orientated style.
+__doc__ = """turbopanda: Pandas. But Smarter
 
 The aim of this library is extend the functionality of the `pandas` library package,
 which is extensively used for data munging,

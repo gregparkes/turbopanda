@@ -248,7 +248,7 @@ def cached_chunk(
 
 @deprecated(
     "0.2.8",
-    "0.3.0",
+    "0.3",
     instead="cachedec",
     reason="We don't want confusion between this function and .utils.cache",
 )

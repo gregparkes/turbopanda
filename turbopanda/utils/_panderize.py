@@ -8,8 +8,6 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed, cpu_count
 
-from turbopanda._deprecator import deprecated
-
 __all__ = ("panderfy", "transform_copy", "series")
 
 
@@ -57,17 +55,3 @@ def series(values, index, name=None):
         if isinstance(name, str)
         else pd.Series(values, index=index)
     )
-
-
-@deprecated("0.2.8", "0.3", instead=".utils.umapp")
-def lparallel(func: Callable, *args):
-    """Performs a parallel list comprehension operation on f(*args)"""
-    if len(args) == 0:
-        return func()
-    elif len(args) == 1:
-        n_cpus = cpu_count() - 1 if len(args[0]) > cpu_count() else len(args[0])
-        # if we have a numpy array, list etc, expand it out
-        return Parallel(n_cpus)(delayed(func)(a) for a in args[0])
-    else:
-        n_cpus = cpu_count() - 1 if len(args) > cpu_count() else len(args)
-        return Parallel(n_cpus)(delayed(func)(arg) for arg in args)

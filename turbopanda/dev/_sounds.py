@@ -16,6 +16,19 @@ from turbopanda.utils import belongs, union
 __all__ = ["bleep", "Bleep"]
 
 
+def _is_simpleaudio_installed(raise_error: bool = False):
+    """Determines whether scikit-learn is installed."""
+    try:
+        import simpleaudio as sa  # noqa
+        is_installed = True
+    except IOError:  # pragma: no cover
+        is_installed = False
+    # Raise error (if needed) :
+    if raise_error and not is_installed:  # pragma: no cover
+        raise IOError("simpleaudio not installed. Use `pip install simpleaudio`.")
+    return is_installed
+
+
 def _get_note_progression(n, A_4=440):
     """Given base note A4 frequency in Hz, calculate note $n$ steps away.
 
@@ -152,11 +165,11 @@ def _produce_audio(notes: List[str], seconds=2, fs=44100):
 
 
 def _play_audio(audio, fs=44100):
-    import simpleaudio as sa
-
-    play_obj = sa.play_buffer(audio, 1, 2, fs)
-    # wait for playback to finish
-    play_obj.wait_done()
+    # import simpleaudio if possible.
+    if _is_simpleaudio_installed(True):
+        play_obj = sa.play_buffer(audio, 1, 2, fs)
+        # wait for playback to finish
+        play_obj.wait_done()
 
 
 def _play_arpeggio(note="C", key="major"):

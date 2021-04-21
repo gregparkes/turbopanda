@@ -94,3 +94,6 @@ def is_sklearn_installed(raise_error: bool = False):
     if raise_error and not is_installed:  # pragma: no cover
         raise IOError("sklearn not installed. Use `pip install scikit-learn`.")
     return is_installed
+
+
+

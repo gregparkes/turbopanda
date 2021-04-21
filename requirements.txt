@@ -6,8 +6,4 @@ matplotlib
 scikit-learn
 numba
 tqdm
-pre-commit
-black
-flake8
-hypothesis
 pytest

@@ -41,7 +41,11 @@ def _set_index_def(
         df.set_index(_shared.tolist(), inplace=True)
 
 
-@deprecated("0.2.8", "0.3", instead=".utils.cache")
+@deprecated(
+    "0.2.8",
+    "0.3",
+    instead=".utils.cache"
+)
 def cached(
     func: Callable, filename: str = "example1.json", verbose: int = 0, *args, **kwargs
 ) -> "MetaPanda":
@@ -245,7 +249,7 @@ def cached_chunk(
 @deprecated(
     "0.2.8",
     "0.3.0",
-    instead="This function is being renamed to 'cachedec' to reflect its a decorator",
+    instead="cachedec",
     reason="We don't want confusion between this function and .utils.cache",
 )
 def cache(
@@ -380,7 +384,8 @@ def cachedec(
 
     Especially compatible with `turb.MetaPanda` or `pd.DataFrame`.
 
-    .. note:: this is a decorator function, not to be called directly.
+    .. note:: this is a decorator function, not to be called directly. All parameters
+    must be passed as keyword arguments.
 
     Parameters
     ----------

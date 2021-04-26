@@ -205,7 +205,7 @@ class MetaPanda(object):
     from ._patsy import patsy
 
     # renaming columns
-    from ._name_axis import rename_axis, add_suffix, add_prefix
+    from ._name_axis import rename_axis
 
     # metadata operations
     from ._metadata import sort_columns, meta_split_category, meta_map, update_meta

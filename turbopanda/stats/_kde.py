@@ -7,6 +7,7 @@ from typing import Optional
 import numpy as np
 from scipy import optimize as so, stats
 from scipy.interpolate import make_interp_spline
+from numba import njit
 
 from turbopanda.utils import as_flattened_numpy
 
@@ -39,6 +40,7 @@ def _negative_negbinomial_loglikelihood(theta, x):
 """ Miscallaenous function for bin optimization """
 
 
+@njit
 def freedman_diaconis_bins(a: np.ndarray) -> int:
     """
     Calculate number of hist bins using Freedman-Diaconis rule.
@@ -46,14 +48,10 @@ def freedman_diaconis_bins(a: np.ndarray) -> int:
     Taken from https://github.com/mwaskom/seaborn/blob/master/seaborn/distributions.py
     """
     # From https://stats.stackexchange.com/questions/798/
-    a = as_flattened_numpy(a)
-    if len(a) < 2:
+    n = a.shape[0]
+    if n < 2:
         return 1
-    h = (
-        2
-        * (stats.scoreatpercentile(a, 75) - stats.scoreatpercentile(a, 25))
-        / (a.shape[0] ** (1 / 3))
-    )
+    h = (2 * (np.percentile(a, 75) - np.percentile(a, 25)) / (n ** (1. / 3.)))
     # fall back to sqrt(a) bins if iqr is 0
     if h == 0:
         return int(np.sqrt(a.size))
@@ -187,13 +185,13 @@ def fit_model(X, name, verbose=0, return_params=False):
 
 
 def univariate_kde(
-    X: np.ndarray,
-    bins: Optional[np.ndarray] = None,
-    kde_name: str = "norm",
-    kde_range: float = 1e-3,
-    smoothen_kde: bool = True,
-    verbose: int = 0,
-    return_dist: bool = False,
+        X: np.ndarray,
+        bins: Optional[np.ndarray] = None,
+        kde_name: str = "norm",
+        kde_range: float = 1e-3,
+        smoothen_kde: bool = True,
+        verbose: int = 0,
+        return_dist: bool = False,
 ):
     """Determines a univariate KDE approximation on a 1D sample, either continuous or discrete.
 

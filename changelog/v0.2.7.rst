@@ -6,8 +6,7 @@ Version 0.2.7
 
 Changelog
 ---------
-- |MajorFeature| `melt` now supports complex `pandas.melt` operations, including
-regex (flex) support and more. Includes an example.
+- |MajorFeature| `melt` now supports complex `pandas.melt` operations, including regex (flex) support and more. Includes an example.
 - |Enhancement| `vectorize` now supports caching for each step
 - |Fix| keyword argument `cache`, default set to False
 - Removed a number of redundant code, such as checksums for MetaPanda

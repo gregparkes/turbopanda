@@ -45,6 +45,14 @@ space.
 This version sees the introduction of smarter *boxplots* with optional stripplot overlays. The introduction of
 `joblib` as a requirement also opens the avenue for significant speedups where list comprehensions are used.
 
+## v0.2.7: Seamless string regex-selection and umapping
+
+We introduce `pattern` operation to find regex-like patterns in a number of structures, along with improvements to plotting, `vectorize` caching and more.
+
+## v0.2.8: Synthetic Datasets/Progressbars
+
+Incorporation of `joblib` and `tqdm` into various places including faster correlations, levenshtein. Introduction of `turb.sample` extension with multivariate gaussian generation for correlated data. Added `hinton` and `scatter_slim` plotting options for correlation matrices and memory-efficient density scatterplots, respectively. 
+
 ### AOB
 
 Further details can be found by exploring the 

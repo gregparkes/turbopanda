@@ -43,7 +43,10 @@ def _choose_regex(pat: str, K):
 def _foreach_flexterm(term: str, K):
     if term.startswith("~"):
         s = _choose_regex(term[1:], K)
-        res = absdifference(K, s)
+        if isinstance(K, pd.DataFrame):
+            res = absdifference(K.columns, s)
+        else:
+            res = absdifference(K, s)
     else:
         res = _choose_regex(term, K)
     return res
@@ -77,17 +80,18 @@ def pattern(
     When extended regex is not on, it behaves similarly to the regex engine would
     normally do:
     >>> from turbopanda.str import pattern
-    >>> pattern("ellow", ["hello", "bellow", "mellow", "swellow"])
+    >>> greetings = ["hello", "bellow", "mellow", "swellow"]
+    >>> pattern("ellow", greetings)
     >>> ["bellow", "mellow", "swellow"]
     With extended regex, you can use intersection and union operations in between
     each regex call (space optional):
-    >>> pattern("^he | ^b")
+    >>> pattern("^he | ^b", greetings)
     >>> ["hello", "bellow"]
     It essentially treats each block separated by | or & as a separate regex search.
     When a pandas.DataFrame is passed, the search is applied to the *column names*, and
     types can be search for:
-    >>> # where ... represents a dataframe with float and object columns,...
-    >>> pattern("float & pixel_", ...)
+    >>> pattern("float & pixel_", greetings)
+    >>> []
     Here only float columns AND that contain 'pixel_' in the column name are selected
     """
     instance_check(pat, str)

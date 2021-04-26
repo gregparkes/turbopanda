@@ -3,11 +3,46 @@
 """Additional correlation metrics. Taken from pingouin package."""
 # imports
 import numpy as np
-from scipy.stats import chi2, pearsonr, spearmanr, t
+import warnings
+from pandas import crosstab, factorize
+from scipy.stats import chi2, pearsonr, spearmanr, t, chi2_contingency
 
 from turbopanda._dependency import is_sklearn_installed
 
-__all__ = ("skipped", "bsmahal", "shepherd", "percbend")
+__all__ = ("skipped", "bsmahal", "shepherd", "percbend", "kramers_v", "corr_ratio")
+
+
+def _convert(data, to):
+    converted = None
+    if to == 'array':
+        if isinstance(data, np.ndarray):
+            converted = data
+        elif isinstance(data, pd.Series):
+            converted = data.values
+        elif isinstance(data, list):
+            converted = np.array(data)
+        elif isinstance(data, pd.DataFrame):
+            converted = data.as_matrix()
+    elif to == 'list':
+        if isinstance(data, list):
+            converted = data
+        elif isinstance(data, pd.Series):
+            converted = data.values.tolist()
+        elif isinstance(data, np.ndarray):
+            converted = data.tolist()
+    elif to == 'dataframe':
+        if isinstance(data, pd.DataFrame):
+            converted = data
+        elif isinstance(data, np.ndarray):
+            converted = pd.DataFrame(data)
+    else:
+        raise ValueError("Unknown data conversion: {}".format(to))
+    if converted is None:
+        raise TypeError(
+            'cannot handle data conversion of type: {} to {}'.format(
+                type(data), to))
+    else:
+        return converted
 
 
 def skipped(x, y, method="spearman"):
@@ -232,3 +267,104 @@ def percbend(x, y, beta=0.2):
     tval = r * np.sqrt((nx - 2) / (1 - r ** 2))
     pval = 2 * t.sf(abs(tval), nx - 2)
     return r, pval
+
+
+def kramers_v(x, y, bias_correction=True):
+    """Calculates Cramer's V statistic for categorical-categorical association.
+
+    Taken from https://github.com/shakedzy/dython/blob/master/dython/nominal.py
+    Inspired by Shaked Zychlinski.
+
+    This is a symmetric coefficient: V(x,y) = V(y,x)
+    Original function taken from: https://stackoverflow.com/a/46498792/5863503
+    Wikipedia: https://en.wikipedia.org/wiki/Cram%C3%A9r%27s_V
+
+    Parameters:
+    -----------
+    x : list / NumPy ndarray / Pandas Series
+        A sequence of categorical measurements
+    y : list / NumPy ndarray / Pandas Series
+        A sequence of categorical measurements
+    bias_correction : Boolean, default = True
+        Use bias correction from Bergsma and Wicher,
+        Journal of the Korean Statistical Society 42 (2013): 323-328.
+
+    Returns:
+    --------
+    float in the range of [0,1]
+    """
+    confusion_matrix = crosstab(x, y)
+    c2 = chi2_contingency(confusion_matrix)[0]
+    n = confusion_matrix.sum().sum()
+    phi2 = c2 / n
+    r, k = confusion_matrix.shape
+    if bias_correction:
+        phi2corr = max(0, phi2 - ((k - 1) * (r - 1)) / (n - 1))
+        rcorr = r - ((r - 1) ** 2) / (n - 1)
+        kcorr = k - ((k - 1) ** 2) / (n - 1)
+        if min((kcorr - 1), (rcorr - 1)) == 0:
+            warnings.warn(
+                "Unable to calculate Cramer's V using bias correction. Consider using bias_correction=False",
+                RuntimeWarning)
+            return np.nan
+        else:
+
+            V = np.sqrt(phi2corr / min((kcorr - 1), (rcorr - 1)))
+            # calculate p-value using V
+            tval = t.isf(0.975, n-3)
+            return V, t.sf(abs(tval), n-2)
+    else:
+        V = np.sqrt(phi2 / min(k - 1, r - 1))
+        tval = t.isf(0.975, n-3)
+        return V, t.sf(abs(tval), n-2)
+
+
+def corr_ratio(measurements, categories):
+    """Calculates the Correlation Ratio (sometimes marked by the greek letter Eta)
+    for categorical-continuous association.
+
+    Taken from https://github.com/shakedzy/dython/blob/master/dython/nominal.py
+    Inspired by Shaked Zychlinski.
+
+    Answers the question - given a continuous value of a measurement, is it
+    possible to know which category is it associated with?
+
+    Value is in the range [0,1], where 0 means a category cannot be determined
+    by a continuous measurement, and 1 means a category can be determined with
+    absolute certainty.
+    Wikipedia: https://en.wikipedia.org/wiki/Correlation_ratio
+
+    Parameters:
+    -----------
+    categories : list / NumPy ndarray / Pandas Series
+        A sequence of categorical measurements
+    measurements : list / NumPy ndarray / Pandas Series
+        A sequence of continuous measurements
+
+    Returns:
+    --------
+    float in the range of [0,1]
+    """
+    categories = _convert(categories, 'array')
+    measurements = _convert(measurements, 'array')
+
+    fcat, _ = factorize(categories)
+    cat_num = np.max(fcat) + 1
+    y_avg_array = np.zeros(cat_num)
+    n_array = np.zeros(cat_num)
+    for i in range(0, cat_num):
+        cat_measures = measurements[np.argwhere(fcat == i).flatten()]
+        n_array[i] = len(cat_measures)
+        y_avg_array[i] = np.average(cat_measures)
+    y_total_avg = np.sum(np.multiply(y_avg_array, n_array)) / np.sum(n_array)
+    numerator = np.sum(
+        np.multiply(n_array, np.power(np.subtract(y_avg_array, y_total_avg),
+                                      2)))
+    denominator = np.sum(np.power(np.subtract(measurements, y_total_avg), 2))
+
+    tval = t.isf(0.975, categories.shape[0])
+    pval = t.sf(abs(tval), categories.shape[0]-2)
+    if numerator == 0:
+        return np.nan, pval
+    else:
+        return np.sqrt(numerator / denominator), pval

@@ -31,7 +31,8 @@ setup(
         "matplotlib>=3.1.1",
         "scikit-learn>=0.22",
         "joblib>=0.14.1",
-        "tqdm>=4.48.2"
+        "tqdm>=4.48.2",
+        "numba>=0.40.0"
     ],
     classifiers=[
         "Natural Language :: English",

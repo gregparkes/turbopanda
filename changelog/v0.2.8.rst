@@ -56,7 +56,6 @@ We are now public on PyPI.
 
 `turbopanda.str`
 ................
-- |Efficiency| `levenshtein` now supports a parameter for parallelization with `joblib`
 - |Fix| `pattern` now drops NA values when receives a pandas.Series object before regex search
 - |API| `pattern` docs now has some examples to learn from
 

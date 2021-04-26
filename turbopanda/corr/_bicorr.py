@@ -6,7 +6,7 @@ from scipy.stats import pearsonr, spearmanr, kendalltau, pointbiserialr
 
 from typing import List, Tuple, Union
 
-from ._corr_metrics import percbend, shepherd, skipped
+from ._corr_metrics import percbend, shepherd, skipped, corr_ratio, kramers_v
 from ._stats_extra import compute_esci, power_corr
 
 from turbopanda.stats._lmfast import lm
@@ -16,6 +16,7 @@ from turbopanda.utils import (
     is_column_boolean,
     is_column_float,
     is_column_int,
+    is_column_object,
     remove_na,
     union,
     is_dataframe_float,
@@ -37,14 +38,26 @@ def _both_integers(x, y):
 
 
 def _continuous_bool(x, y):
-    return is_column_float(x) and is_column_boolean(y)
+    return (x.dtype.kind == 'f') and is_column_boolean(y)
 
 
 def _bool_continuous(x, y):
-    return is_column_boolean(x) and is_column_float(y)
+    return is_column_boolean(x) and (y.dtype.kind == 'f')
 
 
-def _boolbool(x, y):
+def _continuous_categorical(x, y):
+    return (x.dtype.kind == 'f') and is_column_object(y)
+
+
+def _categorical_continuous(x, y):
+    return is_column_object(x) and (y.dtype.kind == 'f')
+
+
+def _both_categorical(x, y):
+    return is_column_object(x) and is_column_object(y)
+
+
+def _both_bool(x, y):
     return is_column_boolean(x) and is_column_boolean(y)
 
 
@@ -77,15 +90,23 @@ def _compute_correlative_all(x, y, xa, ya, method):
     elif _both_integers(x, y):
         # handle the integer-integer use case.
         r, pval = spearmanr(xa, ya)
+    # if they're both categories (strings), then use kramers_v
+    elif _continuous_categorical(x, y):
+        # correlation ratio [0, 1]
+        r, pval = corr_ratio(xa, ya)
+    elif _categorical_continuous(x, y):
+        # correlation ratio [0, 1]
+        r, pval = corr_ratio(ya, xa)
+    elif _both_categorical(x, y):
+        # kramer's v for categorical-categorical [0, 1]
+        r, pval = kramers_v(x, y, True)
     elif _continuous_bool(x, y):
         # sort them into order, it matters
         r, pval = pointbiserialr(xa, ya.astype(np.uint8))
-        # override method
     elif _bool_continuous(x, y):
         # sort them into order, it matters
         r, pval = pointbiserialr(xa.astype(np.uint8), ya)
-        # override method
-    elif _boolbool(x, y):
+    elif _both_bool(x, y):
         # use spearman
         r, pval = spearmanr(xa.astype(np.uint8), ya.astype(np.uint8))
     else:

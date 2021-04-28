@@ -5,4 +5,4 @@
 # import statements here
 from ._bicorr import *
 from ._correlate import *
-from ._entropy import *
+from ._entropy import continuous_mutual_info

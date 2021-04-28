@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Provides access to useful statistical functions."""
 
-from ._kde import get_bins, univariate_kde
+from ._kde import get_bins, univariate_kde, freedman_diaconis_bins
 from ._dists import auto_fit
 from ._density import density
 from ._linear_model import LinearModel

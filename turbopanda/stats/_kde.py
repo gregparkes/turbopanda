@@ -7,8 +7,6 @@ from typing import Optional
 import numpy as np
 from scipy import optimize as so, stats
 from scipy.interpolate import make_interp_spline
-from numba import njit
-
 from turbopanda.utils import as_flattened_numpy
 
 
@@ -40,7 +38,6 @@ def _negative_negbinomial_loglikelihood(theta, x):
 """ Miscallaenous function for bin optimization """
 
 
-@njit
 def freedman_diaconis_bins(a: np.ndarray) -> int:
     """
     Calculate number of hist bins using Freedman-Diaconis rule.

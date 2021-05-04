@@ -6,10 +6,12 @@ from a bunch of different options.
 """
 from typing import Union
 
+import itertools as it
 import re
 import pandas as pd
 from pandas import Index, DataFrame, Series
 from numpy import ndarray
+from functools import reduce
 
 from turbopanda.utils import set_like, union, intersect, absdifference, instance_check
 
@@ -50,6 +52,18 @@ def _foreach_flexterm(term: str, K):
     else:
         res = _choose_regex(term, K)
     return res
+
+
+def _integrate_terms(a, b):
+    """where a, b are packaged (term, op)"""
+    t1, op = a
+    t2, _ = b
+    if op == '&':
+        return intersect(t1, t2)
+    elif op == '|':
+        return union(t1, t2)
+    else:
+        return t1
 
 
 def pattern(
@@ -106,13 +120,8 @@ def pattern(
             return Index([])
         else:
             grpres = [_foreach_flexterm(t, K) for t in terms]
-            # combine
-            full = grpres[0]
-            for mg, op in zip(grpres[1:], operators):
-                if op == "&":
-                    full = intersect(full, mg)
-                elif op == "|":
-                    full = union(full, mg)
+            # reduce using intersect or union
+            full = reduce(_integrate_terms, it.zip_longest(grpres, operators))
             return full
     else:
         return _choose_regex(pat, K)

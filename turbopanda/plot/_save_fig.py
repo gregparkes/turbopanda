@@ -6,6 +6,7 @@ import os
 import warnings
 from typing import Tuple
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from turbopanda.utils import belongs, instance_check
 
@@ -82,7 +83,7 @@ def save(
     file_types_supported = ("png", "pdf", "svg", "eps", "ps")
     accepted_savemodes = ("first", "update")
 
-    instance_check(fig_obj, plt.Figure)
+    instance_check(fig_obj, (plt.Figure, mpl.figure.Figure))
     instance_check(name, str)
     instance_check(fp, str)
     belongs(plot_type, accepted_types)

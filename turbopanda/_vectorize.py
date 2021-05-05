@@ -18,17 +18,15 @@ f(Map([1, 2, 3, 4]))
 from typing import Optional, Callable
 
 import os
-from tempfile import mkdtemp
-import shutil
 import itertools as it
 import operator
-import functools
 import numpy as np
-from joblib import Parallel, delayed, cpu_count
 from pandas import DataFrame
+from functools import wraps, reduce
 
 from .utils._error_raise import belongs, instance_check
 from .utils._cache import cache as utilcache
+from ._dependency import is_joblib_installed
 
 
 def _expand_dict(k, vs):
@@ -44,7 +42,7 @@ def _dictchain(L):
 
 
 def _any_param(args, kwargs):
-    return functools.reduce(
+    return reduce(
         operator.ior,
         map(lambda o: isinstance(o, Param), it.chain(args, kwargs.values())),
     )
@@ -98,8 +96,16 @@ def vectorize(
     instance_check((parallel, cache), bool)
     belongs(return_as, ("list", "tuple", "numpy", "pandas"))
 
+    # joblib is a requirement if parallel OR cache are True.
+    if is_joblib_installed(raise_error=(parallel or cache)):
+        from joblib import cpu_count, Parallel, delayed
+
+    # additional imports.
+    from tempfile import mkdtemp
+    import shutil
+
     def _decorator_vectorize(f):
-        @functools.wraps(f)
+        @wraps(f)
         def _wrapped_function(*args, **kwargs):
             # check if Param packaging exists
             if _any_param(args, kwargs):

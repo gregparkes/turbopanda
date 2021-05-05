@@ -5,43 +5,12 @@
 import itertools as it
 import numpy as np
 import pandas as pd
-from numba import jit
-from tqdm import tqdm
-
-# integrating joblib
-import joblib
 
 from typing import Optional, List
+from turbopanda._dependency import is_tqdm_installed, requires
 
 
-@jit(nopython=True)
-def _fill_matrix(d, s, t):
-    rows = d.shape[0]
-    cols = d.shape[1]
-    # fill sides
-    for col in range(1, cols):
-        d[col, 0] = col
-    for row in range(1, rows):
-        d[0, row] = row
-
-    # iterate over and calculate.
-    for col in range(1, cols):
-        for row in range(1, rows):
-            if s[row - 1] == t[col - 1]:
-                cost = 0  # If the characters are the same in the two strings in a given position [i,j] then cost is 0
-            else:
-                # to align the results with those of the Python Levenshtein package, if we choose to calculate the ratio
-                # the cost of a substitution is 2. If we calculate just distance, then the cost of a substitution is 1.
-                cost = 2
-            d[row][col] = min(
-                d[row - 1][col] + 1,  # Cost of deletions
-                d[row][col - 1] + 1,  # Cost of insertions
-                d[row - 1][col - 1] + cost,
-            )  # Cost of substitutions
-    return d
-
-
-def _ratio_and_distance(s: str, t: str, ratio_calc: bool = True) -> float:
+def _ratio_and_distance(s1: str, s2: str, ratio_calc: bool = True) -> float:
     """levenshtein_ratio_and_distance:
     Calculates levenshtein distance between two strings.
     If ratio_calc = True, the function computes the
@@ -50,15 +19,42 @@ def _ratio_and_distance(s: str, t: str, ratio_calc: bool = True) -> float:
     distance between the first i characters of s and the
     first j characters of t
     """
+
+    @numba.jit(nopython=True)
+    def _fill_matrix(d, s, t):
+        r = d.shape[0]
+        c = d.shape[1]
+        # fill sides
+        for col in range(1, c):
+            d[col, 0] = col
+        for row in range(1, r):
+            d[0, row] = row
+
+        # iterate over and calculate.
+        for col in range(1, c):
+            for row in range(1, r):
+                if s[row - 1] == t[col - 1]:
+                    cost = 0  # If the characters are the same in the two strings in a given position [i,j] then cost is 0
+                else:
+                    # to align the results with those of the Python Levenshtein package, if we choose to calculate the ratio
+                    # the cost of a substitution is 2. If we calculate just distance, then the cost of a substitution is 1.
+                    cost = 2
+                d[row][col] = min(
+                    d[row - 1][col] + 1,  # Cost of deletions
+                    d[row][col - 1] + 1,  # Cost of insertions
+                    d[row - 1][col - 1] + cost,
+                )  # Cost of substitutions
+        return d
+
     # Initialize matrix of zeros
-    rows = len(s) + 1
-    cols = len(t) + 1
+    rows = len(s1) + 1
+    cols = len(s2) + 1
     distance = np.zeros((rows, cols), dtype=int)
     # fill sides
     # distance[0, :] = np.arange(0, cols, 1, dtype=int)
     # distance[:, 0] = np.arange(0, rows, 1, dtype=int)
     # fill the matrix with values, using JIT.
-    distance = _fill_matrix(distance, s, t)
+    distance = _fill_matrix(distance, s1, s2)
 
     if ratio_calc:
         # Computation of the Levenshtein Distance Ratio
@@ -69,7 +65,14 @@ def _ratio_and_distance(s: str, t: str, ratio_calc: bool = True) -> float:
 
 
 def _compute_combination(gen):
-    F = [_ratio_and_distance(a, b, True) for a, b in tqdm(gen, position=0)]
+    # handle if tqdm is installed or not.
+    if is_tqdm_installed():
+        from tqdm import tqdm
+        _generator = tqdm(gen, position=0)
+    else:
+        _generator = gen
+
+    F = [_ratio_and_distance(a, b, True) for a, b in _generator]
     res = pd.DataFrame(gen, columns=["x", "y"])
     res["L"] = F
     return res
@@ -82,6 +85,7 @@ def _mirror_matrix_lev(D):
     return X
 
 
+@requires("numba")
 def levenshtein(
     X: List[str],
     Y: Optional[List[str]] = None,

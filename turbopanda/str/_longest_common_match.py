@@ -7,6 +7,7 @@ from typing import List, Union, Optional
 from pandas import Series, Index
 
 from turbopanda.utils import instance_check, nonnegative, disallow_instance_pair
+from turbopanda._dependency import requires
 
 
 def _single_common_substring_match(a: str, b: str) -> str:
@@ -24,6 +25,7 @@ def _single_common_substring_match(a: str, b: str) -> str:
         return ""
 
 
+@requires("difflib")
 def common_substrings(
         a: Union[str, List[str]],
         b: Optional[Union[str, List[str]]] = None,

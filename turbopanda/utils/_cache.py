@@ -3,10 +3,13 @@
 """Methods relating to the caching using joblib library."""
 
 import os
-import joblib
 from typing import Callable
 
+# make sure joblib is a requirement for this function.
+from turbopanda._dependency import requires
 
+
+@requires("joblib")
 def cache(fn: str, f: Callable, *args, **kwargs):
     """Provides automatic caching for anything using joblib.
 
@@ -26,6 +29,8 @@ def cache(fn: str, f: Callable, *args, **kwargs):
     ca : cached element
         This can take many forms, either as list, tuple or dict usually
     """
+    import joblib
+
     if os.path.isfile(fn):
         print("loading file '%s'" % fn)
         return joblib.load(fn)

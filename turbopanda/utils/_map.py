@@ -4,13 +4,12 @@
     with parallelism and caching enabled as needed."""
 
 import os
-from tqdm import tqdm
 from typing import Callable
 import itertools as it
-from joblib import load, dump, delayed, Parallel, cpu_count
 
 from ._cache import cache
 from ._files import insert_suffix as add_suf
+from turbopanda._dependency import requires
 
 __all__ = ("zipe", "umap", "umapc", "umapp", "umapcc", "umappc", "umappcc")
 
@@ -47,12 +46,30 @@ def zipe(*args):
         return list(it.zip_longest(*map(_singleton, args)))
 
 
+def _load_file(fn):
+    # use joblib.load to read in the data
+    print("loading file '%s'" % fn)
+    return joblib.load(fn)
+
+
+def _write_file(um, fn):
+    print("writing file '%s'" % fn)
+    joblib.dump(um, fn)
+
+
+def _delete_temps(fn, n):
+    for i in range(n):
+        fni = add_suf(fn, str(i))
+        if os.path.isfile(fni):
+            os.remove(fni)
+
+
 def _map_comp(f, arg0, *args):
     # check to make sure every argument is an iterable, and make it one if not
     if len(args) == 0:
         return [f(arg) for arg in arg0]
     else:
-        return [f(*arg) for arg in it.zip_longest(tqdm(arg0, position=0), *args)]
+        return [f(*arg) for arg in it.zip_longest(*args)]
 
 
 def _parallel_list_comprehension(f, *args):
@@ -60,11 +77,11 @@ def _parallel_list_comprehension(f, *args):
         return f()
     else:
         n = len(args[0])
-        ncpu = n if n < cpu_count() else (cpu_count() - 1)
+        ncpu = n if n < joblib.cpu_count() else (joblib.cpu_count() - 1)
         if len(args) == 1:
-            um = Parallel(ncpu)(delayed(f)(arg) for arg in args[0])
+            um = joblib.Parallel(ncpu)(joblib.delayed(f)(arg) for arg in args[0])
         else:
-            um = Parallel(ncpu)(delayed(f)(*arg) for arg in it.zip_longest(*args))
+            um = joblib.Parallel(ncpu)(joblib.delayed(f)(*arg) for arg in it.zip_longest(*args))
         return um
 
 
@@ -103,6 +120,7 @@ def umap(f: Callable, *args):
     return _map_comp(f, *args)
 
 
+@requires("joblib")
 def umapc(fn: str, f: Callable, *args):
     """Performs Map comprehension with final state Cache.
 
@@ -131,15 +149,15 @@ def umapc(fn: str, f: Callable, *args):
     """
     if os.path.isfile(fn):
         # use joblib.load to read in the data
-        print("loading file '%s'" % fn)
-        return load(fn)
+        return _load_file(fn)
     else:
         # perform list comprehension
         um = _map_comp(f, *args)
-        dump(um, fn)
+        _write_file(um, fn)
         return um
 
 
+@requires("joblib")
 def umapp(f: Callable, *args):
     """Performs Map comprehension with Parallelism.
 
@@ -165,6 +183,7 @@ def umapp(f: Callable, *args):
     return _parallel_list_comprehension(f, *args)
 
 
+@requires("joblib")
 def umappc(fn: str, f: Callable, *args):
     """Performs Map comprehension with Parallelism and Caching.
 
@@ -194,17 +213,16 @@ def umappc(fn: str, f: Callable, *args):
     See `turb.utils.umap` for examples.
     """
     if os.path.isfile(fn):
-        print("loading file '%s'" % fn)
-        return load(fn)
+        return _load_file(fn)
     else:
         um = _parallel_list_comprehension(f, *args)
         # cache result
-        print("writing file '%s'" % fn)
-        dump(um, fn)
+        _write_file(um, fn)
         # return
         return um
 
 
+@requires("joblib")
 def umapcc(fn: str, f: Callable, *args):
     """Performs Map comprehension with Caching by Chunks.
 
@@ -236,8 +254,7 @@ def umapcc(fn: str, f: Callable, *args):
     See `turb.utils.umap` for examples.
     """
     if os.path.isfile(fn):
-        print("loading file '%s'" % fn)
-        return load(fn)
+        return _load_file(fn)
     else:
         n = len(args[0])
         # run and do chunked caching, using item cache
@@ -246,17 +263,14 @@ def umapcc(fn: str, f: Callable, *args):
             for i, arg in enumerate(it.zip_longest(*args))
         ]
         # save final version
-        print("writing file '%s'" % fn)
-        dump(um, fn)
+        _write_file(um, fn)
         # delete temp versions
-        for i in range(n):
-            fni = add_suf(fn, str(i))
-            if os.path.isfile(fni):
-                os.remove(fni)
+        _delete_temps(fn, n)
         # return
         return um
 
 
+@requires("joblib")
 def umappcc(fn: str, f: Callable, *args):
     """Performs Map comprehension with Parallelism and Caching by Chunks.
 
@@ -290,23 +304,18 @@ def umappcc(fn: str, f: Callable, *args):
     See `turb.utils.umap` for examples.
     """
     if os.path.isfile(fn):
-        print("loading file '%s'" % fn)
-        return load(fn)
+        return _load_file(fn)
     else:
         n = len(args[0])
-        ncpu = n if n < cpu_count() else (cpu_count() - 1)
+        ncpu = n if n < joblib.cpu_count() else (joblib.cpu_count() - 1)
         # do list comprehension using parallelism
-        um = Parallel(ncpu)(
-            delayed(cache)(add_suf(fn, str(i)), f, *arg)
+        um = joblib.Parallel(ncpu)(
+            joblib.delayed(cache)(add_suf(fn, str(i)), f, *arg)
             for i, arg in enumerate(it.zip_longest(*args))
         )
         # save final version
-        print("writing file '%s'" % fn)
-        dump(um, fn)
+        _write_file(um, fn)
         # delete temp versions
-        for i in range(n):
-            fni = add_suf(fn, str(i))
-            if os.path.isfile(fni):
-                os.remove(fni)
+        _delete_temps(fn, n)
         # return
         return um

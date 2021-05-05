@@ -118,7 +118,11 @@ def pattern(
         operators = re.findall("[&|]", pat)
         if len(terms) == 0:
             return Index([])
+        elif len(terms) == 1:
+            # handle singular case with no split terms found.
+            return _foreach_flexterm(terms[0], K)
         else:
+            # iterate over and reduce.
             grpres = [_foreach_flexterm(t, K) for t in terms]
             # reduce using intersect or union
             full = reduce(_integrate_terms, it.zip_longest(grpres, operators))

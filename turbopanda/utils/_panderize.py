@@ -6,7 +6,6 @@ from typing import Callable
 
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed, cpu_count
 
 __all__ = ("panderfy", "transform_copy", "series")
 

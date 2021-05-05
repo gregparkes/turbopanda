@@ -4,11 +4,11 @@
 
 import hashlib
 import json
-from joblib import dump
 from typing import Optional
 
 import pandas as pd
 
+from turbopanda._dependency import is_joblib_installed
 from turbopanda.utils import split_file_directory, union
 from ._metadata import default_columns
 
@@ -62,10 +62,12 @@ def _write_json(self, filename: str):
 
 
 def _write_pickle(self, filename: str):
-    # update meta information
-    self.update_meta()
-    # simply joblib dump
-    dump(self, filename)
+    if is_joblib_installed(raise_error=True):
+        from joblib import dump
+        # update meta information
+        self.update_meta()
+        # simply joblib dump
+        dump(self, filename)
 
 
 def write(

@@ -7,10 +7,10 @@ from __future__ import absolute_import, division, print_function
 
 # locals
 import glob
-import joblib
 from typing import List, Optional, Union
 
 from ._metapanda import MetaPanda
+from turbopanda._dependency import is_joblib_installed
 from .utils import instance_check, join
 
 
@@ -74,7 +74,9 @@ def read(
             elif ext(fl) == "json":
                 return MetaPanda.from_json(fl, name=n, **kwargs)
             elif ext(fl) == "pkl":
-                return joblib.load(fl)
+                # check if joblib is loaded
+                if is_joblib_installed(raise_error=True):
+                    return joblib.load(fl)
             else:
                 raise ValueError(
                     "file ending '.{}' not recognized, must end with {}".format(

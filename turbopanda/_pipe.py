@@ -10,7 +10,6 @@ from typing import Callable, Dict, List, Tuple, TypeVar, Union
 
 import numpy as np
 from pandas import Index, Series, to_numeric
-from sklearn import preprocessing
 
 # locals
 from ._deprecator import deprecated
@@ -179,67 +178,6 @@ class Pipe(object):
         return deepcopy(self)
 
     """ ############ PUBLIC ACCESSIBLE PIPELINES TO PLUG-AND-PLAY .... ############### """
-
-    @classmethod
-    def ml_regression(
-        cls,
-        mp,
-        x_s: Union[Tuple[str, ...], Index],
-        y_s: Union[str, Tuple[str, ...], Index],
-        preprocessor: str = "scale",
-    ) -> "Pipe":
-        """The default pipeline for Machine Learning Regression problems.
-
-        Parameters
-        --------
-        mp : MetaPanda
-            The MetaPanda object
-        x_s : list of str, pd.Index
-            A list of x-features
-        y_s : str/list of str, pd.Index
-            A list of y-feature(s)
-        preprocessor : str, optional
-            Name of preprocessing: default 'scale', choose from
-                {'power_transform', 'minmax_scale', 'maxabs_scale', 'robust_scale',
-                 'quantile_transform', 'scale', 'normalize'}
-
-        Returns
-        -------
-        pipe : Pipe
-            The pipeline to perform on mp
-        """
-        if hasattr(preprocessing, preprocessor):
-            # try to get function
-            preproc_f = getattr(preprocessing, preprocessor.lower())
-        else:
-            raise ValueError(
-                "preprocessor function '{}' not found in sklearn.preprocessing".format(
-                    preprocessor
-                )
-            )
-
-        # out of the x-features, we only preprocess.scale continuous features.
-        return cls.raw(
-            (
-                # drop objects, ids columns
-                ("drop", (object, ".*id$", ".*ID$", "^ID.*", "^id.*"), {}),
-                # drop any columns with single-value-type in
-                (
-                    "apply",
-                    (
-                        "drop",
-                        mp.view(is_n_value_column),
-                    ),
-                    {"axis": 1},
-                ),
-                # drop missing values in y
-                ("apply", ("dropna",), {"axis": 0, "subset": mp.view(y_s)}),
-                # fill missing values with the mean
-                ("transform", (lambda x: x.fillna(x.mean()), x_s), {}),
-                # apply standard scaling to X
-                ("transform", (preproc_f,), {"selector": x_s, "whole": True}),
-            )
-        )
 
     @classmethod
     def clean(

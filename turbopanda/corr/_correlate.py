@@ -11,15 +11,13 @@ from __future__ import absolute_import, division, print_function
 import itertools as it
 
 # imports
-from tqdm import tqdm
 from typing import Optional, Union
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed, cpu_count
 
 # locals
 from turbopanda._metapanda import MetaPanda, SelectorType
-
+from turbopanda._dependency import is_tqdm_installed
 from turbopanda.str import pattern
 from turbopanda.utils import belongs, instance_check, is_dataframe_float, bounds_check
 
@@ -49,26 +47,41 @@ def _corr_combination(data, comb, covar, cart_z, method, output, verbose):
     # as comb is an iterable
     nelems = int(((data.shape[1] ** 2) / 2) + (data.shape[1] / 2))
 
+    # handle if tqdm is installed whether to use progressbar.
+    if is_tqdm_installed():
+        from tqdm import tqdm
+        # wrap the generator around tqdm
+        if covar is not None and cart_z:
+            _generator = tqdm(it.product(comb, covar), position=0, total=nelems)
+        else:
+            _generator = tqdm(comb, position=0, total=nelems)
+    else:
+        # there is no tqdm
+        if covar is not None and cart_z:
+            _generator = it.product(comb, covar)
+        else:
+            _generator = comb
+
     # with no covariates, simple correlation.
     if covar is None:
         # select appropriate function rho.
         rho = _bicorr_inner_score if output == "score" else _bicorr_inner_full
         # iterate and calculate rho
         result_k = [rho(data[x], data[y], method)
-                    for x, y in tqdm(comb, position=0, total=nelems)]
+                    for x, y in _generator]
     else:
         # if we cartesian over covariates, produce the product of combinations to each covariate
         if cart_z:
             nelems *= len(covar)
             result_k = [
                 _partial_bicorr_inner(data, x, y, covar, method=method, output=output)
-                for (x, y), z in tqdm(it.product(comb, covar), position=0, total=nelems)
+                for (x, y), z in _generator
             ]
         else:
             # otherwise do all pairwise correlations with a fixed covariate matrix
             result_k = [
                 _partial_bicorr_inner(data, x, y, covar, method=method, output=output)
-                for x, y, in tqdm(comb, position=0, total=nelems)
+                for x, y, in _generator
             ]
 
     # we should have a list of dict - assemble the records

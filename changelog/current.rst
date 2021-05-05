@@ -6,6 +6,7 @@ Version 0.2.9
 
 Changelog
 ---------
+- |Enhancement| `joblib` and `tqdm` are now 'optional' modules in most cases.
 
 `turbopanda.MetaPanda`
 ......................
@@ -29,7 +30,7 @@ Changelog
 
 `turbopanda.str`
 ................
-- |Fix| `pattern` now properly handles cases where a DataFrame is passed with ~ not operator.
+- |Fix| `pattern` now properly handles cases where a DataFrame is passed with ~ not operator, and single non-split cases.
 
 `turbopanda.utils`
 ..................

@@ -19,6 +19,7 @@ from typing import Callable, List, Tuple, Union
 from pandas import DataFrame, concat
 
 # locals
+from turbopanda._dependency import is_joblib_installed
 from turbopanda._deprecator import deprecated
 from turbopanda._fileio import read
 from turbopanda._metapanda import MetaPanda
@@ -462,8 +463,9 @@ def cachedec(
                     else:
                         return mdf.df_
                 else:
-                    mdf = joblib.load(filename)
-                    return mdf
+                    if is_joblib_installed(raise_error=True):
+                        mdf = joblib.load(filename)
+                        return mdf
             else:
                 # returns MetaPanda or pandas.DataFrame
                 mpf = func(*args, **kwargs)
@@ -482,9 +484,10 @@ def cachedec(
                     else:
                         return mpf
                 else:
-                    # attempt to use joblib to dump
-                    joblib.dump(mpf, filename, compress=compress)
-                    return mpf
+                    if is_joblib_installed(raise_error=True):
+                        # attempt to use joblib to dump
+                        joblib.dump(mpf, filename, compress=compress)
+                        return mpf
 
         return _wrapper_cache
 

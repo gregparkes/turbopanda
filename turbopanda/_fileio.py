@@ -76,6 +76,7 @@ def read(
             elif ext(fl) == "pkl":
                 # check if joblib is loaded
                 if is_joblib_installed(raise_error=True):
+                    import joblib
                     return joblib.load(fl)
             else:
                 raise ValueError(

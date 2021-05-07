@@ -9,9 +9,24 @@ import itertools as it
 
 from ._cache import cache
 from ._files import insert_suffix as add_suf
-from turbopanda._dependency import requires
+from turbopanda._dependency import requires, is_tqdm_installed
 
 __all__ = ("zipe", "umap", "umapc", "umapp", "umapcc", "umappc", "umappcc")
+
+
+def _load_file(fn, debug=True):
+    import joblib
+    # use joblib.load to read in the data
+    if debug:
+        print("loading file '%s'" % fn)
+    return joblib.load(fn)
+
+
+def _write_file(um, fn, debug=True):
+    import joblib
+    if debug:
+        print("writing file '%s'" % fn)
+    joblib.dump(um, fn)
 
 
 def zipe(*args):
@@ -46,17 +61,6 @@ def zipe(*args):
         return list(it.zip_longest(*map(_singleton, args)))
 
 
-def _load_file(fn):
-    # use joblib.load to read in the data
-    print("loading file '%s'" % fn)
-    return joblib.load(fn)
-
-
-def _write_file(um, fn):
-    print("writing file '%s'" % fn)
-    joblib.dump(um, fn)
-
-
 def _delete_temps(fn, n):
     for i in range(n):
         fni = add_suf(fn, str(i))
@@ -73,6 +77,7 @@ def _map_comp(f, arg0, *args):
 
 
 def _parallel_list_comprehension(f, *args):
+    import joblib
     if len(args) == 0:
         return f()
     else:
@@ -147,14 +152,7 @@ def umapc(fn: str, f: Callable, *args):
     --------
     See `turb.utils.umap` for examples.
     """
-    if os.path.isfile(fn):
-        # use joblib.load to read in the data
-        return _load_file(fn)
-    else:
-        # perform list comprehension
-        um = _map_comp(f, *args)
-        _write_file(um, fn)
-        return um
+    return cache(fn, _map_comp, False, f, *args)
 
 
 @requires("joblib")
@@ -256,16 +254,35 @@ def umapcc(fn: str, f: Callable, *args):
     if os.path.isfile(fn):
         return _load_file(fn)
     else:
-        n = len(args[0])
+        # pre-compute iterable
+        its = list(it.zip_longest(*args))
+        n = len(its)
+        import shutil
+        # use tqdm for display.
+        if is_tqdm_installed():
+            from tqdm import tqdm
+            _generator = enumerate(tqdm(its, position=0, total=n))
+        else:
+            _generator = enumerate(its)
+
+        # create a cache directory in the directory below where to plant the file
+        parent_rel, just_file = fn.rsplit("/", 1)
+        parent_abs = os.path.abspath(parent_rel)
+        abscachedir = os.path.join(parent_abs, "_tmp_umapcc_")
+        relfile = os.path.join(os.path.join(parent_rel, "_tmp_umapcc_"), just_file)
+
+        if not os.path.isdir(abscachedir):
+            os.mkdir(abscachedir)
+
         # run and do chunked caching, using item cache
         um = [
-            cache(add_suf(fn, str(i)), f, *arg)
-            for i, arg in enumerate(it.zip_longest(*args))
+            cache(add_suf(relfile, str(i)), f, False, *arg)
+            for i, arg in _generator
         ]
         # save final version
         _write_file(um, fn)
-        # delete temp versions
-        _delete_temps(fn, n)
+        # delete the temp files
+        _delete_temps(relfile, n)
         # return
         return um
 
@@ -310,7 +327,7 @@ def umappcc(fn: str, f: Callable, *args):
         ncpu = n if n < joblib.cpu_count() else (joblib.cpu_count() - 1)
         # do list comprehension using parallelism
         um = joblib.Parallel(ncpu)(
-            joblib.delayed(cache)(add_suf(fn, str(i)), f, *arg)
+            joblib.delayed(cache)(add_suf(fn, str(i)), f, False, *arg)
             for i, arg in enumerate(it.zip_longest(*args))
         )
         # save final version

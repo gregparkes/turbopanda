@@ -9,8 +9,23 @@ from typing import Callable
 from turbopanda._dependency import requires
 
 
+def _load_file(fn, debug=True):
+    import joblib
+    # use joblib.load to read in the data
+    if debug:
+        print("loading file '%s'" % fn)
+    return joblib.load(fn)
+
+
+def _write_file(um, fn, debug=True):
+    import joblib
+    if debug:
+        print("writing file '%s'" % fn)
+    joblib.dump(um, fn)
+
+
 @requires("joblib")
-def cache(fn: str, f: Callable, *args, **kwargs):
+def cache(fn: str, f: Callable, debug=True, *args, **kwargs):
     """Provides automatic caching for anything using joblib.
 
     Parameters
@@ -19,6 +34,8 @@ def cache(fn: str, f: Callable, *args, **kwargs):
         The name of the file to cache to, or read from. This is fixed. Include extension
     f : function
         A custom function returning the object to cache
+    debug : bool
+        Whether to print statements.
     *args : list, optional
         Arguments to pass to f(...)
     **kwargs : dict, optional
@@ -32,10 +49,10 @@ def cache(fn: str, f: Callable, *args, **kwargs):
     import joblib
 
     if os.path.isfile(fn):
-        print("loading file '%s'" % fn)
-        return joblib.load(fn)
+        return _load_file(fn, debug)
     else:
-        print("running chunk '%s'" % fn)
+        if debug:
+            print("running chunk '%s'" % fn)
         res = f(*args, **kwargs)
-        joblib.dump(res, fn)
+        _write_file(res, fn, debug)
         return res

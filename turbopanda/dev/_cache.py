@@ -464,6 +464,8 @@ def cachedec(
                         return mdf.df_
                 else:
                     if is_joblib_installed(raise_error=True):
+                        import joblib
+
                         mdf = joblib.load(filename)
                         return mdf
             else:
@@ -485,6 +487,7 @@ def cachedec(
                         return mpf
                 else:
                     if is_joblib_installed(raise_error=True):
+                        import joblib
                         # attempt to use joblib to dump
                         joblib.dump(mpf, filename, compress=compress)
                         return mpf

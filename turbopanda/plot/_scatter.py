@@ -18,7 +18,8 @@ from turbopanda.utils import (
     belongs,
     as_flattened_numpy,
     unique_ordered,
-    nonnegative
+    nonnegative,
+    remove_na
 )
 from turbopanda.stats._kde import freedman_diaconis_bins
 
@@ -206,11 +207,13 @@ def scatter(
     # get subset where missing values from either are dropped
     _X = as_flattened_numpy(X)
     _Y = as_flattened_numpy(Y)
+    # remove values not found in both.
+    _X, _Y = remove_na(_X, _Y, paired=True)
 
     # warn the user if n is large to maybe consider dense option?
     if _X.shape[0] > 15000 and not dense:
         warn(
-            "Data input size: {} is large, consider setting dense=True".format(
+            "Data input n={} is large, consider setting dense=True or using function `scatter_slim`.".format(
                 X.shape[0]
             ),
             UserWarning,
@@ -340,6 +343,8 @@ def scatter_slim(X: _ArrayLike,
     # get subset where missing values from either are dropped
     _X = as_flattened_numpy(X)
     _Y = as_flattened_numpy(Y)
+    # paired values
+    _X, _Y = remove_na(_X, _Y, paired=True)
 
     # get the bins
     if bins is None:
@@ -381,5 +386,4 @@ def scatter_slim(X: _ArrayLike,
 
     ni = np.hstack(indices)
     # x and y is now selected using ni
-
     return scatter(_X[ni], _Y[ni], **t_kws, **mpl_kws)

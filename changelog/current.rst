@@ -27,6 +27,7 @@ Changelog
 
 `turbopanda.plot`
 .................
+- |Fix| `scatter` now accepts X and Y with missing values.
 
 `turbopanda.str`
 ................

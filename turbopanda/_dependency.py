@@ -149,9 +149,12 @@ def requires(package_name: str, optional: bool = False):
         optional : bool, default=False
             Whether the packages are optional or required
         """
-    packages = ('numpy', 'scipy', 'matplotlib', 'pandas', 'sklearn', 'joblib', 'tqdm', 'numba', 'difflib')
-    aligned_funcs = (is_numpy_installed, is_scipy_installed, is_matplotlib_installed, is_pandas_installed,
-                     is_sklearn_installed, is_joblib_installed, is_tqdm_installed, is_numba_installed,
+    packages = ('numpy', 'scipy', 'matplotlib', 'pandas', 'sklearn',
+                'joblib', 'tqdm', 'numba', 'difflib')
+    aligned_funcs = (is_numpy_installed, is_scipy_installed, is_matplotlib_installed,
+                     is_pandas_installed,
+                     is_sklearn_installed, is_joblib_installed,
+                     is_tqdm_installed, is_numba_installed,
                      is_difflib_installed)
     # ensure package_name is one of the selected.
     belongs(package_name, packages)

@@ -59,8 +59,6 @@ class MetaPanda(object):
         Prints the raw data in full pandas format
     view(selector)
         Views a selection of columns in `df_`
-    search(selector)
-        View the intersection of search terms, for columns in `df_`.
     view_not(selector)
         Views the non-selected columns in `df_`.
     select(sel_str)
@@ -347,7 +345,7 @@ class MetaPanda(object):
 
     def __repr__(self) -> str:
         """Represent the object in a stringed format."""
-        p = self.df_.shape[1] if self.df_.ndim > 1 else 1
+        p = self._df.shape[1] if self.df_.ndim > 1 else 1
         """
         OPTIONS are:
         - S: contains selectors
@@ -357,7 +355,7 @@ class MetaPanda(object):
         opt_m = "M" if len(self.mapper_) > 0 else ""
         opts = "[" + opt_s + opt_m + "]"
         return "MetaPanda({}(n={}, p={}, mem={}, options={}))".format(
-            self.name_, self.df_.shape[0], p, self.memory_, opts
+            self.name_, self._df.shape[0], p, self.memory_, opts
         )
 
     """ ######## PROPERTIES ############ """
@@ -408,33 +406,33 @@ class MetaPanda(object):
     @deprecated_param("0.2.8", "n_", "0.3", "renamed to `n`")
     def n_(self) -> int:
         """Fetch the number of rows/samples within the df_ attribute."""
-        return self.df_.shape[0]
+        return self._df.shape[0]
 
     @property
     def n(self) -> int:
         """Fetch the number of rows/samples within the df_ attribute."""
-        return self.df_.shape[0]
+        return self._df.shape[0]
 
     @property
     @deprecated_param("0.2.8", "p_", "0.3", "renamed to `p`")
     def p_(self) -> int:
         """Fetch the number of dimensions within the df_ attribute."""
-        return self.df_.shape[1]
+        return self._df.shape[1]
 
     @property
     def p(self):
         """Fetches the number of dimensions within the df+ attribute."""
-        return self.df_.shape[1]
+        return self._df.shape[1]
 
     @property
     def shape(self) -> Tuple[int, int]:
         """Fetches the shape of the dataset."""
-        return self.df_.shape
+        return self._df.shape
 
     @property
     def columns(self) -> pd.Index:
         """Forward on 'columns' property."""
-        return self.df_.columns
+        return self._df.columns
 
     """ Additional meta information """
 
@@ -454,8 +452,8 @@ class MetaPanda(object):
     @property
     def memory_(self) -> str:
         """Fetch the memory consumption of the MetaPanda."""
-        df_m = self.df_.memory_usage(deep=False).sum() / 1000000
-        meta_m = self.df_.memory_usage(deep=False).sum() / 1000000
+        df_m = self._df.memory_usage(deep=False).sum() / 1000000
+        meta_m = self._df.memory_usage(deep=False).sum() / 1000000
         return "{:0.3f}MB".format(df_m + meta_m)
 
     @property
@@ -467,7 +465,7 @@ class MetaPanda(object):
     def name_(self, n: str):
         if isinstance(n, str):
             # if name is found as a column name, block it.
-            if n in self.df_.columns:
+            if n in self._df.columns:
                 raise ValueError(
                     "name: {} for df_ found as a column attribute; not allowed!".format(
                         n

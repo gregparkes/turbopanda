@@ -21,11 +21,11 @@ def _is_simpleaudio_installed(raise_error: bool = False):
     try:
         import simpleaudio as sa  # noqa
         is_installed = True
-    except IOError:  # pragma: no cover
+    except ModuleNotFoundError:  # pragma: no cover
         is_installed = False
     # Raise error (if needed) :
     if raise_error and not is_installed:  # pragma: no cover
-        raise IOError("simpleaudio not installed. Use `pip install simpleaudio`.")
+        raise ModuleNotFoundError("simpleaudio not installed. Use `pip install simpleaudio`.")
     return is_installed
 
 
@@ -167,6 +167,7 @@ def _produce_audio(notes: List[str], seconds=2, fs=44100):
 def _play_audio(audio, fs=44100):
     # import simpleaudio if possible.
     if _is_simpleaudio_installed(True):
+        import simpleaudio as sa
         play_obj = sa.play_buffer(audio, 1, 2, fs)
         # wait for playback to finish
         play_obj.wait_done()
@@ -238,8 +239,11 @@ def bleep(_func=None, *, note="C") -> Callable:
 class Bleep:
     """Handles noise sound with a `with` statement."""
 
+    def __init__(self, note="C"):
+        self.note = note
+
     def __enter__(self):
         pass
 
     def __exit__(self, type_, value, traceback):
-        _play_arpeggio("C", key="major")
+        _play_arpeggio(self.note, key="major")

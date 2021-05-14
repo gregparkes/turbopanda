@@ -24,11 +24,11 @@ def is_numpy_installed(raise_error: bool = False):
         import numpy as np  # noqa
 
         is_installed = True
-    except IOError:  # pragma: no cover
+    except ModuleNotFoundError:  # pragma: no cover
         is_installed = False
     # Raise error (if needed) :
     if raise_error and not is_installed:  # pragma: no cover
-        raise IOError("numpy not installed. Use `pip install numpy`.")
+        raise ModuleNotFoundError("numpy not installed. Use `pip install numpy`.")
     return is_installed
 
 
@@ -38,11 +38,11 @@ def is_numba_installed(raise_error: bool = False):
         import numba  # noqa
 
         is_installed = True
-    except IOError:  # pragma: no cover
+    except ModuleNotFoundError:  # pragma: no cover
         is_installed = False
     # Raise error (if needed) :
     if raise_error and not is_installed:  # pragma: no cover
-        raise IOError("numba not installed. Use `pip install numba`.")
+        raise ModuleNotFoundError("numba not installed. Use `pip install numba`.")
     return is_installed
 
 
@@ -52,11 +52,11 @@ def is_scipy_installed(raise_error: bool = False):
         import scipy  # noqa
 
         is_installed = True
-    except IOError:  # pragma: no cover
+    except ModuleNotFoundError:  # pragma: no cover
         is_installed = False
     # Raise error (if needed) :
     if raise_error and not is_installed:  # pragma: no cover
-        raise IOError("scipy not installed. Use `pip " "install scipy`.")
+        raise ModuleNotFoundError("scipy not installed. Use `pip " "install scipy`.")
     return is_installed
 
 
@@ -65,11 +65,11 @@ def is_pandas_installed(raise_error: bool = False):
     try:
         import pandas as pd  # noqa
         is_installed = True
-    except IOError:  # pragma: no cover
+    except ModuleNotFoundError:  # pragma: no cover
         is_installed = False
     # Raise error (if needed) :
     if raise_error and not is_installed:  # pragma: no cover
-        raise IOError("pandas not installed. Use `pip install pandas`.")
+        raise ModuleNotFoundError("pandas not installed. Use `pip install pandas`.")
     return is_installed
 
 
@@ -78,11 +78,11 @@ def is_matplotlib_installed(raise_error: bool = False):
     try:
         import matplotlib.pyplot as plt  # noqa
         is_installed = True
-    except IOError:  # pragma: no cover
+    except ModuleNotFoundError:  # pragma: no cover
         is_installed = False
     # Raise error (if needed) :
     if raise_error and not is_installed:  # pragma: no cover
-        raise IOError("matplotlib not installed. Use `pip install matplotlib`.")
+        raise ModuleNotFoundError("matplotlib not installed. Use `pip install matplotlib`.")
     return is_installed
 
 
@@ -92,11 +92,11 @@ def is_sklearn_installed(raise_error: bool = False):
         import sklearn  # noqa
 
         is_installed = True
-    except IOError:  # pragma: no cover
+    except ModuleNotFoundError:  # pragma: no cover
         is_installed = False
     # Raise error (if needed) :
     if raise_error and not is_installed:  # pragma: no cover
-        raise IOError("sklearn not installed. Use `pip install scikit-learn`.")
+        raise ModuleNotFoundError("sklearn not installed. Use `pip install scikit-learn`.")
     return is_installed
 
 
@@ -105,11 +105,11 @@ def is_joblib_installed(raise_error: bool = False):
     try:
         import joblib  # noqa
         is_installed = True
-    except IOError:  # pragma: no cover
+    except ModuleNotFoundError:  # pragma: no cover
         is_installed = False
     # Raise error (if needed) :
     if raise_error and not is_installed:  # pragma: no cover
-        raise IOError("joblib not installed. Use `pip install joblib`.")
+        raise ModuleNotFoundError("joblib not installed. Use `pip install joblib`.")
     return is_installed
 
 
@@ -118,11 +118,11 @@ def is_tqdm_installed(raise_error: bool = False):
     try:
         from tqdm import tqdm  # noqa
         is_installed = True
-    except IOError:  # pragma: no cover
+    except ModuleNotFoundError:  # pragma: no cover
         is_installed = False
     # Raise error (if needed) :
     if raise_error and not is_installed:  # pragma: no cover
-        raise IOError("tqdm not installed. Use `pip " "install tqdm`.")
+        raise ModuleNotFoundError("tqdm not installed. Use `pip " "install tqdm`.")
     return is_installed
 
 
@@ -131,11 +131,11 @@ def is_difflib_installed(raise_error: bool = False):
     try:
         import difflib  # noqa
         is_installed = True
-    except IOError:  # pragma: no cover
+    except ModuleNotFoundError:  # pragma: no cover
         is_installed = False
     # Raise error (if needed) :
     if raise_error and not is_installed:  # pragma: no cover
-        raise IOError("difflib not installed. Use `pip " "install difflib`.")
+        raise ModuleNotFoundError("difflib not installed. Use `pip " "install difflib`.")
     return is_installed
 
 

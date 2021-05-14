@@ -9,7 +9,7 @@ import pandas as pd
 from matplotlib import cm
 from matplotlib import colors
 
-from turbopanda.utils import instance_check, unique_ordered
+from turbopanda.utils import instance_check, unique_ordered, umap
 
 __all__ = ("color_qualitative", "cat_array_to_color", "palette_cmap")
 
@@ -170,9 +170,9 @@ def palette_pairs(n: int):
     return list(it.islice(it.cycle(cols), 0, n))
 
 
-def palette_cmap(n: int, cmap: str):
+def palette_cmap(n: int, cmap: str, rstart=0., rend=1.):
     """given n, calculate the linspace searched for monocolor scales"""
-    return _colormap_to_hex(cm.get_cmap(cmap)(np.linspace(0.4 / n, 0.6 / n, n)))
+    return _colormap_to_hex(cm.get_cmap(cmap)(np.linspace(rstart, rend, n)))
 
 
 def color_qualitative(n: Union[int, List, Tuple], sharp: bool = True) -> List[str]:
@@ -212,13 +212,13 @@ def color_qualitative(n: Union[int, List, Tuple], sharp: bool = True) -> List[st
             getattr(cm, np.random.choice(lt8_pastel))(np.linspace(0, 1, n))
         )
     elif n <= 9 and sharp:
-        return _colormap_to_hex(cm.Set1(np.linspace(0, 1, n)))
+        return palette_cmap(n, "Set1")
     elif n <= 9 and not sharp:
-        return _colormap_to_hex(cm.Pastel1(np.linspace(0, 1, n)))
+        return palette_cmap(n, "Pastel1")
     elif n <= 10:
-        return _colormap_to_hex(cm.tab10(np.linspace(0, 1, n)))
+        return palette_cmap(n, "tab10")
     elif n <= 12:
-        return _colormap_to_hex(cm.Set3(np.linspace(0, 1, n)))
+        return palette_cmap(n, "Set3")
     elif n <= 20:
         return _colormap_to_hex(
             getattr(cm, np.random.choice(lt20))(np.linspace(0, 1, n))
@@ -238,7 +238,7 @@ def color_qualitative(n: Union[int, List, Tuple], sharp: bool = True) -> List[st
         )
 
 
-def cat_array_to_color(array, cmap="Blues"):
+def cat_array_to_color(array, cmap="Blues", rstart=0., rend=1.):
     """Given some list/array of values, find some way of mapping this to colour values
 
     Parameters
@@ -248,6 +248,10 @@ def cat_array_to_color(array, cmap="Blues"):
     cmap : str, dict, list-like
         Either a string or an array referencing the 'unique' colours
         If dict (k = name, v = hex color)
+    rstart : float [0..1]
+        The start of the color range
+    rend : float [0..1]
+        The end of the color range
     """
     instance_check(cmap, (str, dict, list, tuple))
 
@@ -262,14 +266,10 @@ def cat_array_to_color(array, cmap="Blues"):
         _array = _array.astype(np.str)
     if (_array.dtype.kind == "U") | (_array.dtype.kind == "O"):
         # i.e we have a string array
-        names = unique_ordered(_array)
-        if isinstance(cmap, str):
-            _d = dict(zip(names, palette_cmap(len(names), cmap=cmap)))
-        elif isinstance(cmap, dict):
-            _d = cmap
-        else:
-            _d = dict(zip(names, cmap))
-        dmap = np.vectorize(lambda x: _d[x])
-        return dmap(_array), "discrete"
+        name_uniq = unique_ordered(_array)
+        col_uniq = _colormap_to_hex(cm.get_map(cmap)(np.linspace(rstart, rend, len(name_uniq))))
+        name_col_map = dict(zip(name_uniq, col_uniq))
+        cl = umap(lambda s: s.replace(s, name_col_map[s]), _array)
+        return np.asarray(cl), "discrete"
     else:
         return _array, "continuous"

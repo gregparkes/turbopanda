@@ -6,7 +6,7 @@ import itertools as it
 import pandas as pd
 from matplotlib.lines import Line2D
 
-from turbopanda.utils import is_twotuple, unique_ordered
+from turbopanda.utils import is_twotuple, unique_ordered, zipe
 
 
 def _marker_set():
@@ -56,7 +56,8 @@ def legend_scatter(markers, colors, labels, msize=15):
         Line2D(
             [0], [0], color="w", marker=m, label=l, markerfacecolor=c, markersize=msize
         )
-        for m, c, l in it.zip_longest(markers, colors, labels)
+        # we use zipe to expand out markers etc.
+        for m, c, l in zipe(markers, colors, labels)
     ]
     return custom_scats
 

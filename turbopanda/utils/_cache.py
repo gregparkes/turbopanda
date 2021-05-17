@@ -7,6 +7,7 @@ from typing import Callable
 
 # make sure joblib is a requirement for this function.
 from turbopanda._dependency import requires
+from ._files import check_file_path
 
 
 def _load_file(fn, debug=True):
@@ -17,15 +18,23 @@ def _load_file(fn, debug=True):
     return joblib.load(fn)
 
 
-def _write_file(um, fn, debug=True):
+def _write_file(um, fn, debug=True, create_folders=True):
     import joblib
+    # check that the file path is real.
+    check_file_path(fn, create_folders, not create_folders, 1 if debug else 0)
     if debug:
+        # check that the folder path exists.
         print("writing file '%s'" % fn)
     joblib.dump(um, fn)
 
 
 @requires("joblib")
-def cache(fn: str, f: Callable, debug=True, *args, **kwargs):
+def cache(fn: str,
+          f: Callable,
+          debug: bool = True,
+          expand_filepath: bool = False,
+          *args,
+          **kwargs):
     """Provides automatic caching for anything using joblib.
 
     Parameters
@@ -36,6 +45,8 @@ def cache(fn: str, f: Callable, debug=True, *args, **kwargs):
         A custom function returning the object to cache
     debug : bool
         Whether to print statements.
+    expand_filepath : bool
+        If True, checks the filepath AND adds folders if they dont exist to reach it
     *args : list, optional
         Arguments to pass to f(...)
     **kwargs : dict, optional
@@ -54,5 +65,5 @@ def cache(fn: str, f: Callable, debug=True, *args, **kwargs):
         if debug:
             print("running chunk '%s'" % fn)
         res = f(*args, **kwargs)
-        _write_file(res, fn, debug)
+        _write_file(res, fn, debug, expand_filepath)
         return res

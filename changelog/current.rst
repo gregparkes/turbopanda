@@ -35,6 +35,9 @@ Changelog
 
 `turbopanda.utils`
 ..................
+- |Enhancement| `cache` now checks the filepath and can create folders before writing
+- |Feature| Added `check_file_path` method to ensure that a path to a file is real even if the file itself exists
 
 `turbopanda.sample`
 ...................
+- |Fix| `covariance_matrix` now properly handle numba dependency

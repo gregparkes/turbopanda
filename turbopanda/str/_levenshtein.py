@@ -19,8 +19,7 @@ def _ratio_and_distance(s1: str, s2: str, ratio_calc: bool = True) -> float:
     distance between the first i characters of s and the
     first j characters of t
     """
-
-    @numba.jit(nopython=True)
+    @jit(nopython=True)
     def _fill_matrix(d, s, t):
         r = d.shape[0]
         c = d.shape[1]
@@ -113,6 +112,8 @@ def levenshtein(
         The levenshtein distance, where n is the number of X elements,
             p is the number of y elements
     """
+    from numba import jit
+
     if as_matrix:
         with_replacement = True
 

@@ -4,46 +4,77 @@
 
 import numpy as np
 import warnings
-from numba import jit
 
 from turbopanda.utils import nonnegative, instance_check, arrays_equal_size
+from turbopanda._dependency import is_numba_installed
 
 
-@jit
-def _negative_matrix_direction(p):
-    # calculates the negative direction matrix
-    _X = np.ones((p, p))
-    # every other point in the array is -1 for both directions
-    _X[::2, ::2] = -1.
-    _X[1::2, 1::2] = -1.
-    return _X
+def _create_cov_matrix(p, c, diag_v, rng_dir):
+    # wrapper function to surround using jit.
+    if is_numba_installed():
+        # import
+        from numba import jit
 
+        @jit(nopython=True)
+        def _generate_covariance_withjit():
+            # diag elements
+            _diag = np.full(p, diag_v) + np.random.normal(0, 0.005, p)
+            _diag_mat = np.full((p, p), _diag)
 
-@jit
-def _generate_covariance(p, c, diag_v, rng_dir):
-    # diag elements
-    _diag = np.full(p, diag_v) + np.random.normal(0, 0.005, p)
-    _diag_mat = np.full((p, p), _diag)
+            _cov_min = np.minimum(_diag_mat, _diag_mat.T) * c
 
-    _cov_min = np.minimum(_diag_mat, _diag_mat.T) * c
+            # a matrix to flip random directions.
+            if rng_dir:
+                # randomly -1 or 1.
+                _dir = np.sign(np.random.uniform(-1, 1))
+            else:
+                _dir = np.sign(corr_ratio)
 
-    # a matrix to flip random directions.
-    if rng_dir:
-        # randomly -1 or 1.
-        _dir = np.sign(np.random.uniform(-1, 1))
+            if _dir < 0:
+                # create -1s at offset positions to ensure invertibility
+                _tmpX = np.ones((p, p))
+                _tmpX[::2, ::2] = -1.
+                _tmpX[1::2, 1::2] = -1.
+                # alternative pos and negative diag terms
+                _cov_lower = np.tril(_cov_min * _tmpX, k=-1)
+            else:
+                # all positive values.
+                _cov_lower = np.tril(np.abs(_cov_min), k=-1)
+
+            # make full cov matrix
+            _cov_total = _cov_lower + _cov_lower.T + np.diag(_diag)
+            return _cov_total
+        return _generate_covariance_withjit()
     else:
-        _dir = np.sign(corr_ratio)
+        def _generate_covariance_woutjit():
+            # diag elements
+            _diag = np.full(p, diag_v) + np.random.normal(0, 0.005, p)
+            _diag_mat = np.full((p, p), _diag)
 
-    if _dir < 0:
-        # alternative pos and negative diag terms
-        _cov_lower = np.tril(_cov_min * _negative_matrix_direction(p), k=-1)
-    else:
-        # all positive values.
-        _cov_lower = np.tril(np.abs(_cov_min), k=-1)
+            _cov_min = np.minimum(_diag_mat, _diag_mat.T) * c
 
-    # make full cov matrix
-    _cov_total = _cov_lower + _cov_lower.T + np.diag(_diag)
-    return _cov_total
+            # a matrix to flip random directions.
+            if rng_dir:
+                # randomly -1 or 1.
+                _dir = np.sign(np.random.uniform(-1, 1))
+            else:
+                _dir = np.sign(corr_ratio)
+
+            if _dir < 0:
+                # create -1s at offset positions to ensure invertibility
+                _tmpX = np.ones((p, p))
+                _tmpX[::2, ::2] = -1.
+                _tmpX[1::2, 1::2] = -1.
+                # alternative pos and negative diag terms
+                _cov_lower = np.tril(_cov_min * _tmpX, k=-1)
+            else:
+                # all positive values.
+                _cov_lower = np.tril(np.abs(_cov_min), k=-1)
+
+            # make full cov matrix
+            _cov_total = _cov_lower + _cov_lower.T + np.diag(_diag)
+            return _cov_total
+        return _generate_covariance_woutjit()
 
 
 def covariance_matrix(p,
@@ -80,14 +111,14 @@ def covariance_matrix(p,
     if p < 2:
         raise ValueError("'p' must be > 1")
     # clips ratio into the range [0, 1]
-    _corr_ratio = np.clip(corr_ratio, 1./(p-1), 0.999)
+    _corr_ratio = np.clip(corr_ratio, 1. / (p - 1), 0.999)
 
     if not np.isclose(corr_ratio, _corr_ratio):
         warnings.warn("`corr_ratio` parameter is clipped from {:0.3f} to [{:0.3f}, 1]".format(
             corr_ratio, _corr_ratio
         ))
 
-    return _generate_covariance(p, _corr_ratio, diag_var, random_direction)
+    return _create_cov_matrix(p, _corr_ratio, diag_var, random_direction)
 
 
 def multivariate_gaussians(n, k, C=0.5):

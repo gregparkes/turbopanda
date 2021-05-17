@@ -3,6 +3,8 @@
 """Methods utility file-related functions."""
 
 import glob
+import os
+import warnings
 from typing import Any, List, Iterable
 
 from ._sets import join
@@ -13,6 +15,7 @@ __all__ = (
     "insert_prefix",
     "insert_suffix",
     "get_file_expanded",
+    "check_file_path"
 )
 
 
@@ -109,3 +112,60 @@ def insert_suffix(filename: str, ins: str) -> str:
     """
     _f = split_file_directory(filename)
     return "/".join([_f[0], _f[1] + ins]) + "." + _f[-1]
+
+
+def check_file_path(path: str,
+                    create_folder: bool = False,
+                    raise_error: bool = True,
+                    verbose: int = 0) -> bool:
+    """Checks along a filepath and raises errors if one of the files doesn't exist.
+
+    Parameters
+    ----------
+    path : str
+        The filepath to the desired file.
+    create_folder : bool
+        Creates a folder with warning if not found at each step
+    raise_error : bool
+        Raises an error if a folder isn't found, does not create folder
+    verbose : int
+        Prints statements at each folder step
+
+    Returns
+    -------
+    result : bool
+        True or False
+    """
+
+    # handle case where create_folder and raise_error are true
+    if raise_error and create_folder:
+        warnings.warn("`raise_error` and `create_folder` cannot both be true, defaulting to `raise_error`")
+
+    def _remove_garb(x):
+        return x != "" and x != ".." and x.find(".") == -1
+
+    # get a list of folders in order
+    folders = list(filter(_remove_garb, path.split("/")))
+
+    if verbose > 1:
+        print("folders: " + folders)
+
+    # iterate through each folder subtype and check
+    for f in folders:
+        constructed_string = path[:path.find(f) + len(f)]
+        if verbose > 1:
+            print("folder step: " + constructed_string)
+        # does this subpart exist
+        if not os.path.isdir(constructed_string):
+            absp = os.path.abspath(constructed_string)
+            # now create, raise or warn
+            if raise_error:
+                # raise an error
+                raise FileNotFoundError("directory at '{}' does not exist".format(absp))
+            elif create_folder:
+                if verbose > 0:
+                    print("creating folder at '{}'".format(absp))
+                os.mkdir(constructed_string)
+            else:
+                warnings.warn("directory at '{}' does not exist".format(absp), UserWarning)
+    return True

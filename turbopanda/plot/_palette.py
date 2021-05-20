@@ -9,7 +9,7 @@ import pandas as pd
 from matplotlib import cm
 from matplotlib import colors
 
-from turbopanda.utils import instance_check, unique_ordered, umap
+from turbopanda.utils import instance_check, unique_ordered
 
 __all__ = ("color_qualitative", "cat_array_to_color", "palette_cmap")
 
@@ -269,7 +269,7 @@ def cat_array_to_color(array, cmap="Blues", rstart=0., rend=1.):
         name_uniq = unique_ordered(_array)
         col_uniq = _colormap_to_hex(cm.get_map(cmap)(np.linspace(rstart, rend, len(name_uniq))))
         name_col_map = dict(zip(name_uniq, col_uniq))
-        cl = umap(lambda s: s.replace(s, name_col_map[s]), _array)
+        cl = list(map(lambda s: s.replace(s, name_col_map[s]), _array))
         return np.asarray(cl), "discrete"
     else:
         return _array, "continuous"

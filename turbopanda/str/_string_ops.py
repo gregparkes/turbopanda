@@ -4,12 +4,12 @@
 
 import re
 import itertools as it
-from functools import reduce
+from functools import reduce, partial
 import numpy as np
 from typing import Tuple, Union, Iterable, List
 from pandas import DataFrame, Index, Series
 
-from turbopanda.utils import belongs, instance_check, umap, transform_copy
+from turbopanda.utils import belongs, instance_check, transform_copy
 
 __all__ = ("patproduct", "string_replace", "reformat", "shorten")
 
@@ -89,7 +89,10 @@ def shorten(s, newl: int = 15, strategy: str = "middle"):
     if isinstance(s, str):
         return _shorten_string(s, newl, strategy)
     else:
-        return [_shorten_string(_s, newl, strategy) for _s in s]
+        # create a partial passing in keyword arguments to every call.
+        _shorten_part = partial(_shorten_string, approp_len=newl, strategy=strategy)
+        # map through the strings and shorten them.
+        return list(map(_shorten_part, s))
 
 
 def string_replace(
@@ -147,7 +150,7 @@ def string_replace(
             return strings
         else:
             strings_new = reduce(
-                lambda sold, arg: umap(lambda s: s.replace(*arg), sold),
+                lambda sold, arg: map(lambda s: s.replace(*arg), sold),
                 [strings, *operations],
             )
             return transform_copy(strings, strings_new)

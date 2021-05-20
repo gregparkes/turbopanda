@@ -139,15 +139,13 @@ def is_difflib_installed(raise_error: bool = False):
     return is_installed
 
 
-def requires(package_name: str, optional: bool = False):
+def requires(*package_names: str):
     """A decorator for requiring certain packages.
 
         Parameters
         ----------
-        package_name : str
-            The name of the package needed to run this program
-        optional : bool, default=False
-            Whether the packages are optional or required
+        package_names : str args
+            Arguments The name of the package needed to run this program
         """
     packages = ('numpy', 'scipy', 'matplotlib', 'pandas', 'sklearn',
                 'joblib', 'tqdm', 'numba', 'difflib')
@@ -157,14 +155,14 @@ def requires(package_name: str, optional: bool = False):
                      is_tqdm_installed, is_numba_installed,
                      is_difflib_installed)
     # ensure package_name is one of the selected.
-    belongs(package_name, packages)
     hash_pack = dict(zip(packages, aligned_funcs))
 
     def _decorator_requires(func):
         @functools.wraps(func)
         def _inner_func(*args, **kwargs):
             # call the appropriate checking function
-            hash_pack[package_name](not optional)
+            for pn in package_names:
+                hash_pack[pn](True)
             # now return as normal
             return func(*args, **kwargs)
 

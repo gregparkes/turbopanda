@@ -57,8 +57,8 @@ def annotate(
     instance_check(ax, (type(None), mpl.axes.Axes))
     arrays_equal_size(X, Y, T)
     # convert to numpy.
-    _X = as_flattened_numpy(X)
-    _Y = as_flattened_numpy(Y)
+    _X = as_flattened_numpy(X).copy()
+    _Y = as_flattened_numpy(Y).copy()
     _T = as_flattened_numpy(T)
 
     if word_shorten:

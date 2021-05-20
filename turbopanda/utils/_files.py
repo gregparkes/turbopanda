@@ -110,8 +110,8 @@ def insert_suffix(filename: str, ins: str) -> str:
     new_filename : str
         The new filename full string
     """
-    _f = split_file_directory(filename)
-    return "/".join([_f[0], _f[1] + ins]) + "." + _f[-1]
+    lhs, rhs = filename.rsplit(".", 1)
+    return lhs + ins + "." + rhs
 
 
 def check_file_path(path: str,

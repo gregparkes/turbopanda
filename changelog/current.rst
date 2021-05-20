@@ -7,6 +7,7 @@ Version 0.2.9
 Changelog
 ---------
 - |Enhancement| `joblib` and `tqdm` are now 'optional' modules in most cases.
+- |Fix| `requires` can now accept multiple arguments
 
 `turbopanda.MetaPanda`
 ......................
@@ -28,6 +29,8 @@ Changelog
 `turbopanda.plot`
 .................
 - |Fix| `scatter` now accepts X and Y with missing values.
+- |Fix| `annotate` now takes a copy of X and Y, preventing a bug where the data underlying was changing.
+- |Fix| `palette` uses `map` now instead of `umap`
 
 `turbopanda.str`
 ................
@@ -35,9 +38,12 @@ Changelog
 
 `turbopanda.utils`
 ..................
+- |Enhancement| `tqdm` now works properly with parallelized loops with `joblib`
 - |Enhancement| `cache` now checks the filepath and can create folders before writing
 - |Feature| Added `check_file_path` method to ensure that a path to a file is real even if the file itself exists
+- |Fix| `umap` and other functions now incorporate tqdm, filepaths fixed properly
 
 `turbopanda.sample`
 ...................
+- |MajorFeature| `matrix_homo` and `matrix_hetero` allow for creation of toy data matrices X with homoscedastic and heteroscedastic noise.
 - |Fix| `covariance_matrix` now properly handle numba dependency

@@ -7,9 +7,11 @@ import os
 from typing import Callable
 import itertools as it
 
-from ._cache import cache
+from ._cache import cache, _simple_debug_cache
 from ._files import insert_suffix as add_suf
+from ._files import check_file_path
 from turbopanda._dependency import requires, is_tqdm_installed
+from ._tqdm_parallel import TqdmParallel
 
 __all__ = ("zipe", "umap", "umapc", "umapp", "umapcc", "umappc", "umappcc")
 
@@ -27,6 +29,26 @@ def _write_file(um, fn, debug=True):
     if debug:
         print("writing file '%s'" % fn)
     joblib.dump(um, fn)
+
+
+def _create_cache_directory(fn):
+    # create a cache directory in the directory below where to plant the file
+    fnspl = fn.rsplit("/", 1)
+    if len(fnspl) == 2:
+        parent_rel, just_file = fnspl
+        parent_abs = os.path.abspath(parent_rel)
+    else:
+        just_file = fnspl[0]
+        parent_rel = "."
+        parent_abs = os.getcwd()
+
+    abscachedir = os.path.join(parent_abs, "_tmp_umapcc_")
+    relfile = os.path.join(os.path.join(parent_rel, "_tmp_umapcc_"), just_file)
+
+    if not os.path.isdir(abscachedir):
+        os.mkdir(abscachedir)
+
+    return relfile, abscachedir
 
 
 def zipe(*args):
@@ -61,32 +83,53 @@ def zipe(*args):
         return list(it.zip_longest(*map(_singleton, args)))
 
 
-def _delete_temps(fn, n):
-    for i in range(n):
-        fni = add_suf(fn, str(i))
-        if os.path.isfile(fni):
-            os.remove(fni)
+def _delete_temps(fn):
+    # remove the tree
+    import shutil
+    try:
+        shutil.rmtree(fn)
+    except OSError as e:
+        print("Error: %s - %s." % (e.filename, e.strerror))
 
 
-def _map_comp(f, arg0, *args):
-    # check to make sure every argument is an iterable, and make it one if not
-    if len(args) == 0:
-        return [f(arg) for arg in arg0]
+def _map_comp(f, *args):
+    N = len(args)
+    narg = len(args[0])
+    if is_tqdm_installed():
+        from tqdm import tqdm
+        _gen = (tqdm(args, position=0, total=narg)
+                if N == 0
+                else tqdm(it.zip_longest(*args), position=0, total=narg))
     else:
-        return [f(*arg) for arg in it.zip_longest(*args)]
+        _gen = args if N == 0 else it.zip_longest(*args)
+    # check to make sure every argument is an iterable, and make it one if not
+    if N == 0:
+        return [f(arg) for arg in _gen]
+    else:
+        return [f(*arg) for arg in _gen]
 
 
 def _parallel_list_comprehension(f, *args):
-    import joblib
-    if len(args) == 0:
+    from joblib import cpu_count, Parallel, delayed
+
+    N = len(args)
+
+    if N == 0:
         return f()
     else:
-        n = len(args[0])
-        ncpu = n if n < joblib.cpu_count() else (joblib.cpu_count() - 1)
-        if len(args) == 1:
-            um = joblib.Parallel(ncpu)(joblib.delayed(f)(arg) for arg in args[0])
+        if is_tqdm_installed():
+            # use tqdm to wrap around our iterable
+            _Threaded = TqdmParallel(use_tqdm=True, total=len(args[0]))
         else:
-            um = joblib.Parallel(ncpu)(joblib.delayed(f)(*arg) for arg in it.zip_longest(*args))
+            _Threaded = Parallel
+
+        if N == 1:
+            n = len(args[0])
+            ncpu = n if n < cpu_count() else (cpu_count() - 1)
+            um = _Threaded(ncpu)(delayed(f)(arg) for arg in args[0])
+        else:
+            ncpu = N if N < cpu_count() else (cpu_count() - 1)
+            um = _Threaded(ncpu)(delayed(f)(*arg) for arg in it.zip_longest(*args))
         return um
 
 
@@ -113,12 +156,12 @@ def umap(f: Callable, *args):
     Examples
     --------
     Provides a clean way to do a list comprehension:
-    >>> import turbopanda as turb
-    >>> turb.utils.umap(lambda x: x**2, [2, 4, 6])
+    >>> import turbopanda.utils import umap
+    >>> umap(lambda x: x**2, [2, 4, 6])
     >>> [4, 16, 36]
     Like the normal mapping, multiple lists map to
     multiple parameters passed to the function:
-    >>> turb.utils.umap(lambda x, y: x + y, [2, 4, 6], [1, 2, 4])
+    >>> umap(lambda x, y: x + y, [2, 4, 6], [1, 2, 4])
     >>> [3, 6, 10]
     """
     # check to make sure every argument is an iterable, and make it one if not
@@ -152,7 +195,8 @@ def umapc(fn: str, f: Callable, *args):
     --------
     See `turb.utils.umap` for examples.
     """
-    return cache(fn, _map_comp, False, f, *args)
+    # call new cache passing our _map_comp args
+    return _simple_debug_cache(fn, _map_comp, f, *args)
 
 
 @requires("joblib")
@@ -210,14 +254,7 @@ def umappc(fn: str, f: Callable, *args):
     --------
     See `turb.utils.umap` for examples.
     """
-    if os.path.isfile(fn):
-        return _load_file(fn)
-    else:
-        um = _parallel_list_comprehension(f, *args)
-        # cache result
-        _write_file(um, fn)
-        # return
-        return um
+    return _simple_debug_cache(fn, _parallel_list_comprehension, f, *args)
 
 
 @requires("joblib")
@@ -257,7 +294,9 @@ def umapcc(fn: str, f: Callable, *args):
         # pre-compute iterable
         its = list(it.zip_longest(*args))
         n = len(its)
-        import shutil
+        # check the directory actually exists before continuing
+        check_file_path(fn, False, True, 0)
+
         # use tqdm for display.
         if is_tqdm_installed():
             from tqdm import tqdm
@@ -266,23 +305,17 @@ def umapcc(fn: str, f: Callable, *args):
             _generator = enumerate(its)
 
         # create a cache directory in the directory below where to plant the file
-        parent_rel, just_file = fn.rsplit("/", 1)
-        parent_abs = os.path.abspath(parent_rel)
-        abscachedir = os.path.join(parent_abs, "_tmp_umapcc_")
-        relfile = os.path.join(os.path.join(parent_rel, "_tmp_umapcc_"), just_file)
-
-        if not os.path.isdir(abscachedir):
-            os.mkdir(abscachedir)
+        relfile, abscachedir = _create_cache_directory(fn)
 
         # run and do chunked caching, using item cache
         um = [
-            cache(add_suf(relfile, str(i)), f, False, *arg)
+            _simple_debug_cache(add_suf(relfile, str(i)), f, *arg)
             for i, arg in _generator
         ]
         # save final version
         _write_file(um, fn)
         # delete the temp files
-        _delete_temps(relfile, n)
+        _delete_temps(abscachedir)
         # return
         return um
 
@@ -320,19 +353,35 @@ def umappcc(fn: str, f: Callable, *args):
     --------
     See `turb.utils.umap` for examples.
     """
+    from joblib import Parallel, cpu_count, delayed
     if os.path.isfile(fn):
         return _load_file(fn)
     else:
-        n = len(args[0])
-        ncpu = n if n < joblib.cpu_count() else (joblib.cpu_count() - 1)
+        # pre-compute iterable
+        its = list(it.zip_longest(*args))
+        n = len(its)
+        ncpu = n if n < cpu_count() else (cpu_count() - 1)
+        # check the directory actually exists before continuing
+        check_file_path(fn, False, True, 0)
+
+        # use tqdm for display.
+        if is_tqdm_installed():
+            # use our custom tqdm parallel class
+            _Threaded = TqdmParallel(use_tqdm=True, total=n)
+        else:
+            _Threaded = Parallel
+
+        # create a cache directory in the directory below where to plant the file
+        relfile, abscachedir = _create_cache_directory(fn)
+
         # do list comprehension using parallelism
-        um = joblib.Parallel(ncpu)(
-            joblib.delayed(cache)(add_suf(fn, str(i)), f, False, *arg)
-            for i, arg in enumerate(it.zip_longest(*args))
+        um = _Threaded(ncpu)(
+            delayed(_simple_debug_cache)(add_suf(relfile, str(i)), f, *arg)
+            for i, arg in enumerate(its)
         )
         # save final version
         _write_file(um, fn)
         # delete temp versions
-        _delete_temps(fn, n)
+        _delete_temps(abscachedir)
         # return
         return um

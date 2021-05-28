@@ -267,7 +267,7 @@ def cat_array_to_color(array, cmap="Blues", rstart=0., rend=1.):
     if (_array.dtype.kind == "U") | (_array.dtype.kind == "O"):
         # i.e we have a string array
         name_uniq = unique_ordered(_array)
-        col_uniq = _colormap_to_hex(cm.get_map(cmap)(np.linspace(rstart, rend, len(name_uniq))))
+        col_uniq = _colormap_to_hex(cm.get_cmap(cmap)(np.linspace(rstart, rend, len(name_uniq))))
         name_col_map = dict(zip(name_uniq, col_uniq))
         cl = list(map(lambda s: s.replace(s, name_col_map[s]), _array))
         return np.asarray(cl), "discrete"

@@ -52,7 +52,7 @@ def best_model(
     # create a copy
     res = cv_results.df_ if not isinstance(cv_results, pd.DataFrame) else cv_results
     # transform.
-    if res[sely].mean() < 0.0:
+    if res[sely].squeeze().mean() < 0.0:
         res = res.pipe(absolute, "(?:split[0-9]+|mean)_(?:train|test)_score")
     # for each 'model', arrange data into boxplot
     if minimize:

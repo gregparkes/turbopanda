@@ -7,7 +7,7 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 
-__all__ = ("panderfy", "transform_copy", "series")
+__all__ = ("panderfy", "transform_copy", "series", "vector")
 
 
 def panderfy(func: Callable):
@@ -45,6 +45,12 @@ def transform_copy(old, new):
         return pd.DataFrame(new, columns=old.columns, index=old.index)
     else:
         return new
+
+
+def vector(*args):
+    """Given list arguments, converts each one to a numpy and returns"""
+    res = [np.array(a) for a in args]
+    return tuple(res)
 
 
 def series(values, index, name=None):

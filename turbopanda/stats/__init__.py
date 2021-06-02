@@ -8,3 +8,4 @@ from ._density import density
 from ._linear_model import LinearModel
 from ._stats import *
 from ._lmfast import lm
+from ._mvn import is_mvn

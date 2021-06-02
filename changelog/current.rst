@@ -17,14 +17,9 @@ Changelog
 - |Enhancement| `bicorr` now handles category-category and continuous-category combinations.
 - |Fix| `entropy`, `continuous_mutual_info` now add small eps to prevent NaN results for log2(0) cases.
 
-`turbopanda.dev`
-................
-
-`turbopanda.ml`
-...............
-
-`turbopanda.pipe`
-.................
+`turbopanda.stats`
+..................
+- |Feature| Added `is_mvn` to collect normally distributed columns from a pandas dataframe.
 
 `turbopanda.plot`
 .................

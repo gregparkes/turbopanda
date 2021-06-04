@@ -6,8 +6,9 @@
 import os
 from typing import Callable
 import itertools as it
+from functools import partial
 
-from ._cache import cache, _simple_debug_cache
+from ._cache import cache
 from ._files import insert_suffix as add_suf
 from ._files import check_file_path
 from turbopanda._dependency import requires, is_tqdm_installed
@@ -196,7 +197,10 @@ def umapc(fn: str, f: Callable, *args):
     See `turb.utils.umap` for examples.
     """
     # call new cache passing our _map_comp args
-    return _simple_debug_cache(fn, _map_comp, f, *args)
+    # create a partial passing in the keyword arguments.
+    _cache_part = partial(cache, debug=True, expand_filepath=True)
+    # call function with f as the first arg and all other args after.
+    return _cache_part(fn, _map_comp, f, *args)
 
 
 @requires("joblib")
@@ -254,7 +258,10 @@ def umappc(fn: str, f: Callable, *args):
     --------
     See `turb.utils.umap` for examples.
     """
-    return _simple_debug_cache(fn, _parallel_list_comprehension, f, *args)
+    # create partial
+    _cache_part = partial(cache, debug=True, expand_filepath=True)
+    # now call
+    return _cache_part(fn, _parallel_list_comprehension, f, *args)
 
 
 @requires("joblib")
@@ -306,10 +313,11 @@ def umapcc(fn: str, f: Callable, *args):
 
         # create a cache directory in the directory below where to plant the file
         relfile, abscachedir = _create_cache_directory(fn)
-
         # run and do chunked caching, using item cache
+        _cache_part = partial(cache, debug=False, expand_filepath=False)
+
         um = [
-            _simple_debug_cache(add_suf(relfile, str(i)), f, *arg)
+            _cache_part(add_suf(relfile, str(i)), f, *arg)
             for i, arg in _generator
         ]
         # save final version
@@ -373,10 +381,12 @@ def umappcc(fn: str, f: Callable, *args):
 
         # create a cache directory in the directory below where to plant the file
         relfile, abscachedir = _create_cache_directory(fn)
+        # run and do chunked caching, using item cache
+        _cache_part = partial(cache, debug=False, expand_filepath=False)
 
         # do list comprehension using parallelism
         um = _Threaded(ncpu)(
-            delayed(_simple_debug_cache)(add_suf(relfile, str(i)), f, *arg)
+            delayed(_cache_part)(add_suf(relfile, str(i)), f, *arg)
             for i, arg in enumerate(its)
         )
         # save final version

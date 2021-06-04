@@ -10,39 +10,6 @@ from turbopanda._dependency import requires
 from ._files import check_file_path
 
 
-def _load_file(fn, debug=True):
-    from joblib import load
-    # use joblib.load to read in the data
-    if debug:
-        print("loading file '%s'" % fn)
-    return load(fn)
-
-
-def _write_file(um, fn, debug=True, create_folders=True):
-    from joblib import dump
-    # check that the file path is real.
-    check_file_path(fn, create_folders, not create_folders, 1 if debug else 0)
-    if debug:
-        # check that the folder path exists.
-        print("writing file '%s'" % fn)
-    dump(um, fn)
-
-
-def _simple_debug_cache(fn, f, *args):
-    from joblib import dump, load
-    # perform a cursory check of the files.
-    check_file_path(fn, False, True, 1)
-
-    if os.path.isfile(fn):
-        print("loading file '%s'" % fn)
-        return load(fn)
-    else:
-        res = f(*args)
-        print("writing file '%s'" % fn)
-        dump(res, fn)
-        return res
-
-
 @requires("joblib")
 def cache(fn: str,
           f: Callable,
@@ -72,11 +39,22 @@ def cache(fn: str,
     ca : cached element
         This can take many forms, either as list, tuple or dict usually
     """
+    from joblib import load, dump
+
     if os.path.isfile(fn):
-        return _load_file(fn, debug)
+        if debug:
+            print("loading file '%s'" % fn)
+        return load(fn)
     else:
+        # firstly check the filepath is real
+        if expand_filepath:
+            check_file_path(fn, expand_filepath, not expand_filepath, 1 if debug else 0)
+
         if debug:
             print("running chunk '%s'" % fn)
         res = f(*args, **kwargs)
-        _write_file(res, fn, debug, expand_filepath)
+        if debug:
+            # check that the folder path exists.
+            print("writing file '%s'" % fn)
+        dump(res, fn)
         return res

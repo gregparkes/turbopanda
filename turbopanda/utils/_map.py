@@ -14,7 +14,7 @@ from ._files import check_file_path
 from turbopanda._dependency import requires, is_tqdm_installed
 from ._tqdm_parallel import TqdmParallel
 
-__all__ = ("zipe", "umap", "umapc", "umapp", "umapcc", "umappc", "umappcc")
+__all__ = ("zipe", "umap", "umapc", "umapp", "umapcc", "umappc", "umappcc", "umap_validate")
 
 
 def _load_file(fn, debug=True):
@@ -32,7 +32,19 @@ def _write_file(um, fn, debug=True):
     joblib.dump(um, fn)
 
 
-def _create_cache_directory(fn):
+def _mini_cache(fn, f, *args):
+    from joblib import load, dump
+
+    if os.path.isfile(fn):
+        return load(fn)
+    else:
+        res = f(*args)
+        dump(res, fn)
+        return res
+
+
+def _directory_info(fn):
+    """Returns the relative file and absolute cache directory information"""
     # create a cache directory in the directory below where to plant the file
     fnspl = fn.rsplit("/", 1)
     if len(fnspl) == 2:
@@ -45,7 +57,12 @@ def _create_cache_directory(fn):
 
     abscachedir = os.path.join(parent_abs, "_tmp_umapcc_")
     relfile = os.path.join(os.path.join(parent_rel, "_tmp_umapcc_"), just_file)
+    return relfile, abscachedir
 
+
+def _create_cache_directory(fn):
+    relfile, abscachedir = _directory_info(fn)
+    # if it doesn't already exist, create it.
     if not os.path.isdir(abscachedir):
         os.mkdir(abscachedir)
 
@@ -197,10 +214,8 @@ def umapc(fn: str, f: Callable, *args):
     See `turb.utils.umap` for examples.
     """
     # call new cache passing our _map_comp args
-    # create a partial passing in the keyword arguments.
-    _cache_part = partial(cache, debug=True, expand_filepath=True)
     # call function with f as the first arg and all other args after.
-    return _cache_part(fn, _map_comp, f, *args)
+    return _mini_cache(fn, _map_comp, f, *args)
 
 
 @requires("joblib")
@@ -259,9 +274,7 @@ def umappc(fn: str, f: Callable, *args):
     See `turb.utils.umap` for examples.
     """
     # create partial
-    _cache_part = partial(cache, debug=True, expand_filepath=True)
-    # now call
-    return _cache_part(fn, _parallel_list_comprehension, f, *args)
+    return _mini_cache(fn, _parallel_list_comprehension, f, *args)
 
 
 @requires("joblib")
@@ -314,10 +327,10 @@ def umapcc(fn: str, f: Callable, *args):
         # create a cache directory in the directory below where to plant the file
         relfile, abscachedir = _create_cache_directory(fn)
         # run and do chunked caching, using item cache
-        _cache_part = partial(cache, debug=False, expand_filepath=False)
+        # _cache_part = partial(cache, f=f, debug=False, expand_filepath=False)
 
         um = [
-            _cache_part(add_suf(relfile, str(i)), f, *arg)
+            _mini_cache(add_suf(relfile, str(i)), f, *arg)
             for i, arg in _generator
         ]
         # save final version
@@ -381,12 +394,9 @@ def umappcc(fn: str, f: Callable, *args):
 
         # create a cache directory in the directory below where to plant the file
         relfile, abscachedir = _create_cache_directory(fn)
-        # run and do chunked caching, using item cache
-        _cache_part = partial(cache, debug=False, expand_filepath=False)
-
         # do list comprehension using parallelism
         um = _Threaded(ncpu)(
-            delayed(_cache_part)(add_suf(relfile, str(i)), f, *arg)
+            delayed(_mini_cache)(add_suf(relfile, str(i)), f, *arg)
             for i, arg in enumerate(its)
         )
         # save final version
@@ -395,3 +405,33 @@ def umappcc(fn: str, f: Callable, *args):
         _delete_temps(abscachedir)
         # return
         return um
+
+
+@requires("joblib")
+def umap_validate(fn: str):
+    """Validate partial stored cache chunk files into one.
+
+    For use with `umapcc` or `umappcc`.
+
+    Parameters
+    ----------
+    fn : str
+        The path and filename.
+
+    Returns
+    -------
+    res : Any
+        The results from f(*args) from a previous call to `umapcc` or others.
+
+    Examples
+    --------
+    See `turb.utils.umap` for examples.
+    """
+    # dig into the cache directory and collect the files, concatenating them together.
+    relfile, abscachedir = _directory_info(fn)
+    # use glob and get all the files within the directory
+    import glob
+    sub_file_names = glob.glob(os.path.join(abscachedir, "*"))
+    # iterate through the files and load them
+    data = [_load_file(s) for s in sub_file_names]
+    return data

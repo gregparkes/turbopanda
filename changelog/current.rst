@@ -36,6 +36,7 @@ Changelog
 - |Enhancement| `tqdm` now works properly with parallelized loops with `joblib`
 - |Enhancement| `cache` now checks the filepath and can create folders before writing
 - |Feature| Added `check_file_path` method to ensure that a path to a file is real even if the file itself exists
+- |Feature| Added `umap_validate` which reads in 'partial' chunk run files for analysis.
 - |Fix| `umap` and other functions now incorporate tqdm, filepaths fixed properly
 
 `turbopanda.sample`

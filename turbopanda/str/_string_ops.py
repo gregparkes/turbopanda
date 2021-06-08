@@ -149,10 +149,10 @@ def string_replace(
         if len(strings) == 0:
             return strings
         else:
-            strings_new = reduce(
+            strings_new = list(reduce(
                 lambda sold, arg: map(lambda s: s.replace(*arg), sold),
                 [strings, *operations],
-            )
+            ))
             return transform_copy(strings, strings_new)
 
 

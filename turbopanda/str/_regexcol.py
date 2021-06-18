@@ -128,6 +128,9 @@ def pattern(
             grpres = [_foreach_flexterm(t, K) for t in terms]
             # reduce using intersect or union
             full = reduce(_integrate_terms, it.zip_longest(grpres, operators))
-            return full
+            if isinstance(full, (tuple,list)):
+                return full[0]
+            else:
+                return full
     else:
         return _choose_regex(pat, K)

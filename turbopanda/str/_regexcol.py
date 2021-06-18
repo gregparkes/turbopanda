@@ -57,11 +57,13 @@ def _foreach_flexterm(term: str, K):
 def _integrate_terms(a, b):
     """where a, b are packaged (term, op)"""
     t1, op = a
-    t2, _ = b
+    t2, op2 = b
     if op == '&':
-        return intersect(t1, t2)
+        # return a 2-tuple
+        return (intersect(t1, t2), op2)
     elif op == '|':
-        return union(t1, t2)
+        # return a 2-tuple
+        return (union(t1, t2), op2)
     else:
         return t1
 

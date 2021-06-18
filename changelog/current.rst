@@ -30,6 +30,7 @@ Changelog
 `turbopanda.str`
 ................
 - |Fix| `pattern` now properly handles cases where a DataFrame is passed with ~ not operator, and single non-split cases.
+- |Fix| Fixed a bug where `pattern` wasn't properly handling cases with multiple & or | string operations.
 
 `turbopanda.utils`
 ..................

@@ -16,6 +16,7 @@ Changelog
 .................
 - |Enhancement| `bicorr` now handles category-category and continuous-category combinations.
 - |Fix| `entropy`, `continuous_mutual_info` now add small eps to prevent NaN results for log2(0) cases.
+- |Fix| progressbar in `correlate` now correct length
 
 `turbopanda.stats`
 ..................

@@ -42,19 +42,18 @@ def _row_to_matrix(rows: pd.DataFrame, x="x", y="y", piv="r") -> pd.DataFrame:
     function to bivariate examples (with partials). """
 
 
-def _corr_combination(data, comb, covar, cart_z, method, output, verbose):
+def _corr_combination(data, comb, niter, covar, cart_z, method, output, verbose):
     # calculate the number of combinations to pass to tqdm to set the progressbar length
     # as comb is an iterable
-    nelems = int(((data.shape[1] ** 2) / 2) + (data.shape[1] / 2))
 
     # handle if tqdm is installed whether to use progressbar.
     if is_tqdm_installed():
         from tqdm import tqdm
         # wrap the generator around tqdm
         if covar is not None and cart_z:
-            _generator = tqdm(it.product(comb, covar), position=0, total=nelems)
+            _generator = tqdm(it.product(comb, covar), position=0, total=niter)
         else:
-            _generator = tqdm(comb, position=0, total=nelems)
+            _generator = tqdm(comb, position=0, total=niter)
     else:
         # there is no tqdm
         if covar is not None and cart_z:
@@ -72,7 +71,7 @@ def _corr_combination(data, comb, covar, cart_z, method, output, verbose):
     else:
         # if we cartesian over covariates, produce the product of combinations to each covariate
         if cart_z:
-            nelems *= len(covar)
+            niter *= len(covar)
             result_k = [
                 _partial_bicorr_inner(data, x, y, covar, method=method, output=output)
                 for (x, y), z in _generator
@@ -224,25 +223,30 @@ def correlate(
     if x is None and y is None:
         # here just perform matrix-based correlation
         comb = it.combinations_with_replacement(df.columns, 2)
+        niter = (df.columns.shape[0]**2) // 2 + (df.columns.shape[0] // 2)
     elif isinstance(x, (list, tuple, pd.Index)) and y is None:
         # use a subset of x, in union with covar
         comb = it.combinations_with_replacement(x, 2)
+        niter = (len(x)**2) // 2 + (len(x) // 2)
     elif isinstance(x, (list, tuple, pd.Index)) and isinstance(y, str):
         # list of x, y str -> matrix-vector cartesian product
         comb = it.product(x, [y])
+        niter = len(x)
     elif isinstance(y, (list, tuple, pd.Index)) and isinstance(x, str):
         # list of y, x str -> matrix-vector cartesian product
         comb = it.product(y, [x])
+        niter = len(y)
     elif isinstance(x, (list, tuple, pd.Index)) and isinstance(
             y, (list, tuple, pd.Index)
     ):
         # list of x, y -> cartesian product of x: y terms
         comb = it.product(x, y)
+        niter = len(x) * len(y)
     else:
         raise ValueError("X: {}; Y: {}; Z: {} combination unknown.".format(x, y, covar))
     # return the combination of these effects.
     return _corr_combination(
-        df, comb, covar, cartesian_covar, method, output, verbose
+        df, comb, niter, covar, cartesian_covar, method, output, verbose
     )
 
 

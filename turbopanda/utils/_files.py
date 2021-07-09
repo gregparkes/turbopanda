@@ -63,7 +63,7 @@ def split_file_directory(filename: str):
     ext : str
         Extension type
     """
-    fs = filename.rsplit("/", 1)
+    fs = filename.replace("\\","/").rsplit("/", 1)
     if len(fs) == 0:
         raise ValueError("filename '{}' not recognized".format(filename))
     elif len(fs) == 1:

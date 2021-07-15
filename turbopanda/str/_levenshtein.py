@@ -10,6 +10,31 @@ from typing import Optional, List
 from turbopanda._dependency import is_tqdm_installed, requires
 
 
+def _fill_matrix(d, s, t):
+    r, c = d.shape
+    # fill sides
+    for col in range(1, c):
+        d[0, col] = col
+    for row in range(1, r):
+        d[row, 0] = row
+
+    # iterate over and calculate.
+    for col in range(1, c):
+        for row in range(1, r):
+            if s[row - 1] == t[col - 1]:
+                cost = 0  # If the characters are the same in the two strings in a given position [i,j] then cost is 0
+            else:
+                # to align the results with those of the Python Levenshtein package, if we choose to calculate the ratio
+                # the cost of a substitution is 2. If we calculate just distance, then the cost of a substitution is 1.
+                cost = 2
+            d[row][col] = min(
+                d[row - 1][col] + 1,  # Cost of deletions
+                d[row][col - 1] + 1,  # Cost of insertions
+                d[row - 1][col - 1] + cost,
+            )  # Cost of substitutions
+    return d
+
+
 def _ratio_and_distance(s1: str, s2: str, ratio_calc: bool = True) -> float:
     """levenshtein_ratio_and_distance:
     Calculates levenshtein distance between two strings.
@@ -19,31 +44,6 @@ def _ratio_and_distance(s1: str, s2: str, ratio_calc: bool = True) -> float:
     distance between the first i characters of s and the
     first j characters of t
     """
-    @jit(nopython=True)
-    def _fill_matrix(d, s, t):
-        r = d.shape[0]
-        c = d.shape[1]
-        # fill sides
-        for col in range(1, c):
-            d[col, 0] = col
-        for row in range(1, r):
-            d[0, row] = row
-
-        # iterate over and calculate.
-        for col in range(1, c):
-            for row in range(1, r):
-                if s[row - 1] == t[col - 1]:
-                    cost = 0  # If the characters are the same in the two strings in a given position [i,j] then cost is 0
-                else:
-                    # to align the results with those of the Python Levenshtein package, if we choose to calculate the ratio
-                    # the cost of a substitution is 2. If we calculate just distance, then the cost of a substitution is 1.
-                    cost = 2
-                d[row][col] = min(
-                    d[row - 1][col] + 1,  # Cost of deletions
-                    d[row][col - 1] + 1,  # Cost of insertions
-                    d[row - 1][col - 1] + cost,
-                )  # Cost of substitutions
-        return d
 
     # Initialize matrix of zeros
     rows = len(s1) + 1
@@ -86,10 +86,10 @@ def _mirror_matrix_lev(D):
 
 @requires("numba")
 def levenshtein(
-    X: List[str],
-    Y: Optional[List[str]] = None,
-    as_matrix: bool = False,
-    with_replacement: bool = True
+        X: List[str],
+        Y: Optional[List[str]] = None,
+        as_matrix: bool = False,
+        with_replacement: bool = True
 ) -> pd.DataFrame:
     """Determines the levenshtein matrix distance between every pair of column names.
 
@@ -112,8 +112,6 @@ def levenshtein(
         The levenshtein distance, where n is the number of X elements,
             p is the number of y elements
     """
-    from numba import jit
-
     if as_matrix:
         with_replacement = True
 

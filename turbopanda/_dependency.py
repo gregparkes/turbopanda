@@ -36,7 +36,6 @@ def is_numba_installed(raise_error: bool = False):
     """Determines whether NumPy is installed."""
     try:
         import numba  # noqa
-
         is_installed = True
     except ModuleNotFoundError:  # pragma: no cover
         is_installed = False

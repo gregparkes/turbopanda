@@ -58,3 +58,26 @@ def cache(fn: str,
             print("writing file '%s'" % fn)
         dump(res, fn)
         return res
+
+
+class Cacheable:
+    """A cacheable object for holding file name and callable"""
+    def __init__(self, fn):
+        self.fn = fn
+        self.debug = True
+        self.expand_filepath = False
+
+    def __call__(self, f, *args, **kwargs):
+        return cache(self.fn, f, self.debug, self.expand_filepath, *args, **kwargs)
+
+
+class CacheContext:
+    """A simple __with__ class for cache contexts using a file name."""
+    def __init__(self, fn):
+        self.fn = fn
+
+    def __enter__(self):
+        return Cacheable(self.fn)
+
+    def __exit__(self, rtype, value, traceback):
+        pass

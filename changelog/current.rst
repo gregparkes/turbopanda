@@ -35,6 +35,7 @@ Changelog
 
 `turbopanda.utils`
 ..................
+- |Feature| Added `CacheContext` object to use with operator
 - |Enhancement| `tqdm` now works properly with parallelized loops with `joblib`
 - |Enhancement| `cache` now checks the filepath and can create folders before writing
 - |Feature| Added `check_file_path` method to ensure that a path to a file is real even if the file itself exists
